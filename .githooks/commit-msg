@@ -1,0 +1,17 @@
+#!/bin/sh
+# Every commit must reference a GitHub issue, e.g. "#12" or "Fixes #12".
+# Merge, revert, and autosquash commits are exempt.
+msg=$(cat "$1")
+
+case "$msg" in
+  "Merge "*|"Revert "*|fixup!*|squash!*) exit 0 ;;
+esac
+
+if printf '%s' "$msg" | grep -Eq '#[0-9]+'; then
+  exit 0
+fi
+
+echo "commit-msg hook: rejected." >&2
+echo "  Message must reference an issue (e.g. '#12' or 'Closes #12')." >&2
+echo "  See open issues: gh issue list" >&2
+exit 1
