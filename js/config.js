@@ -232,6 +232,65 @@ export const COSMETICS = {
   ],
 };
 
+// Daily Expeditions: one date-seeded themed run per day, identical for everyone
+// with no server. `mut` holds the run modifiers the engine reads.
+export const EXPEDITIONS = [
+  { id: 'blaze_rush',   name: 'Blaze Rush',    icon: 'head_piglin',   biome: 'nether',   mode: 'shooter',
+    desc: 'Nether raid — double emeralds and extra speed.',      mut: { emeraldMul: 2, speedMul: 1.15 } },
+  { id: 'creeper_storm', name: 'Creeper Storm', icon: 'head_creeper',  mode: 'shooter',
+    desc: 'Creepers everywhere. Grab the TNT and blast them!',   mut: { enemies: ['creeper', 'creeper', 'spider'], tntCommon: true, emeraldMul: 1.5 } },
+  { id: 'giant_march',  name: 'Giant March',   icon: 'iron_golem',    mode: 'shooter',
+    desc: 'Start with a Giga Steve, but the mobs hit harder.',   mut: { startWorth: 60, enemyHpMul: 1.4, emeraldMul: 1.5 } },
+  { id: 'golden_hour',  name: 'Golden Hour',   icon: 'golden_apple',  mode: 'shooter',
+    desc: 'Golden apples rain down. Triple emeralds!',           mut: { emeraldMul: 3, appleCommon: true } },
+  { id: 'endless_night', name: 'Endless Night', icon: 'boss_warden',  biome: 'deepdark', mode: 'shooter',
+    desc: 'The Deep Dark calls. Face the Warden.',               mut: { emeraldMul: 2 } },
+  { id: 'bone_brigade', name: 'Bone Brigade',  icon: 'head_skeleton', mode: 'shooter',
+    desc: 'Skeletons only. Dodge the arrow storm!',              mut: { enemies: ['skeleton', 'stray', 'skeleton'], emeraldMul: 1.5 } },
+  { id: 'gate_frenzy',  name: 'Gate Frenzy',   icon: 'emerald',       mode: 'gates',
+    desc: 'No bows — pure gates. Grow a giant army!',            mut: { gateBoost: true, emeraldMul: 2 } },
+];
+
+export function dayKey(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function hashStr(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+// The one expedition offered for a given day (defaults to today).
+export function dailyExpedition(key = dayKey()) {
+  const h = hashStr(key);
+  const exp = EXPEDITIONS[h % EXPEDITIONS.length];
+  const level = 1 + (Math.floor(h / 7) % BIOMES.length); // varies scenery when biome not forced
+  return { ...exp, level, key };
+}
+
+function prevKey(key) {
+  const [Y, M, D] = key.split('-').map(Number);
+  const d = new Date(Y, M - 1, D);
+  d.setDate(d.getDate() - 1);
+  return dayKey(d);
+}
+
+export function expeditionStatus(save, key = dayKey()) {
+  const e = save.expedition || { lastDay: null, streak: 0 };
+  return { streak: e.streak || 0, doneToday: e.lastDay === key };
+}
+
+// Record a completed expedition; extends or resets the streak. first=false if
+// today's expedition was already completed (no repeat reward).
+export function recordExpedition(save, key = dayKey()) {
+  const e = save.expedition || (save.expedition = { lastDay: null, streak: 0 });
+  if (e.lastDay === key) return { streak: e.streak, first: false };
+  e.streak = (e.lastDay === prevKey(key)) ? (e.streak || 0) + 1 : 1;
+  e.lastDay = key;
+  return { streak: e.streak, first: true };
+}
+
 const SAVE_KEY = 'craftrush_save_v1';
 
 export function loadSave() {
@@ -240,8 +299,9 @@ export function loadSave() {
     camera: 'far',
     cosmetics: { cape: 'none', hat: 'none', trail: 'none', pet: 'none' },
     cosmeticsOwned: ['none'],
-    stats: { runs: 0, wins: 0, kills: 0, golems: 0, gigas: 0, totalEmeralds: 0, bossWins: {} },
-    achievements: [] };
+    stats: { runs: 0, wins: 0, kills: 0, golems: 0, gigas: 0, totalEmeralds: 0, bossWins: {}, expeditions: 0 },
+    achievements: [],
+    expedition: { lastDay: null, streak: 0 } };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return def;

@@ -49,6 +49,20 @@
   .em { display: inline-block; width: 0.95em; height: 0.95em; vertical-align: -0.14em;
     background: var(--em-icon) center/contain no-repeat; image-rendering: pixelated; }
 
+  /* daily expedition card */
+  #expCard { width: 100%; border: 2px solid #ffd94d; background: rgba(40,32,10,0.55);
+    box-shadow: inset 1px 1px 0 rgba(255,217,77,0.25); padding: 8px; display: flex;
+    flex-direction: column; gap: 7px; }
+  #expHead { display: flex; justify-content: space-between; align-items: center;
+    font-weight: 900; font-size: 12px; letter-spacing: 1px; color: #ffd94d; text-shadow: 1px 1px 0 #000; }
+  #expStreak { color: #ff8d3a; }
+  #expBody { display: flex; align-items: center; gap: 9px; text-align: left; }
+  #expIcon { width: 40px; height: 40px; image-rendering: pixelated; flex: 0 0 auto;
+    background: rgba(0,0,0,0.35); border: 1px solid #000; }
+  #expName { font-weight: 900; color: #fff; font-size: 14px; text-shadow: 1px 1px 0 #000; }
+  #expDesc { font-size: 11px; color: #d8cfa8; line-height: 1.4; }
+  #btnExpedition { background: #b58a1a; }
+
   .modeRow { display: flex; width: 100%; gap: 0; }
   .modeRow .mcbtn { font-size: 13px; padding: 10px 4px; }
   .modeRow .mcbtn.sel { background: #2a7fd4; }
@@ -204,6 +218,16 @@
       </div>
       <div id="modeDesc"></div>
       <button class="mcbtn primary" id="btnPlay">▶ PLAY</button>
+
+      <div id="expCard">
+        <div id="expHead">🗺 TODAY'S EXPEDITION<span id="expStreak"></span></div>
+        <div id="expBody">
+          <canvas id="expIcon" width="40" height="40"></canvas>
+          <div class="expText"><div id="expName">—</div><div id="expDesc">—</div></div>
+        </div>
+        <button class="mcbtn small" id="btnExpedition">▶ START EXPEDITION</button>
+      </div>
+
       <button class="mcbtn" id="btnShop">🧑 SKINS &amp; SHOP</button>
       <button class="mcbtn small" id="btnAch">🏆 ACHIEVEMENTS</button>
       <button class="mcbtn small" id="btnCamera">📷 CAMERA: FAR</button>

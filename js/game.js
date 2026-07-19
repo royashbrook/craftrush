@@ -90,20 +90,26 @@ export class Game {
     this.eventIdx = 0;
     this.length = 0;
     this.golemHintShown = false;
+    this.expedition = null;
+    this.mut = {};
   }
 
   // ---------- run lifecycle ----------
-  startRun() {
+  // expedition: optional daily-expedition object (overrides biome/mode + `mut`)
+  startRun(expedition = null) {
     this.resetRunState();
-    this.level = this.save.level;
-    this.mode = this.save.mode;
-    this.biome = BIOMES[(this.level - 1) % BIOMES.length];
+    this.expedition = expedition;
+    this.mut = expedition ? (expedition.mut || {}) : {};
+    this.level = expedition ? expedition.level : this.save.level;
+    this.mode = expedition && expedition.mode ? expedition.mode : this.save.mode;
+    this.biome = (expedition && expedition.biome && BIOMES.find(b => b.id === expedition.biome))
+      || BIOMES[(this.level - 1) % BIOMES.length];
     this.applySkin();
     this.paused = false;
     const diff = this.levelDiff();
-    this.speed = Math.min(TUNE.speedCap, TUNE.runSpeed * (1 + TUNE.speedRamp * (this.level - 1)));
+    this.speed = Math.min(TUNE.speedCap, TUNE.runSpeed * (1 + TUNE.speedRamp * (this.level - 1)) * (this.mut.speedMul || 1));
     this.genLevel(diff);
-    this.setWorth(TUNE.crowdStart);
+    this.setWorth(this.mut.startWorth || TUNE.crowdStart);
     this.state = 'run';
     this.t = 0;
     this.applyCamera();
@@ -130,10 +136,11 @@ export class Game {
         // ---- gate pair ----
         sinceGate = 0;
         const goodGood = rng() < Math.max(0.3, 0.9 - L * 0.07);
+        const boost = this.mut.gateBoost ? 1 : 0;
         const mk = (good) => {
           if (good) {
-            if (rng() < (L >= 3 ? 0.42 : 0.25)) return { op: 'mul', val: L >= 5 && rng() < 0.25 ? 3 : 2 };
-            return { op: 'add', val: irnd(2, 3 + Math.min(L, 9)) };
+            if (rng() < (L >= 3 ? 0.42 : 0.25) + boost * 0.2) return { op: 'mul', val: (L >= 5 || boost) && rng() < 0.3 ? 3 : 2 };
+            return { op: 'add', val: irnd(2, 3 + Math.min(L, 9) + boost * 4) };
           }
           if (rng() < 0.4) return { op: 'div', val: 2 };
           return { op: 'sub', val: irnd(2, 2 + Math.ceil(L * 1.3)) };
@@ -146,8 +153,9 @@ export class Game {
         // ---- enemy cluster ----
         const n = Math.min(10, irnd(2, 3 + Math.ceil(L * 0.8)));
         const cx = (rng() * 2 - 1) * (TUNE.laneHalf - 0.6);
+        const pool = this.mut.enemies || this.biome.enemies;
         for (let i = 0; i < n; i++) {
-          const id = pick(this.biome.enemies);
+          const id = pick(pool);
           ev.push({
             z: z + rng() * 6, type: 'enemy', id,
             x: Math.max(-TUNE.laneHalf, Math.min(TUNE.laneHalf, cx + (rng() * 2 - 1) * 1.8)),
@@ -164,7 +172,8 @@ export class Game {
         }
       } else if (roll < 0.84) {
         // ---- pickup trail ----
-        const kind = rng() < 0.78 ? 'emerald' : rng() < 0.5 ? 'apple' : 'chest';
+        const appleP = this.mut.appleCommon ? 0.5 : 0.78;
+        const kind = rng() < appleP ? 'emerald' : rng() < 0.5 ? 'apple' : 'chest';
         if (kind === 'emerald') {
           const cx = (rng() * 2 - 1) * (TUNE.laneHalf - 0.8);
           const arc = rng() < 0.5;
@@ -178,7 +187,7 @@ export class Game {
         }
       } else if (roll < 0.92 && this.mode === 'shooter') {
         ev.push({ z, type: 'pickup', kind: pick(['powerup_triple', 'powerup_rapid', 'powerup_power']), x: (rng() * 2 - 1) * (TUNE.laneHalf - 0.8) });
-      } else if (roll < 0.955 && L >= 3) {
+      } else if ((roll < 0.955 && L >= 3) || (this.mut.tntCommon && roll < 0.99)) {
         ev.push({ z, type: 'pickup', kind: 'tnt', x: (rng() * 2 - 1) * (TUNE.laneHalf - 0.8) });
       } // else breather
       z += irnd(13, 21);
@@ -207,9 +216,10 @@ export class Game {
     const type = ENEMY_TYPES[id];
     if (!type) return;
     const diff = this.levelDiff();
+    const hp = Math.ceil(type.hp * diff * (this.mut.enemyHpMul || 1));
     this.enemies.push({
       id, type, x, z,
-      hp: Math.ceil(type.hp * diff), maxHp: Math.ceil(type.hp * diff),
+      hp, maxHp: hp,
       t: Math.random() * 4, flash: 0, fuse: -1, shotT: 1 + Math.random(), biteT: 0,
       tpT: 2 + Math.random() * 2, dead: false,
     });
@@ -1015,7 +1025,8 @@ export class Game {
     Audio.stopMusic();
     Audio.sfx(win ? 'fanfare' : 'defeat');
     const bonus = win ? TUNE.winBonusBase + this.level * TUNE.winBonusPerLevel + Math.floor(this.bestCrowd / 4) : 0;
-    const total = this.runEmeralds + bonus;
+    const mul = this.mut.emeraldMul || 1;
+    const total = Math.round((this.runEmeralds + bonus) * mul);
     const st = this.save.stats;
     if (st) {
       st.runs = (st.runs || 0) + 1;
@@ -1028,8 +1039,10 @@ export class Game {
     }
     this.hooks.onRunEnd({
       win, level: this.level, emeralds: total, pickupEmeralds: this.runEmeralds, bonus,
+      emeraldMul: mul,
       kills: this.kills, bestCrowd: this.bestCrowd,
       biome: this.biome.name, mode: this.mode,
+      expedition: this.expedition ? { id: this.expedition.id, name: this.expedition.name } : null,
     });
   }
 

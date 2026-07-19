@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, persistSave } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, dailyExpedition, expeditionStatus, recordExpedition, persistSave } from './config.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit } from './assets.js';
 import { Audio } from './audio.js';
@@ -30,6 +30,8 @@ export class UI {
       btnAch: $('btnAch'), achScreen: $('achievements'), achGrid: $('achGrid'),
       achCount: $('achCount'), btnAchBack: $('btnAchBack'),
       achPop: $('achPop'), achPopIcon: $('achPopIcon'), achPopName: $('achPopName'),
+      expCard: $('expCard'), expIcon: $('expIcon'), expName: $('expName'),
+      expDesc: $('expDesc'), expStreak: $('expStreak'), btnExpedition: $('btnExpedition'),
     };
     this.returnTo = 'menu';   // where BACK from shop/achievements goes
     this.achQueue = [];
@@ -51,6 +53,7 @@ export class UI {
     E.btnPlay.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.startRun(); });
     E.btnShop.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showShop('menu'); });
     E.btnShopBack.addEventListener('click', () => { Audio.sfx('click'); this.back(); });
+    E.btnExpedition.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.startExpedition(); });
     E.btnAch.addEventListener('click', () => { Audio.sfx('click'); this.showAchievements('menu'); });
     E.btnAchBack.addEventListener('click', () => { Audio.sfx('click'); this.back(); });
     E.btnSound.addEventListener('click', () => {
@@ -136,6 +139,13 @@ export class UI {
     this.toast(null);
   }
 
+  startExpedition() {
+    this.hideAll();
+    this.els.hud.classList.remove('hidden');
+    this.game.startRun(dailyExpedition());
+    this.toast(null);
+  }
+
   hideAll() {
     for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen']) this.els[k].classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
@@ -160,6 +170,21 @@ export class UI {
     E.modeShooter.classList.toggle('sel', this.save.mode === 'shooter');
     E.modeGates.classList.toggle('sel', this.save.mode === 'gates');
     E.modeDesc.textContent = MODES[this.save.mode].desc;
+    this.refreshExpedition();
+  }
+
+  refreshExpedition() {
+    const E = this.els;
+    const exp = dailyExpedition();
+    const st = expeditionStatus(this.save);
+    E.expName.textContent = exp.name;
+    E.expDesc.textContent = exp.desc;
+    E.expStreak.textContent = st.streak > 0 ? `🔥 ${st.streak}` : '';
+    E.btnExpedition.textContent = st.doneToday ? '↻ REPLAY EXPEDITION' : '▶ START EXPEDITION';
+    const g = E.expIcon.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.clearRect(0, 0, 40, 40);
+    this.drawIcon(g, exp.icon, 40, 34);
   }
 
   // ---------- shop ----------
@@ -428,15 +453,36 @@ export class UI {
     this.els.hud.classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
     const E = this.els;
-    E.resultTitle.textContent = r.win ? '⭐ VICTORY! ⭐' : 'CROWD WIPED OUT';
+    const isExp = !!r.expedition;
+
+    // expedition streak: the multiplier + streak bonus apply only to the FIRST
+    // completion of today's expedition. Replays are practice for base emeralds.
+    let streakBonus = 0, streak = 0, expFirst = false;
+    if (isExp && r.win) {
+      const rec = recordExpedition(this.save);
+      streak = rec.streak;
+      expFirst = rec.first;
+      if (rec.first) {
+        streakBonus = 20 * Math.min(rec.streak, 10);
+        this.save.stats.expeditions = (this.save.stats.expeditions || 0) + 1;
+      }
+    }
+    // strip the expedition multiplier on a replay (already cleared today)
+    const earned = (isExp && !expFirst) ? Math.round(r.emeralds / (r.emeraldMul || 1)) : r.emeralds;
+
+    E.resultTitle.textContent = r.win ? (isExp ? '🗺 EXPEDITION DONE!' : '⭐ VICTORY! ⭐') : 'CROWD WIPED OUT';
     E.resultTitle.className = r.win ? 'win' : 'lose';
     E.resultStats.innerHTML = '';
     const rows = [
-      ['<span class="em"></span> Emeralds earned', `+${r.emeralds}`],
-      ...(r.win ? [['🏆 Victory bonus', `+${r.bonus}`]] : []),
+      ...(isExp ? [['🗺 ' + r.expedition.name, r.win ? 'CLEARED!' : 'failed']] : []),
+      ['<span class="em"></span> Emeralds earned', `+${earned}`],
+      ...(r.win && !isExp ? [['🏆 Victory bonus', `+${r.bonus}`]] : []),
+      ...(expFirst && r.emeraldMul > 1 ? [['✨ Expedition bonus', `${r.emeraldMul}× emeralds`]] : []),
+      ...(streakBonus > 0 ? [[`🔥 Day ${streak} streak`, `+${streakBonus}`]] : []),
+      ...(isExp && !expFirst && r.win ? [['↻ Replay', 'base reward only']] : []),
       ['👥 Biggest crowd', `${r.bestCrowd}`],
       ...(r.mode === 'shooter' ? [['🏹 Mobs blasted', `${r.kills}`]] : []),
-      ['🗺 ' + r.biome, r.win ? 'CLEARED!' : 'try again!'],
+      ...(isExp ? [] : [['🗺 ' + r.biome, r.win ? 'CLEARED!' : 'try again!']]),
     ];
     for (const [k, v] of rows) {
       const d = document.createElement('div');
@@ -444,13 +490,15 @@ export class UI {
       d.innerHTML = `<span>${k}</span><b>${v}</b>`;
       E.resultStats.appendChild(d);
     }
-    E.btnNext.classList.toggle('hidden', !r.win);
-    E.btnRetry.classList.toggle('hidden', r.win);
+    // expeditions never advance the campaign — NEXT shows only for a normal win
+    E.btnNext.classList.toggle('hidden', !(r.win && !isExp));
+    E.btnRetry.classList.toggle('hidden', r.win && !isExp);
     E.result.classList.remove('hidden');
     // bank it
-    this.save.emeralds += r.emeralds;
-    this.save.stats.totalEmeralds = (this.save.stats.totalEmeralds || 0) + r.emeralds;
-    if (r.win) {
+    const banked = earned + streakBonus;
+    this.save.emeralds += banked;
+    this.save.stats.totalEmeralds = (this.save.stats.totalEmeralds || 0) + banked;
+    if (r.win && !isExp) {
       this.save.level += 1;
       this.save.bestLevel = Math.max(this.save.bestLevel, this.save.level);
     }

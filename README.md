@@ -24,6 +24,7 @@ Any static file server works (needs http:// for ES modules + service worker):
 cd craftshoot
 python3 -m http.server 8080
 # or: npx serve .
+# for cache-free iteration on the ES modules: python3 tools/devserver.py 8300
 ```
 
 Open http://localhost:8080 — on a phone, use your machine's LAN IP, then
@@ -44,6 +45,12 @@ Open http://localhost:8080 — on a phone, use your machine's LAN IP, then
   camera rides behind the crowd), hats, arrow trails, pets. Beat the boss to
   advance to the next biome.
 - **Camera**: menu button cycles Close / Far / Overhead, saved per device.
+- **Daily Expedition**: one themed run per day (same for everyone, chosen by a
+  date seed, no server) with its own modifiers — a Nether raid, a creeper storm,
+  a Deep Dark Warden hunt, and so on. Finish it to build a play streak that
+  pays escalating bonus emeralds. The full-reward multiplier and streak count
+  only on the first clear each day; replays give base emeralds. Expeditions are
+  a side mode and do not affect campaign level progression.
 
 ## Two game modes, one engine
 
