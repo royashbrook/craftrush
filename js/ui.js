@@ -34,6 +34,9 @@ export class UI {
     this.returnTo = 'menu';   // where BACK from shop/achievements goes
     this.achQueue = [];
     this._wire();
+    // back-fill achievements a returning player already earned — silently, no popups
+    checkAchievements(this.save);
+    persistSave(this.save);
     this.refreshMenu();
     this.showMenu();
   }
