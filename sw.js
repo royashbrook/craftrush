@@ -1,5 +1,5 @@
 // Cache-first service worker: full offline play after first load.
-const CACHE = 'craftrush-v1';
+const CACHE = 'craftrush-v2';
 const ASSETS = [
   './',
   './index.html',

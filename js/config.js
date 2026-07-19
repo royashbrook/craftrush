@@ -58,13 +58,19 @@ export const CAMERAS = {
   overhead: { label: 'OVERHEAD', camBack: 6.5,  camHeight: 11.5, focal: 3.4, horizonFrac: 0.18 },
 };
 
-// Giga-Steve: crowd gains past the cap merge into giants (Bow Blitz only).
-export const GIGA = {
-  perGiga: 10,       // overflow runners per giga
-  maxGigas: 12,
-  hp: 10,
-  dmgMul: 10,        // one fat arrow worth this many normal arrows
-  scale: 2.3,        // sprite worldH multiplier
+// Tiered crowd: worth grows without limit. Rendered as three tiers, each unit
+// worth 10x the last; worth beyond the render caps is held in `reserve`, which
+// scales the top tier bigger and hits harder ("bigger and bigger", no max).
+export const TIERS = {
+  maxRunners: 96,    // rendered tier-0 individuals
+  maxGigas: 12,      // tier-1, each worth 10 runners
+  maxTitans: 10,     // tier-2, each worth 100 runners
+  gigaWorth: 10,
+  titanWorth: 100,
+  gigaScale: 2.3,    // sprite worldH multiplier
+  titanScale: 3.5,
+  titanMaxGrow: 1.6, // extra scale multiplier at very high reserve
+  reserveFullScale: 4000, // reserve worth at which titans reach titanMaxGrow
 };
 
 export const MODES = {
@@ -96,6 +102,7 @@ export const BOSS_TYPES = {
   boss_ravager: { name: 'RAVAGER',       hp: 130, worldH: 4.5, attacks: ['charge', 'minions', 'shockwave'] },
   boss_wither:  { name: 'THE WITHER',    hp: 170, worldH: 4.8, attacks: ['skulls', 'minions', 'shockwave'] },
   boss_dragon:  { name: 'ENDER DRAGON',  hp: 220, worldH: 5.4, attacks: ['skulls', 'charge', 'minions'] },
+  boss_warden:  { name: 'THE WARDEN',    hp: 300, worldH: 5.0, attacks: ['sonicboom', 'minions', 'sonicboom', 'charge'] },
 };
 
 export const BIOMES = [
@@ -161,6 +168,15 @@ export const BIOMES = [
     scenery: ['end_pillar', 'end_pillar'],
     enemies: ['enderman', 'phantom', 'creeper'],
     obstacle: 'end_pillar', boss: 'boss_dragon',
+  },
+  {
+    id: 'deepdark', name: 'The Deep Dark',
+    sky: ['#05090b', '#0c1a1e'], sun: null, clouds: false, stars: true, embers: false,
+    hillFar: '#0c1a1e', hillNear: '#081215', fog: '#0a1518',
+    ground: { a: '#0f2226', b: '#0c1c20', c: '#12282d', pathA: '#112326', pathB: '#0d2024', edge: '#164a44', vein: '#2fd6d6' },
+    scenery: ['deepslate_pillar', 'sculk_sensor', 'sculk_shrieker', 'deepslate_pillar'],
+    enemies: ['enderman', 'skeleton', 'creeper', 'spider'],
+    obstacle: 'deepslate_pillar', boss: 'boss_warden',
   },
 ];
 

@@ -1,6 +1,6 @@
 // Craft Rush core game: crowd sim, dual-mode (shooter / gates), procedural
 // levels, enemies, bosses, effects. World units: blocks; +z is down-track.
-import { TUNE, ENEMY_TYPES, BOSS_TYPES, BIOMES, SKINS, CAMERAS, GIGA, COSMETICS } from './config.js';
+import { TUNE, ENEMY_TYPES, BOSS_TYPES, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS } from './config.js';
 import { Camera, renderWorld, DrawQueue, drawShadow, outlineText, mulberry32, hash2 } from './engine.js';
 import { getSprite, blit, hasSprite } from './assets.js';
 import { Audio } from './audio.js';
@@ -78,7 +78,8 @@ export class Game {
     this.boss = null;
     this.bossDead = false;
     this.gigas = [];
-    this.overflow = 0;
+    this.titans = [];
+    this.reserve = 0;
     this.playerX = 0; this.playerZ = 0; this.targetX = 0;
     this.speed = 0;
     this.redstone = 0;
@@ -102,8 +103,7 @@ export class Game {
     const diff = this.levelDiff();
     this.speed = Math.min(TUNE.speedCap, TUNE.runSpeed * (1 + TUNE.speedRamp * (this.level - 1)));
     this.genLevel(diff);
-    for (let i = 0; i < TUNE.crowdStart; i++) this.addMember();
-    this.reform();
+    this.setWorth(TUNE.crowdStart);
     this.state = 'run';
     this.t = 0;
     this.applyCamera();
@@ -215,99 +215,95 @@ export class Game {
     });
   }
 
-  // ---------- crowd ----------
-  addMember() {
-    if (this.crowd.length >= TUNE.crowdCap) return false;
-    const m = { ox: (Math.random() - 0.5) * 1.5, oz: -Math.random() * 1.2, tx: 0, tz: 0, phase: Math.random() * 7 };
-    this.crowd.push(m);
-    return true;
+  // ---------- crowd (worth-based, unbounded) ----------
+  // worth = crowd(x1) + gigas(x10) + titans(x100) + reserve. Arrays are pure
+  // visualization of the current worth; reserve holds the uncapped overflow.
+  worth() {
+    return this.crowd.length + this.gigas.length * TIERS.gigaWorth
+      + this.titans.length * TIERS.titanWorth + this.reserve;
   }
 
-  addRunners(n, silent = false) {
-    let added = 0, over = 0;
-    for (let i = 0; i < n; i++) { if (this.addMember()) added++; else over++; }
-    if (added > 0) {
-      this.reform();
-      if (!silent) this.floaty(`+${added}`, this.playerX, this.playerZ + 1, '#7dff7d', 1.4);
-    }
-    if (over > 0) {
-      if (this.mode === 'shooter') {
-        // overflow merges into Giga Steves
-        this.overflow += over;
-        while (this.overflow >= GIGA.perGiga && this.gigas.length < GIGA.maxGigas) {
-          this.overflow -= GIGA.perGiga;
-          this.spawnGiga();
-        }
-        if (this.gigas.length >= GIGA.maxGigas && !silent) this.floaty('MAX POWER!', this.playerX, this.playerZ + 2, '#ffd94d', 1.3);
-      } else if (!silent) {
-        this.floaty('MAX CROWD!', this.playerX, this.playerZ + 2, '#ffd94d', 1.2);
-      }
-    }
-    this.bestCrowd = Math.max(this.bestCrowd, this.crowd.length + this.gigas.length * GIGA.perGiga);
+  makeUnit(backRow) {
+    return { ox: (Math.random() - 0.5) * 1.5, oz: backRow ? -2.5 : -Math.random() * 1.2,
+      tx: 0, tz: backRow ? -2.5 : 0, phase: Math.random() * 7, flash: 0 };
   }
 
-  spawnGiga() {
-    if (this.save.stats) this.save.stats.gigas = (this.save.stats.gigas || 0) + 1;
-    this.gigas.push({ ox: 0, oz: -2.5, tx: 0, tz: -2.5, phase: Math.random() * 7, hp: GIGA.hp, flash: 0 });
-    this.reformGigas();
-    const g = this.gigas[this.gigas.length - 1];
-    this.floaty('GIGA STEVE!', this.playerX, this.playerZ + 2.5, '#ffd94d', 1.7);
-    this.burst(this.playerX + g.tx, 1.5, this.playerZ + g.tz, ['#ffd94d', this.skin.palette.t, '#ffffff'], 16);
-    this.ring(this.playerX + g.tx, this.playerZ + g.tz, 2.0);
+  syncCount(arr, target, backRow) {
+    while (arr.length > target) arr.pop();
+    while (arr.length < target) arr.push(this.makeUnit(backRow));
+  }
+
+  // rebalance the tier arrays to represent `total` worth
+  setWorth(total, fx = false) {
+    total = Math.max(0, Math.floor(total));
+    const prevGigas = this.gigas.length, prevTitans = this.titans.length;
+    const t = Math.min(TIERS.maxTitans, Math.floor(total / TIERS.titanWorth));
+    let rem = total - t * TIERS.titanWorth;
+    const g = Math.min(TIERS.maxGigas, Math.floor(rem / TIERS.gigaWorth));
+    rem -= g * TIERS.gigaWorth;
+    const r = Math.min(TIERS.maxRunners, rem);
+    this.reserve = total - (t * TIERS.titanWorth + g * TIERS.gigaWorth + r);
+    this.syncCount(this.titans, t, true);
+    this.syncCount(this.gigas, g, true);
+    this.syncCount(this.crowd, r, false);
+    this.reform();
+    if (fx) {
+      if (this.titans.length > prevTitans) this.tierPop('TITAN STEVE!', this.titans[this.titans.length - 1], '#ff5545');
+      else if (this.gigas.length > prevGigas) this.tierPop('GIGA STEVE!', this.gigas[this.gigas.length - 1], '#ffd94d');
+    }
+    if (this.save.stats) {
+      if (this.gigas.length > prevGigas) this.save.stats.gigas = (this.save.stats.gigas || 0) + (this.gigas.length - prevGigas);
+    }
+    this.bestCrowd = Math.max(this.bestCrowd, this.worth());
+  }
+
+  tierPop(text, unit, color) {
+    if (!unit) return;
+    this.floaty(text, this.playerX + unit.tx, this.playerZ + unit.tz + 1, color, 1.7);
+    this.burst(this.playerX + unit.tx, 1.8, this.playerZ + unit.tz, [color, this.skin.palette.t, '#ffffff'], 18, 7);
+    this.ring(this.playerX + unit.tx, this.playerZ + unit.tz, 2.2);
     this.cam.shake = Math.min(1, this.cam.shake + 0.25);
     Audio.sfx('golem');
   }
 
-  reformGigas() {
-    // marching grid behind the crowd — closest to camera, always in view
-    const crowdR = this.crowdSpacing() * Math.sqrt(this.crowd.length + 1);
-    const backZ = -(crowdR * 0.72 + 1.3);
-    const perRow = 6;
-    this.gigas.forEach((g, i) => {
-      const row = Math.floor(i / perRow);
-      const inRow = Math.min(perRow, this.gigas.length - row * perRow);
-      const col = i % perRow;
-      g.tx = (col - (inRow - 1) / 2) * 1.15;
-      g.tz = backZ - row * 1.2;
-    });
+  addRunners(n, silent = false) {
+    if (n <= 0) return;
+    const before = this.worth();
+    this.setWorth(before + n, true);
+    if (!silent) this.floaty(`+${this.worth() - before}`, this.playerX, this.playerZ + 1, '#7dff7d', 1.4);
   }
 
-  hurtGiga(g, dmg, atX = null, atZ = null) {
-    g.hp -= dmg;
-    g.flash = 0.1;
-    if (g.hp <= 0) {
-      const i = this.gigas.indexOf(g);
-      if (i >= 0) this.gigas.splice(i, 1);
-      this.burst(this.playerX + g.ox, 1.6, this.playerZ + g.oz, [this.skin.palette.t, this.skin.palette.s, '#ffd94d'], 20, 7);
-      Audio.sfx('pop', 60);
-      this.reformGigas();
-      if (this.crowd.length === 0 && this.gigas.length === 0 && !this.bossDead && (this.state === 'run' || this.state === 'boss')) this.endRun(false);
-    }
-  }
-
+  // lose `n` worth; pops fx near the impact point; ends the run when worth hits 0
   killRunners(n, atX = null, atZ = null) {
-    const k = Math.min(n, this.crowd.length);
-    for (let i = 0; i < k; i++) {
-      let idx = 0;
-      if (atX !== null) { // pop nearest to impact
+    const before = this.worth();
+    const lost = Math.min(n, before);
+    if (lost <= 0) return;
+    // pop a few visible units near the hit for feedback (visual only)
+    const pops = Math.min(lost, 6);
+    const pool = this.crowd.length ? this.crowd : this.gigas.length ? this.gigas : this.titans;
+    for (let i = 0; i < pops && pool.length; i++) {
+      let idx = Math.floor(Math.random() * pool.length);
+      if (atX !== null) {
         let best = 1e9;
-        this.crowd.forEach((m, j) => {
+        pool.forEach((m, j) => {
           const d = Math.abs(this.playerX + m.ox - atX) + Math.abs(this.playerZ + m.oz - (atZ ?? this.playerZ));
           if (d < best) { best = d; idx = j; }
         });
-      } else idx = Math.floor(Math.random() * this.crowd.length);
-      const m = this.crowd.splice(idx, 1)[0];
+      }
+      const m = pool[idx];
       this.burst(this.playerX + m.ox, 0.8, this.playerZ + m.oz, [this.skin.palette.t, this.skin.palette.s, this.skin.palette.l], 7);
     }
-    if (k > 0) { Audio.sfx('pop', 70); this.reform(); }
-    // bossDead: victory is already locked in — a stray hit mustn't flip it to a loss.
-    // Gigas count as survivors: the run continues while any giant still marches.
-    if (this.crowd.length === 0 && this.gigas.length === 0 && !this.bossDead && (this.state === 'run' || this.state === 'boss')) this.endRun(false);
+    Audio.sfx('pop', 70);
+    this.setWorth(before - lost);
+    if (this.worth() <= 0 && !this.bossDead && (this.state === 'run' || this.state === 'boss')) this.endRun(false);
   }
 
   crowdSpacing() {
-    // pack tighter as the crowd grows so the formation never exceeds ~4.1 blocks
     return Math.min(TUNE.formationC, 4.1 / Math.sqrt(this.crowd.length + 1));
+  }
+
+  titanScale() {
+    return TIERS.titanScale * (1 + TIERS.titanMaxGrow * Math.min(1, this.reserve / TIERS.reserveFullScale));
   }
 
   reform() {
@@ -318,7 +314,22 @@ export class Game {
       m.tx = Math.cos(a) * r;
       m.tz = Math.sin(a) * r * 0.72;
     });
-    this.reformGigas();
+    // gigas then titans march in rows behind the crowd, biggest closest to camera
+    const crowdR = c * Math.sqrt(this.crowd.length + 1) * 0.72;
+    let backZ = -(crowdR + 1.3);
+    this.rowFormation(this.gigas, backZ, 6, 1.15);
+    backZ -= Math.ceil(this.gigas.length / 6) * 1.2 + 1.6;
+    this.rowFormation(this.titans, backZ, 5, 1.9);
+  }
+
+  rowFormation(arr, backZ, perRow, spacing) {
+    arr.forEach((u, i) => {
+      const row = Math.floor(i / perRow);
+      const inRow = Math.min(perRow, arr.length - row * perRow);
+      const col = i % perRow;
+      u.tx = (col - (inRow - 1) / 2) * spacing;
+      u.tz = backZ - row * spacing * 1.05;
+    });
   }
 
   // ---------- fx ----------
@@ -350,10 +361,6 @@ export class Game {
       if (dx * dx + dz * dz < radius * radius) victims.push(m);
     });
     this.killRunners(Math.min(kills, victims.length), x, z);
-    for (const g of [...this.gigas]) {
-      const dx = this.playerX + g.ox - x, dz = this.playerZ + g.oz - z;
-      if (dx * dx + dz * dz < radius * radius) this.hurtGiga(g, 3);
-    }
     if (hurtEnemies) {
       for (const e of this.enemies) {
         const dx = e.x - x, dz = e.z - z;
@@ -394,46 +401,45 @@ export class Game {
   }
 
   fireVolley() {
+    const powerMul = this.power.power > 0 ? 2 : 1;
     const n = Math.min(this.crowd.length, TUNE.maxShooters);
     const dmgScale = Math.max(1, Math.round(this.crowd.length / TUNE.maxShooters));
-    const dmg = dmgScale * (this.power.power > 0 ? 2 : 1);
+    const dmg = dmgScale * powerMul;
     // aim assist: kid-friendly — arrows curve toward live targets ahead
     const targets = this.enemies.filter(e => !e.dead && e.z > this.playerZ + 1.5 && e.z < this.playerZ + TUNE.arrowRange);
     if (this.boss && !this.boss.entering) targets.push(this.boss);
-    for (let i = 0; i < n; i++) {
-      const m = this.crowd[Math.floor((i / n) * this.crowd.length)];
-      const x = this.playerX + m.ox, z = this.playerZ + m.oz + 0.5;
-      let vx = (Math.random() - 0.5) * 0.8;
+    const aim = (x, z) => {
       let best = null, bd = 1e9;
       for (const e of targets) {
         const d = Math.abs(e.x - x) + (e.z - z) * 0.12;
         if (d < bd) { bd = d; best = e; }
       }
-      if (best) {
-        const tof = Math.max(0.05, (best.z - z) / TUNE.arrowSpeed);
-        vx = Math.max(-7, Math.min(7, (best.x - x) / tof));
-      }
+      if (!best) return (Math.random() - 0.5) * 0.8;
+      const tof = Math.max(0.05, (best.z - z) / TUNE.arrowSpeed);
+      return Math.max(-7, Math.min(7, (best.x - x) / tof));
+    };
+    for (let i = 0; i < n; i++) {
+      const m = this.crowd[Math.floor((i / n) * this.crowd.length)];
+      const x = this.playerX + m.ox, z = this.playerZ + m.oz + 0.5;
+      const vx = aim(x, z);
       this.arrows.push({ x, z, vx, dmg });
       if (this.power.triple > 0) {
         this.arrows.push({ x, z, vx: vx - 4.5, dmg });
         this.arrows.push({ x, z, vx: vx + 4.5, dmg });
       }
     }
-    // giga volley: one fat arrow each, worth a squad
+    // giants fire one fat arrow each, worth a whole squad
     for (const g of this.gigas) {
       const x = this.playerX + g.ox, z = this.playerZ + g.oz + 1;
-      let vx = 0, best = null, bd = 1e9;
-      for (const e of targets) {
-        const d = Math.abs(e.x - x) + (e.z - z) * 0.12;
-        if (d < bd) { bd = d; best = e; }
-      }
-      if (best) {
-        const tof = Math.max(0.05, (best.z - z) / TUNE.arrowSpeed);
-        vx = Math.max(-7, Math.min(7, (best.x - x) / tof));
-      }
-      this.arrows.push({ x, z, vx, dmg: GIGA.dmgMul * (this.power.power > 0 ? 2 : 1), big: true });
+      this.arrows.push({ x, z, vx: aim(x, z), dmg: TIERS.gigaWorth * powerMul, big: true });
     }
-    if (n > 0 || this.gigas.length > 0) Audio.sfx('shoot', 90);
+    // titans hit hardest; reserve worth is folded into their damage
+    const titanDmg = (TIERS.titanWorth + (this.titans.length ? Math.floor(this.reserve / this.titans.length) : 0)) * powerMul;
+    for (const tt of this.titans) {
+      const x = this.playerX + tt.ox, z = this.playerZ + tt.oz + 1;
+      this.arrows.push({ x, z, vx: aim(x, z), dmg: titanDmg, big: true, huge: true });
+    }
+    if (n > 0 || this.gigas.length > 0 || this.titans.length > 0) Audio.sfx('shoot', 90);
   }
 
   summonGolem() {
@@ -478,18 +484,18 @@ export class Game {
   startBoss() {
     const bt = BOSS_TYPES[this.biome.boss];
     const diff = 1 + (this.level - 1) * 0.3;
-    // normalize to the army you arrive with, so every boss is a real ~9s fight
+    // normalize to the army worth you arrive with, so every boss is a real ~9s fight
+    const w = this.worth();
     let hp;
     if (this.mode === 'gates') {
-      // max deliverable damage is crowd*3 — cap hp below it so no level is unwinnable
+      // charge delivers ~worth*3 total; cap hp below it so no level is unwinnable
       hp = Math.min(
-        Math.ceil(bt.hp * diff * 0.4 + this.crowd.length * 1.6),
-        Math.max(6, Math.floor(this.crowd.length * 3 * 0.85))
+        Math.ceil(bt.hp * diff * 0.4 + w * 1.6),
+        Math.max(6, Math.floor(w * 3 * 0.85))
       );
     } else {
-      const shooters = Math.min(this.crowd.length, TUNE.maxShooters);
-      const dmgScale = Math.max(1, Math.round(this.crowd.length / TUNE.maxShooters));
-      const dps = (shooters * dmgScale) / TUNE.volleyInterval;
+      // firepower per volley ~= total worth; target ~8s of sustained fire
+      const dps = w / TUNE.volleyInterval;
       hp = Math.ceil(bt.hp * diff * 0.3 + dps * 8);
     }
     this.boss = {
@@ -519,6 +525,13 @@ export class Game {
     } else if (atk === 'shockwave') {
       const x = Math.random() < 0.6 ? this.playerX : (Math.random() * 2 - 1) * 2;
       this.waves.push({ x, halfW: 1.5, z: b.z - 1, warn: 0.95, speed: 14, kills: Math.min(10, 3 + Math.ceil(this.level / 2)) });
+    } else if (atk === 'sonicboom') {
+      // Warden signature: a wide cyan blast covering most of the lane — sprint to
+      // a gap. Leaves one safe lane so it is always dodgeable.
+      const safe = (Math.random() * 2 - 1) * (TUNE.laneHalf - 0.8);
+      const side = safe < 0 ? 1 : -1; // put the wall opposite the safe gap
+      this.waves.push({ x: side * 2.4, halfW: TUNE.trackHalf - 0.6, z: b.z - 1, warn: 1.15, speed: 20, color: '#2fd6d6', kills: Math.min(14, 4 + Math.ceil(this.level / 2)) });
+      Audio.sfx('boss_roar');
     } else if (atk === 'charge') {
       b.lunge = 0.0001; // phase timer: <0.5 windup, then dash
     } else if (atk === 'skulls') {
@@ -588,7 +601,7 @@ export class Game {
       m.ox += (m.tx - m.ox) * Math.min(1, dt * 6);
       m.oz += (m.tz - m.oz) * Math.min(1, dt * 6);
     }
-    for (const g of this.gigas) {
+    for (const g of [...this.gigas, ...this.titans]) {
       g.ox += (g.tx - g.ox) * Math.min(1, dt * 4);
       g.oz += (g.tz - g.oz) * Math.min(1, dt * 4);
       g.flash = Math.max(0, g.flash - dt);
@@ -600,7 +613,7 @@ export class Game {
         }
       }
     }
-    this.bestCrowd = Math.max(this.bestCrowd, this.crowd.length + this.gigas.length * GIGA.perGiga);
+    this.bestCrowd = Math.max(this.bestCrowd, this.worth());
 
     // shooting
     if (this.mode === 'shooter') {
@@ -664,7 +677,7 @@ export class Game {
       if (Math.abs(a.x - p.x) < 0.6) { p.hp--; a.dead = true; if (p.hp <= 0) this.openChest(p); return; }
     }
     const b = this.boss;
-    if (b && !b.entering && !this.bossDead && Math.abs(b.z - a.z) < 1.4 && Math.abs(a.x - b.x) < 1.8) {
+    if (b && !b.entering && !this.bossDead && Math.abs(b.z - a.z) < 2.0 && Math.abs(a.x - b.x) < 2.6) {
       a.dead = true;
       b.hp -= a.dmg; b.flash = 0.08;
       this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerHit);
@@ -682,7 +695,7 @@ export class Game {
     p.dead = true;
     this.runEmeralds += TUNE.chestEmeralds;
     this.burst(p.x, 0.8, p.z, ['#2eff70', '#ffd94d', '#8a6844'], 16);
-    this.floaty(`+${TUNE.chestEmeralds} 💎`, p.x, p.z, '#2eff70', 1.5);
+    this.floaty(`+${TUNE.chestEmeralds}`, p.x, p.z, '#2eff70', 1.5);
     Audio.sfx('chest');
   }
 
@@ -749,22 +762,13 @@ export class Game {
         e.biteT -= dt;
         if (e.biteT <= 0 && distZ < 1.2 && distZ > -1) {
           let hit = false;
-          for (const m of this.crowd) {
-            if (Math.abs(px + m.ox - e.x) < 0.7 && Math.abs(pz + m.oz - e.z) < 1.0) { hit = true; break; }
+          for (const u of [...this.crowd, ...this.gigas, ...this.titans]) {
+            if (Math.abs(px + u.ox - e.x) < 0.9 && Math.abs(pz + u.oz - e.z) < 1.1) { hit = true; break; }
           }
           if (hit) {
             e.biteT = type.bitePeriod || 0.8;
             this.killRunners(1, e.x, e.z);
             if (type.kind === 'swooper') e.dead = true;
-          } else {
-            for (const g of this.gigas) {
-              if (Math.abs(px + g.ox - e.x) < 1.0 && Math.abs(pz + g.oz - e.z) < 1.2) {
-                e.biteT = type.bitePeriod || 0.8;
-                this.hurtGiga(g, 1);
-                if (type.kind === 'swooper') e.dead = true;
-                break;
-              }
-            }
           }
         }
       }
@@ -919,14 +923,8 @@ export class Game {
         }
       } else if (s.z <= pz + 0.6) {
         s.dead = true;
-        let hit = false;
-        for (const m of this.crowd) {
-          if (Math.abs(px + m.ox - s.x) < 0.6) { hit = true; this.killRunners(1, s.x, s.z); Audio.sfx('hurt', 100); break; }
-        }
-        if (!hit) {
-          for (const g of this.gigas) {
-            if (Math.abs(px + g.ox - s.x) < 1.0) { this.hurtGiga(g, 1); Audio.sfx('hurt', 100); break; }
-          }
+        for (const u of [...this.crowd, ...this.gigas, ...this.titans]) {
+          if (Math.abs(px + u.ox - s.x) < 0.75) { this.killRunners(1, s.x, s.z); Audio.sfx('hurt', 100); break; }
         }
         continue;
       }
@@ -947,17 +945,18 @@ export class Game {
       return;
     }
     if (this.mode === 'gates') {
-      // crowd charge: runners sprint in and slam the boss
+      // crowd charge: the army spends worth to slam the boss, scaled so the
+      // fight lasts about the same whether you bring 40 troops or 4000
       this.chargeT = (this.chargeT || 0) - dt;
-      if (this.chargeT <= 0 && this.crowd.length > 0) {
+      if (this.chargeT <= 0 && this.worth() > 0) {
         this.chargeT = 0.09;
-        const m = this.crowd.pop();
-        this.reform();
-        b.hp -= 3; b.flash = 0.07;
+        const spend = Math.max(1, Math.ceil(this.worth() / 40));
+        this.setWorth(this.worth() - spend);
+        b.hp -= spend * 3; b.flash = 0.07;
         this.burst(b.x + (Math.random() - 0.5) * 1.6, 1.2, b.z - 0.8, [this.skin.palette.t, '#ffd94d'], 6);
         Audio.sfx('hit', 40);
         if (b.hp <= 0) { this.bossDefeated(); return; }
-        if (this.crowd.length === 0) { this.endRun(false); return; }
+        if (this.worth() <= 0) { this.endRun(false); return; }
       }
     } else {
       b.attackT -= dt;
@@ -977,7 +976,7 @@ export class Game {
           if (b.z >= b.targetZ) { b.z = b.targetZ; b.lunge = 0; }
         }
       }
-      b.x += (this.playerX * 0.5 - b.x) * dt * 0.8;
+      b.x += (this.playerX * 0.3 - b.x) * dt * 0.5;
     }
   }
 
@@ -1051,7 +1050,7 @@ export class Game {
   hudState() {
     return {
       emeralds: this.save.emeralds + this.runEmeralds,
-      crowd: this.crowd.length,
+      crowd: this.worth(),
       progress: Math.min(1, this.playerZ / this.length),
       redstone: this.redstone, redstoneMax: TUNE.redstoneMax,
       level: this.level, biome: this.biome.name, mode: this.mode,
@@ -1202,7 +1201,7 @@ export class Game {
     for (const w of this.waves) {
       const steps = 14;
       ctx.globalAlpha = w.warn > 0 ? 0.22 + 0.12 * Math.sin(this.t * 16) : 0.4;
-      ctx.fillStyle = '#ff3b2e';
+      ctx.fillStyle = w.color || '#ff3b2e';
       const z0 = this.playerZ + 1, z1 = w.z;
       for (let i = 0; i < steps; i++) {
         const z = z0 + (z1 - z0) * (i / steps);
@@ -1251,11 +1250,13 @@ export class Game {
     const hatDef = this.cosmetic?.hat;
     const hatSpr = hatDef && hasSprite(hatDef.sprite) ? getSprite(hatDef.sprite) : null;
 
-    const drawUnit = (x, z, worldH, frame, bob, phase, isGiga, flash) => {
+    const drawUnit = (x, z, worldH, frame, bob, phase, tier, flash) => {
       const p = this.cam.project(x, 0, z);
       if (!p) return;
-      const palette = isGiga ? { ...skin.palette, b: '#f3c53f' } : skin.palette;
-      const palKey = isGiga ? `${skin.id}_giga` : skin.id;
+      // giants get a gold (giga) or fiery-gold (titan) boot accent to read as elite
+      const palette = tier === 2 ? { ...skin.palette, b: '#ff8c1a', L: '#c24a12' }
+        : tier === 1 ? { ...skin.palette, b: '#f3c53f' } : skin.palette;
+      const palKey = tier === 2 ? `${skin.id}_titan` : tier === 1 ? `${skin.id}_giga` : skin.id;
       q.add(z, (ctx) => {
         const hPx = worldH * p.s;
         const px1 = hPx / 18; // one art pixel of the 18px-tall runner
@@ -1277,12 +1278,18 @@ export class Game {
     for (const m of this.crowd) {
       drawUnit(this.playerX + m.ox, this.playerZ + m.oz, 1.45,
         Math.floor(this.t * 8 + m.phase) % 2,
-        Math.abs(Math.sin(this.t * 9 + m.phase)) * 0.12, m.phase, false, false);
+        Math.abs(Math.sin(this.t * 9 + m.phase)) * 0.12, m.phase, 0, false);
     }
     for (const g of this.gigas) {
-      drawUnit(this.playerX + g.ox, this.playerZ + g.oz, 1.45 * GIGA.scale,
+      drawUnit(this.playerX + g.ox, this.playerZ + g.oz, 1.45 * TIERS.gigaScale,
         Math.floor(this.t * 5 + g.phase) % 2,
-        Math.abs(Math.sin(this.t * 5 + g.phase)) * 0.16, g.phase, true, g.flash > 0);
+        Math.abs(Math.sin(this.t * 5 + g.phase)) * 0.16, g.phase, 1, g.flash > 0);
+    }
+    const tScale = 1.45 * this.titanScale();
+    for (const tt of this.titans) {
+      drawUnit(this.playerX + tt.ox, this.playerZ + tt.oz, tScale,
+        Math.floor(this.t * 4 + tt.phase) % 2,
+        Math.abs(Math.sin(this.t * 4 + tt.phase)) * 0.2, tt.phase, 2, tt.flash > 0);
     }
   }
 
@@ -1375,8 +1382,9 @@ export class Game {
     if (this.state !== 'run' && this.state !== 'boss') return;
     const p = this.cam.project(this.playerX, 2.3, this.playerZ);
     if (!p) return;
-    const n = this.crowd.length;
-    const label = this.gigas.length > 0 ? `${n} +${this.gigas.length}G` : `${n}`;
-    outlineText(ctx, label, p.sx, p.sy, Math.max(15, p.s * 0.62), n <= 3 && this.gigas.length === 0 ? '#ff8d7a' : '#ffffff');
+    // show total army worth — the number just keeps climbing, no cap
+    const w = this.worth();
+    const low = w <= 3;
+    outlineText(ctx, `${w}`, p.sx, p.sy, Math.max(15, p.s * 0.62), low ? '#ff8d7a' : '#ffffff');
   }
 }

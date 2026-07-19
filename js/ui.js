@@ -33,6 +33,11 @@ export class UI {
     };
     this.returnTo = 'menu';   // where BACK from shop/achievements goes
     this.achQueue = [];
+    // currency icon: bake the green emerald sprite into a CSS var so name + icon agree
+    try {
+      const em = getSprite('emerald');
+      document.documentElement.style.setProperty('--em-icon', `url(${em.frames[0].toDataURL()})`);
+    } catch { /* asset missing — chips just show the count */ }
     this._wire();
     // back-fill achievements a returning player already earned — silently, no popups
     checkAchievements(this.save);
@@ -181,7 +186,7 @@ export class UI {
     card.appendChild(nm);
     const tag = document.createElement('div');
     tag.className = 'skinTag';
-    tag.textContent = selected ? '✔ PICKED' : owned ? 'OWNED' : `💎 ${cost}`;
+    tag.innerHTML = selected ? '✔ PICKED' : owned ? 'OWNED' : `<span class="em"></span> ${cost}`;
     card.appendChild(tag);
     card.addEventListener('click', onClick);
     grid.appendChild(card);
@@ -427,7 +432,7 @@ export class UI {
     E.resultTitle.className = r.win ? 'win' : 'lose';
     E.resultStats.innerHTML = '';
     const rows = [
-      ['💎 Emeralds earned', `+${r.emeralds}`],
+      ['<span class="em"></span> Emeralds earned', `+${r.emeralds}`],
       ...(r.win ? [['🏆 Victory bonus', `+${r.bonus}`]] : []),
       ['👥 Biggest crowd', `${r.bestCrowd}`],
       ...(r.mode === 'shooter' ? [['🏹 Mobs blasted', `${r.kills}`]] : []),

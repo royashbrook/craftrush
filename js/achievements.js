@@ -4,8 +4,9 @@ export const ACHIEVEMENTS = [
   { id: 'start',        name: 'Off We Go!',      desc: 'Finish your first run',        icon: 'head_steve',    check: (s) => s.stats.runs >= 1 },
   { id: 'monster',      name: 'Monster Hunter',  desc: 'Defeat any boss',              icon: 'boss_slime',    check: (s) => Object.keys(s.stats.bossWins).length >= 1 },
   { id: 'squad',        name: 'Squad Goals',     desc: 'Grow a crowd of 50',           icon: 'head_alex',     check: (s) => s.bestCrowd >= 50 },
-  { id: 'crowded',      name: 'Overcrowded',     desc: 'Reach the max crowd of 170',   icon: 'head_zombie',   check: (s) => s.bestCrowd >= 170 },
+  { id: 'crowded',      name: 'Overcrowded',     desc: 'Reach an army of 170',         icon: 'head_zombie',   check: (s) => s.bestCrowd >= 170 },
   { id: 'giga',         name: 'GIGA STEVE!',     desc: 'Merge your first Giga Steve',   icon: 'iron_golem',    check: (s) => s.stats.gigas >= 1, special: true },
+  { id: 'titan',        name: 'TITAN STEVE!',    desc: 'Reach an army of 500',         icon: 'boss_ravager',  check: (s) => s.bestCrowd >= 500, special: true },
   { id: 'golem',        name: 'Iron Friend',     desc: 'Summon an Iron Golem',         icon: 'iron_golem',    check: (s) => s.stats.golems >= 1 },
   { id: 'sniper',       name: 'Sharpshooter',    desc: 'Blast 100 mobs',               icon: 'arrow',         check: (s) => s.stats.kills >= 100 },
   { id: 'massacre',     name: 'Mob Destroyer',   desc: 'Blast 1000 mobs',              icon: 'tnt_block',     check: (s) => s.stats.kills >= 1000, special: true },
@@ -18,7 +19,9 @@ export const ACHIEVEMENTS = [
   { id: 'hero',         name: 'Superhero',       desc: 'Equip a cape',                 icon: 'cape',          check: (s) => s.cosmetics.cape !== 'none' },
   { id: 'pet',          name: 'Best Friend',     desc: 'Adopt a pet',                  icon: 'wolf',          check: (s) => s.cosmetics.pet !== 'none' },
   { id: 'collector',    name: 'Collector',       desc: 'Own 8 cosmetics',              icon: 'golden_apple',  check: (s) => s.cosmeticsOwned.filter((x) => x !== 'none').length >= 8 },
-  { id: 'worldtour',    name: 'World Tour',      desc: 'Reach level 8',                icon: 'heart',         check: (s) => s.bestLevel >= 8, special: true },
+  { id: 'deepdark',     name: 'Into the Deep',   desc: 'Reach The Deep Dark',          icon: 'head_enderman', check: (s) => s.bestLevel >= 8 },
+  { id: 'warden',       name: 'Silence',         desc: 'Defeat the Warden',            icon: 'boss_warden',   check: (s) => !!s.stats.bossWins.deepdark, special: true },
+  { id: 'worldtour',    name: 'World Tour',      desc: 'Loop the whole world (level 9)', icon: 'heart',       check: (s) => s.bestLevel >= 9, special: true },
 ];
 
 // Returns newly-unlocked achievements (and records them in save.achievements).

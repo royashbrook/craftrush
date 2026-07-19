@@ -116,6 +116,7 @@ function drawTiled(ctx, img, offsetX, y, W, scaleY = 1) {
 
 export function renderWorld(ctx, cam, biome, t) {
   const { W, H, horizon } = cam;
+  if (!(W > 0 && H > 0)) return; // canvas not sized yet (e.g. hidden tab) — skip
   // sky
   const sky = ctx.createLinearGradient(0, 0, 0, horizon + 20);
   sky.addColorStop(0, biome.sky[0]);
@@ -177,6 +178,7 @@ export function renderWorld(ctx, cam, biome, t) {
       let col;
       if (onPath) col = ((xi + zi) & 1) ? g.pathB : (n > 0.75 ? g.pathB : g.pathA);
       else if (edge) col = ((xi + zi) & 1) ? g.edge : (n > 0.5 ? g.c : g.b);
+      else if (g.vein && n > 0.955) col = g.vein; // glowing sculk veins
       else col = n > 0.82 ? g.c : ((xi + zi) & 1 ? g.b : g.a);
       ctx.fillStyle = col;
       ctx.fillRect(sxa, y0, sxb - sxa + 0.6, hh + 0.6);

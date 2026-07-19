@@ -6,6 +6,16 @@ Iron Golem, and beat a boss at the end of every biome. All art and sound are
 generated procedurally — original pixel art "in the style of", zero downloaded
 assets, fully offline after first load.
 
+## Contributing
+
+This repo requires every commit message to reference a GitHub issue (e.g.
+`#12` or `Closes #12`). The check lives in a shared hook. Enable it once after
+cloning:
+
+```sh
+git config core.hooksPath .githooks
+```
+
 ## Run it
 
 Any static file server works (needs http:// for ES modules + service worker):
@@ -26,9 +36,10 @@ Open http://localhost:8080 — on a phone, use your machine's LAN IP, then
   SHOOT gates: good gates grow, bad gates shrink toward harmless.
 - **Redstone gauge** fills from hits/kills (or emeralds in Gate Dash). Tap the
   🗿 button (or Space) to summon an Iron Golem that flattens everything ahead.
-- **Giga Steves** (Bow Blitz): grow past the 170 crowd cap and every 10 overflow
-  runners merge into a giant with a squad-worth fat arrow and 10 hp. The run
-  survives as long as one giant still marches.
+- **Uncapped army**: crowd worth grows without limit. Beyond the rendered cap,
+  runners merge into **Giga Steves** (worth 10) and then **Titan Steves**
+  (worth 100), which grow bigger and hit harder the larger your army gets. The
+  on-screen number is your total army worth and just keeps climbing.
 - **Emeralds** buy skins AND cosmetics in the shop: capes (always visible — the
   camera rides behind the crowd), hats, arrow trails, pets. Beat the boss to
   advance to the next biome.
