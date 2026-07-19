@@ -1,0 +1,15 @@
+{
+  "name": "Craft Rush — Mob Runner",
+  "short_name": "Craft Rush",
+  "description": "Blocky crowd-runner: grow your mob, blast creepers, beat the boss!",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#141218",
+  "theme_color": "#141218",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Sprite QA</title>
+<style>
+  body { background: #2a2733; color: #fff; font-family: monospace; padding: 12px; }
+  .pack { margin-bottom: 18px; }
+  h2 { color: #7dff5a; font-size: 14px; margin: 8px 0; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .cell { background: #3a3444; border: 1px solid #000; padding: 6px; text-align: center; }
+  .cell canvas { image-rendering: pixelated; background: repeating-conic-gradient(#444 0 25%, #3c3c3c 0 50%) 0 0/12px 12px; display: block; margin: 0 auto 4px; }
+  .cell span { font-size: 10px; color: #cfc9d8; }
+</style>
+</head>
+<body>
+<div id="out"></div>
+<script type="module">
+const out = document.getElementById('out');
+const packs = [
+  ['../js/sprites/core.js', 'CORE'],
+  ['../js/sprites/hostiles.js', 'HOSTILES'],
+  ['../js/sprites/bosses.js', 'BOSSES'],
+  ['../js/sprites/scenery.js', 'SCENERY'],
+  ['../js/sprites/items.js', 'ITEMS'],
+];
+for (const [path, name] of packs) {
+  const div = document.createElement('div');
+  div.className = 'pack';
+  const h = document.createElement('h2');
+  h.textContent = name;
+  div.appendChild(h);
+  const row = document.createElement('div');
+  row.className = 'row';
+  div.appendChild(row);
+  out.appendChild(div);
+  try {
+    const mod = await import(path + '?t=' + Date.now());
+    const pack = mod[name];
+    for (const [id, s] of Object.entries(pack)) {
+      const scale = s.h > 30 ? 3 : 4;
+      for (let fi = 0; fi < s.frames.length; fi++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        const cv = document.createElement('canvas');
+        cv.width = s.w * scale; cv.height = s.h * scale;
+        const g = cv.getContext('2d');
+        for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+          const ch = s.frames[fi][y][x];
+          if (ch === '.') continue;
+          g.fillStyle = s.palette[ch] || '#ff00ff';
+          g.fillRect(x * scale, y * scale, scale, scale);
+        }
+        cell.appendChild(cv);
+        const lbl = document.createElement('span');
+        lbl.textContent = id + (s.frames.length > 1 ? ` f${fi}` : '');
+        cell.appendChild(lbl);
+        row.appendChild(cell);
+      }
+    }
+  } catch (e) {
+    h.textContent += ' — LOAD FAILED: ' + e.message;
+  }
+}
+</script>
+</body>
+</html>
