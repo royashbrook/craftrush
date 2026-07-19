@@ -178,7 +178,7 @@ export class UI {
     const exp = dailyExpedition();
     const st = expeditionStatus(this.save);
     E.expName.textContent = exp.name;
-    E.expDesc.textContent = exp.desc;
+    E.expDesc.textContent = exp.desc + ' (new expedition every week)';
     E.expStreak.textContent = st.streak > 0 ? `🔥 ${st.streak}` : '';
     E.btnExpedition.textContent = st.doneToday ? '↻ REPLAY EXPEDITION' : '▶ START EXPEDITION';
     const g = E.expIcon.getContext('2d');
@@ -435,6 +435,8 @@ export class UI {
     if (s.power.triple > 0) chips.push(`3× ${Math.ceil(s.power.triple)}s`);
     if (s.power.rapid > 0) chips.push(`⚡ ${Math.ceil(s.power.rapid)}s`);
     if (s.power.power > 0) chips.push(`💥 ${Math.ceil(s.power.power)}s`);
+    if (s.power.sword > 0) chips.push(`⚔ ${Math.ceil(s.power.sword)}s`);
+    if (s.power.axe > 0) chips.push(`🪓 ${Math.ceil(s.power.axe)}s`);
     const cstr = chips.join('  ');
     if (this._chips !== cstr) { this._chips = cstr; E.powerChips.textContent = cstr; }
     // boss

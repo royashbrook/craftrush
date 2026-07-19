@@ -58,19 +58,19 @@ export const CAMERAS = {
   overhead: { label: 'OVERHEAD', camBack: 6.5,  camHeight: 11.5, focal: 3.4, horizonFrac: 0.18 },
 };
 
-// Tiered crowd: worth grows without limit. Rendered as three tiers, each unit
-// worth 10x the last; worth beyond the render caps is held in `reserve`, which
-// scales the top tier bigger and hits harder ("bigger and bigger", no max).
+// Tiered crowd: worth grows without limit. Runners merge upward through the
+// ladder; worth beyond the render caps is held in `reserve`, which scales the
+// top tier bigger and hits harder ("bigger and bigger", no max).
 export const TIERS = {
-  maxRunners: 96,    // rendered tier-0 individuals
-  maxGigas: 12,      // tier-1, each worth 10 runners
-  maxTitans: 10,     // tier-2, each worth 100 runners
-  gigaWorth: 10,
-  titanWorth: 100,
-  gigaScale: 2.3,    // sprite worldH multiplier
-  titanScale: 3.5,
-  titanMaxGrow: 1.6, // extra scale multiplier at very high reserve
-  reserveFullScale: 4000, // reserve worth at which titans reach titanMaxGrow
+  maxRunners: 96,
+  // ladder above the basic runner; each unit fires one arrow worth `worth`
+  units: [
+    { name: 'MEGA STEVE',  worth: 10,   scale: 1.7, max: 12, boots: '#f3c53f', weight: 3,  color: '#ffd94d' },
+    { name: 'GIGA STEVE',  worth: 100,  scale: 2.6, max: 10, boots: '#ff8c1a', weight: 6,  color: '#ff8c1a' },
+    { name: 'ULTRA STEVE', worth: 1000, scale: 3.8, max: 8,  boots: '#c76bff', weight: 10, color: '#c76bff' },
+  ],
+  topMaxGrow: 1.5,          // extra top-tier scale at very high reserve
+  reserveFullScale: 30000,  // reserve worth at which top tier reaches topMaxGrow
 };
 
 export const MODES = {
@@ -249,6 +249,10 @@ export const EXPEDITIONS = [
     desc: 'Skeletons only. Dodge the arrow storm!',              mut: { enemies: ['skeleton', 'stray', 'skeleton'], emeraldMul: 1.5 } },
   { id: 'gate_frenzy',  name: 'Gate Frenzy',   icon: 'emerald',       mode: 'gates',
     desc: 'No bows — pure gates. Grow a giant army!',            mut: { gateBoost: true, emeraldMul: 2 } },
+  { id: 'frozen_stampede', name: 'Frozen Stampede', icon: 'head_skeleton', biome: 'snow', mode: 'shooter',
+    desc: 'Icy sprint — everything is faster. Hold on!',         mut: { speedMul: 1.3, emeraldMul: 2 } },
+  { id: 'swamp_things', name: 'Swamp Things',  icon: 'head_zombie',   biome: 'swamp',    mode: 'gates',
+    desc: 'Witch country, gates only. Choose wisely.',           mut: { gateBoost: true, enemyHpMul: 1.3, emeraldMul: 2 } },
 ];
 
 export function dayKey(d = new Date()) {
@@ -261,12 +265,19 @@ function hashStr(s) {
   return h >>> 0;
 }
 
-// The one expedition offered for a given day (defaults to today).
-export function dailyExpedition(key = dayKey()) {
-  const h = hashStr(key);
+// Expeditions rotate WEEKLY: the same theme runs all week and changes each
+// week, so ~9 themes covers about two months. The play streak stays daily.
+export function weekKey(d = new Date()) {
+  const days = Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
+  return Math.floor((days + 3) / 7); // +3 aligns the boundary to Mondays
+}
+
+// The expedition offered today (same all week; `key` stays the day for streaks).
+export function dailyExpedition(key = dayKey(), week = weekKey()) {
+  const h = hashStr(`week-${week}`);
   const exp = EXPEDITIONS[h % EXPEDITIONS.length];
   const level = 1 + (Math.floor(h / 7) % BIOMES.length); // varies scenery when biome not forced
-  return { ...exp, level, key };
+  return { ...exp, level, key, week };
 }
 
 function prevKey(key) {
