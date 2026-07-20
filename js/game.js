@@ -78,6 +78,8 @@ export class Game {
     this.bossDead = false;
     this.bigs = TIERS.units.map(() => []); // one array per ladder tier
     this.reserve = 0;
+    this._units = [];          // cached flat list of every crowd unit
+    this._reformDirty = false;
     this.playerX = 0; this.playerZ = 0; this.targetX = 0;
     this.speed = 0;
     this.redstone = 0;
@@ -260,8 +262,12 @@ export class Game {
     const r = Math.min(TIERS.maxRunners, rem);
     this.syncCount(this.crowd, r);
     this.reserve = rem - r;
-    this.reform();
+    // cache the flat unit list (cheap); defer the phyllotaxis placement so many
+    // worth changes in one frame (an emerald trail) only re-place once
+    this._units = this.crowd.concat(...this.bigs);
+    this._reformDirty = true;
     if (fx) {
+      this.flushReform(); // promotions are rare; place now so the pop lands right
       for (let i = TIERS.units.length - 1; i >= 0; i--) {
         if (this.bigs[i].length > prev[i]) {
           const u = TIERS.units[i];
@@ -325,7 +331,12 @@ export class Game {
   // ONE mixed clump: every unit (all sizes) packed in a single phyllotaxis
   // blob, big ones interleaved so they tower inside the crowd rather than the
   // little ones running way out front.
-  reform() {
+  reform() { this._reformDirty = true; this.flushReform(); }
+
+  // run the deferred placement at most once per frame
+  flushReform() {
+    if (!this._reformDirty) return;
+    this._reformDirty = false;
     const units = [];
     for (const m of this.crowd) units.push({ u: m, w: 1 });
     TIERS.units.forEach((t, i) => { for (const b of this.bigs[i]) units.push({ u: b, w: t.weight }); });
@@ -617,6 +628,7 @@ export class Game {
 
     this.cam.follow(this.playerX, this.playerZ, dt, true);
 
+    this.flushReform(); // place the crowd once if worth changed this frame
     // crowd member positions ease to formation
     for (const m of this.crowd) {
       m.ox += (m.tx - m.ox) * Math.min(1, dt * 6);
@@ -658,7 +670,9 @@ export class Game {
       this.hooks.onTutorial('golem');
     }
 
-    this.hooks.onHud(this.hudState());
+    // HUD refreshes ~15x/sec, not every frame — DOM writes are the cost
+    this._hudT = (this._hudT || 0) - dt;
+    if (this._hudT <= 0) { this._hudT = 1 / 15; this.hooks.onHud(this.hudState()); }
   }
 
   updateArrows(dt) {
@@ -784,7 +798,7 @@ export class Game {
         e.biteT -= dt;
         if (e.biteT <= 0 && distZ < 1.2 && distZ > -1) {
           let hit = false;
-          for (const u of [...this.crowd, ...this.bigs.flat()]) {
+          for (const u of this._units) {
             if (Math.abs(px + u.ox - e.x) < TUNE.biteReachX && Math.abs(pz + u.oz - e.z) < TUNE.biteReachZ) { hit = true; break; }
           }
           if (hit) {
@@ -948,7 +962,7 @@ export class Game {
         }
       } else if (s.z <= pz + 0.6) {
         s.dead = true;
-        for (const u of [...this.crowd, ...this.bigs.flat()]) {
+        for (const u of this._units) {
           if (Math.abs(px + u.ox - s.x) < 0.75) { this.killRunners(1, s.x, s.z); Audio.sfx('hurt', 100); break; }
         }
         continue;
@@ -1078,15 +1092,23 @@ export class Game {
   }
 
   hudState() {
-    return {
-      emeralds: this.save.emeralds + this.runEmeralds,
-      crowd: this.worth(),
-      progress: Math.min(1, this.playerZ / this.length),
-      redstone: this.redstone, redstoneMax: TUNE.redstoneMax,
-      level: this.level, biome: this.biome.name, mode: this.mode,
-      boss: this.boss && this.state === 'boss' ? { name: this.boss.name, hp: Math.max(0, this.boss.hp), max: this.boss.maxHp, needRunners: this.mode === 'gates' ? Math.ceil(this.boss.hp / 3) : null } : null,
-      power: this.power,
-    };
+    // reuse one object + one nested boss object to avoid per-call allocation
+    const h = this._hud || (this._hud = { boss: { name: '', hp: 0, max: 1, needRunners: null } });
+    h.emeralds = this.save.emeralds + this.runEmeralds;
+    h.crowd = this.worth();
+    h.progress = Math.min(1, this.playerZ / this.length);
+    h.redstone = this.redstone; h.redstoneMax = TUNE.redstoneMax;
+    h.level = this.level; h.biome = this.biome.name; h.mode = this.mode;
+    h.power = this.power;
+    if (this.boss && this.state === 'boss') {
+      const b = h.boss;
+      b.name = this.boss.name; b.hp = Math.max(0, this.boss.hp); b.max = this.boss.maxHp;
+      b.needRunners = this.mode === 'gates' ? Math.ceil(this.boss.hp / 3) : null;
+      h.bossActive = true;
+    } else {
+      h.bossActive = false;
+    }
+    return h;
   }
 
   // ---------- render ----------

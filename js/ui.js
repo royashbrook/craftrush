@@ -158,6 +158,9 @@ export class UI {
   hideAll() {
     for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen']) this.els[k].classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
+    // clear cached HUD values so the next run repaints from scratch
+    this._bossShown = false;
+    this._prog = this._fill = this._glabel = this._chips = this._em = this._lv = this._bossHint = this._ready = null;
   }
 
   showMenu() {
@@ -433,12 +436,15 @@ export class UI {
     if (this._em !== s.emeralds) { this._em = s.emeralds; E.hudEmeralds.textContent = `${s.emeralds}`; }
     const lv = `LV ${s.level} · ${s.biome}`;
     if (this._lv !== lv) { this._lv = lv; E.hudLevel.textContent = lv; }
-    E.hudProgress.style.width = `${(s.progress * 100).toFixed(1)}%`;
+    const prog = `${(s.progress * 100).toFixed(1)}%`;
+    if (this._prog !== prog) { this._prog = prog; E.hudProgress.style.width = prog; }
     const pct = s.redstone / s.redstoneMax;
-    E.golemFill.style.height = `${(pct * 100).toFixed(0)}%`;
+    const fill = `${(pct * 100).toFixed(0)}%`;
+    if (this._fill !== fill) { this._fill = fill; E.golemFill.style.height = fill; }
     const ready = pct >= 1;
-    E.golemBtn.classList.toggle('ready', ready);
-    E.golemLabel.textContent = ready ? 'GO!' : `${Math.floor(pct * 100)}%`;
+    if (this._ready !== ready) { this._ready = ready; E.golemBtn.classList.toggle('ready', ready); }
+    const glabel = ready ? 'GO!' : `${Math.floor(pct * 100)}%`;
+    if (this._glabel !== glabel) { this._glabel = glabel; E.golemLabel.textContent = glabel; }
     // powerups
     const chips = [];
     if (s.power.triple > 0) chips.push(`3× ${Math.ceil(s.power.triple)}s`);
@@ -449,13 +455,13 @@ export class UI {
     const cstr = chips.join('  ');
     if (this._chips !== cstr) { this._chips = cstr; E.powerChips.textContent = cstr; }
     // boss
-    if (s.boss) {
-      E.bossBar.classList.remove('hidden');
-      E.bossName.textContent = s.boss.name;
+    if (s.bossActive) {
+      if (!this._bossShown) { this._bossShown = true; E.bossBar.classList.remove('hidden'); E.bossName.textContent = s.boss.name; }
       E.bossFill.style.width = `${(s.boss.hp / s.boss.max * 100).toFixed(1)}%`;
-      E.bossHint.textContent = s.boss.needRunners ? `NEED ~${s.boss.needRunners} RUNNERS!` : '';
-    } else {
-      E.bossBar.classList.add('hidden');
+      const hint = s.boss.needRunners ? `NEED ~${s.boss.needRunners} RUNNERS!` : '';
+      if (this._bossHint !== hint) { this._bossHint = hint; E.bossHint.textContent = hint; }
+    } else if (this._bossShown) {
+      this._bossShown = false; E.bossBar.classList.add('hidden');
     }
   }
 

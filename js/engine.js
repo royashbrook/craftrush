@@ -117,11 +117,9 @@ function drawTiled(ctx, img, offsetX, y, W, scaleY = 1) {
 export function renderWorld(ctx, cam, biome, t) {
   const { W, H, horizon } = cam;
   if (!(W > 0 && H > 0)) return; // canvas not sized yet (e.g. hidden tab) — skip
-  // sky
-  const sky = ctx.createLinearGradient(0, 0, 0, horizon + 20);
-  sky.addColorStop(0, biome.sky[0]);
-  sky.addColorStop(1, biome.sky[1]);
-  ctx.fillStyle = sky;
+  // sky + fog gradients are static per biome/size — build once and cache
+  const grads = biomeGradients(ctx, biome, cam);
+  ctx.fillStyle = grads.sky;
   ctx.fillRect(0, 0, W, horizon + 20);
 
   const L = biomeLayers(biome);
@@ -185,14 +183,33 @@ export function renderWorld(ctx, cam, biome, t) {
     }
   }
 
-  // fog gradient over the far half
-  const fogTop = horizon + 2;
-  const fogBottom = cam.groundY(TUNE.viewDist * 0.45);
-  const fog = ctx.createLinearGradient(0, fogTop, 0, fogBottom);
-  fog.addColorStop(0, biome.fog + 'ff');
-  fog.addColorStop(1, biome.fog + '00');
-  ctx.fillStyle = fog;
-  ctx.fillRect(0, fogTop, W, fogBottom - fogTop);
+  // fog gradient over the far half (cached; jitter from cam bob is negligible)
+  ctx.fillStyle = grads.fog;
+  ctx.fillRect(0, grads.fogTop, W, grads.fogBottom - grads.fogTop);
+}
+
+// Cache the sky/fog gradients per (biome, canvas size, camera preset). The
+// fog bounds ignore the per-frame camera bob/shake offset, which is sub-pixel.
+const gradCache = new Map();
+function biomeGradients(ctx, biome, cam) {
+  const { W, horizon } = cam;
+  const key = `${biome.id}:${W}:${horizon}:${cam.h}:${cam.focal}`;
+  let g = gradCache.get(key);
+  if (!g) {
+    const sky = ctx.createLinearGradient(0, 0, 0, horizon + 20);
+    sky.addColorStop(0, biome.sky[0]);
+    sky.addColorStop(1, biome.sky[1]);
+    const fogTop = horizon + 2;
+    const s = (cam.focal * W * 0.14) / (TUNE.viewDist * 0.45);
+    const fogBottom = horizon + cam.h * s;
+    const fog = ctx.createLinearGradient(0, fogTop, 0, fogBottom);
+    fog.addColorStop(0, biome.fog + 'ff');
+    fog.addColorStop(1, biome.fog + '00');
+    g = { sky, fog, fogTop, fogBottom };
+    if (gradCache.size > 24) gradCache.clear();
+    gradCache.set(key, g);
+  }
+  return g;
 }
 
 // simple painter's queue for billboards/effects
