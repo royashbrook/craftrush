@@ -32,6 +32,7 @@ export class UI {
       achPop: $('achPop'), achPopIcon: $('achPopIcon'), achPopName: $('achPopName'),
       expCard: $('expCard'), expIcon: $('expIcon'), expName: $('expName'),
       expDesc: $('expDesc'), expStreak: $('expStreak'), btnExpedition: $('btnExpedition'),
+      steerL: $('steerL'), steerR: $('steerR'),
     };
     this.returnTo = 'menu';   // where BACK from shop/achievements goes
     this.achQueue = [];
@@ -78,6 +79,18 @@ export class UI {
     E.btnRetry.addEventListener('click', () => { Audio.sfx('click'); this.startRun(); });
     E.btnMenu.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
     E.golemBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); this.game.summonGolem(); });
+
+    // hold-to-steer buttons (also a visible hint that you can steer)
+    const steer = (btn, dir) => {
+      const on = (e) => { e.preventDefault(); this.game.holdSteer = dir; btn.classList.add('on'); };
+      const off = () => { if (this.game.holdSteer === dir) this.game.holdSteer = 0; btn.classList.remove('on'); };
+      btn.addEventListener('pointerdown', on);
+      btn.addEventListener('pointerup', off);
+      btn.addEventListener('pointerleave', off);
+      btn.addEventListener('pointercancel', off);
+    };
+    steer(E.steerL, -1);
+    steer(E.steerR, 1);
 
     // pause menu
     E.btnPause.addEventListener('click', () => { Audio.sfx('click'); this.openPause(); });
@@ -175,10 +188,10 @@ export class UI {
   refreshMenu() {
     const E = this.els;
     const biome = BIOMES[(this.save.level - 1) % BIOMES.length];
-    E.menuLevel.textContent = `LEVEL ${this.save.level} · ${biome.name.toUpperCase()}`;
+    E.menuLevel.textContent = `LV ${this.save.level} · ${biome.name.toUpperCase()}`;
     E.menuEmeralds.textContent = `${this.save.emeralds}`;
-    E.btnSound.textContent = this.save.sound ? '🔊 SOUND ON' : '🔇 SOUND OFF';
-    E.btnCamera.textContent = `📷 CAMERA: ${(CAMERAS[this.save.camera] || CAMERAS.far).label}`;
+    E.btnSound.textContent = this.save.sound ? '🔊 ON' : '🔇 OFF';
+    E.btnCamera.textContent = `📷 ${(CAMERAS[this.save.camera] || CAMERAS.far).label}`;
     E.modeShooter.classList.toggle('sel', this.save.mode === 'shooter');
     E.modeGates.classList.toggle('sel', this.save.mode === 'gates');
     E.modeDesc.textContent = MODES[this.save.mode].desc;

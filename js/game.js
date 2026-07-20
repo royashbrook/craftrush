@@ -97,6 +97,7 @@ export class Game {
     this.golemHintShown = false;
     this.expedition = null;
     this.mut = {};
+    this.holdSteer = 0; // -1/0/1 from the on-screen steer buttons
   }
 
   // ---------- run lifecycle ----------
@@ -171,9 +172,10 @@ export class Game {
       return;
     }
 
-    // keyboard steer
+    // keyboard + on-screen-button steer
     if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.targetX -= dt * 9;
     if (this.keys['ArrowRight'] || this.keys['KeyD']) this.targetX += dt * 9;
+    if (this.holdSteer) this.targetX += this.holdSteer * dt * 9;
     this.targetX = Math.max(-TUNE.laneHalf, Math.min(TUNE.laneHalf, this.targetX));
     this.playerX += (this.targetX - this.playerX) * Math.min(1, dt * TUNE.steerLerp);
 

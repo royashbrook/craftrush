@@ -69,8 +69,10 @@ export const TUNE = {
 
 // Camera presets — live-switchable in the menu, persisted in the save.
 export const CAMERAS = {
-  close:    { label: 'CLOSE',    camBack: 7.4,  camHeight: 4.6,  focal: 5.2, horizonFrac: 0.36 },
-  far:      { label: 'FAR',      camBack: 10.5, camHeight: 6.4,  focal: 4.6, horizonFrac: 0.33 },
+  // pulled back overall so the crowd sits higher and more track shows —
+  // portrait phones especially were showing everything too close/low
+  close:    { label: 'CLOSE',    camBack: 8.6,  camHeight: 5.6,  focal: 5.0, horizonFrac: 0.34 },
+  far:      { label: 'FAR',      camBack: 12.5, camHeight: 8.0,  focal: 4.3, horizonFrac: 0.30 },
   overhead: { label: 'OVERHEAD', camBack: 6.5,  camHeight: 11.5, focal: 3.4, horizonFrac: 0.18 },
 };
 

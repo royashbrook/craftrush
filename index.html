@@ -19,19 +19,23 @@
   #gameCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 
   .overlay { position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 14px; z-index: 10;
-    background: rgba(10, 8, 14, 0.55); padding: 20px calc(12px + env(safe-area-inset-left)); }
+    align-items: center; justify-content: center; gap: clamp(6px, 1.6vh, 14px); z-index: 10; overflow: hidden;
+    background: rgba(10, 8, 14, 0.55);
+    padding: clamp(8px, 2vh, 20px) calc(12px + env(safe-area-inset-left)); }
   .hidden { display: none !important; }
 
   .panel { background: rgba(22, 19, 28, 0.94); border: 3px solid #000;
     box-shadow: inset 2px 2px 0 rgba(255,255,255,0.12), inset -2px -2px 0 rgba(0,0,0,0.5), 0 8px 30px rgba(0,0,0,0.6);
-    padding: 18px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;
-    width: min(340px, 92%); max-height: 94%; overflow-y: auto; }
+    padding: clamp(10px, 1.8vh, 18px) 18px; display: flex; flex-direction: column; align-items: center;
+    gap: clamp(6px, 1.4vh, 12px);
+    width: min(340px, 92%); max-height: 100%; overflow-y: auto; }
 
-  .logo { font-size: 34px; font-weight: 900; letter-spacing: 2px; color: #7dff5a; line-height: 1.05;
+  .logo { font-size: clamp(22px, 6.5vh, 34px); font-weight: 900; letter-spacing: 2px; color: #7dff5a; line-height: 1.02;
     text-shadow: 3px 3px 0 #1c4d10, 5px 5px 0 rgba(0,0,0,0.8); text-align: center; }
-  .logo small { display: block; font-size: 13px; color: #ffd94d; letter-spacing: 6px;
+  .logo small { display: block; font-size: clamp(10px, 2.2vh, 13px); color: #ffd94d; letter-spacing: 6px;
     text-shadow: 2px 2px 0 rgba(0,0,0,0.8); margin-top: 4px; }
+  .btnRow3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
+  .btnRow3 .mcbtn { padding: 9px 4px; }
 
   .mcbtn { font-family: inherit; font-weight: 900; font-size: 16px; letter-spacing: 1px;
     color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.6); cursor: pointer;
@@ -66,7 +70,14 @@
   .modeRow { display: flex; width: 100%; gap: 0; }
   .modeRow .mcbtn { font-size: 13px; padding: 10px 4px; }
   .modeRow .mcbtn.sel { background: #2a7fd4; }
-  #modeDesc { font-size: 12px; color: #cfc9d8; text-align: center; line-height: 1.5; min-height: 3em; }
+  #modeDesc { font-size: 12px; color: #cfc9d8; text-align: center; line-height: 1.4; min-height: 2.4em; }
+  /* short screens: shave the extras so the whole menu always fits without scroll */
+  @media (max-height: 680px) {
+    #modeDesc { display: none; }
+    #expDesc { display: none; }
+    #expBody { gap: 7px; }
+    .mcbtn { padding: 9px 14px; font-size: 15px; }
+  }
 
   /* shop */
   #shopGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
@@ -94,10 +105,19 @@
   #powerChips { position: absolute; left: 0; right: 0; top: calc(62px + env(safe-area-inset-top));
     text-align: center; font-weight: 900; font-size: 13px; color: #ffd94d; text-shadow: 2px 2px 0 #000; }
 
-  #golemBtn { position: absolute; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom));
+  #golemBtn { position: absolute; left: calc(50% - 37px); bottom: calc(16px + env(safe-area-inset-bottom));
     width: 74px; height: 74px; border: 3px solid #000; background: #3a3444; pointer-events: auto;
     cursor: pointer; overflow: hidden; box-shadow: inset 2px 2px 0 rgba(255,255,255,0.2), 0 4px 14px rgba(0,0,0,0.5);
     display: flex; align-items: center; justify-content: center; flex-direction: column; }
+  /* faint hold-to-steer arrows that also hint the touch controls */
+  .steerBtn { position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); width: 74px; height: 74px;
+    border: 2px solid rgba(0,0,0,0.35); background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55);
+    font-size: 34px; font-weight: 900; pointer-events: auto; cursor: pointer; touch-action: none;
+    display: flex; align-items: center; justify-content: center; text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.12); }
+  #steerL { left: 12px; }
+  #steerR { right: 12px; }
+  .steerBtn:active, .steerBtn.on { background: rgba(255,255,255,0.22); color: #fff; }
   #golemFill { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; background: #b0332a; }
   #golemBtn.ready #golemFill { background: #e04a3f; }
   #golemBtn.ready { animation: pulse 0.7s infinite alternate; }
@@ -167,6 +187,8 @@
     <div id="progressWrap"><div id="hudProgress"></div></div>
     <div id="powerChips"></div>
     <button id="golemBtn"><div id="golemFill"></div><div id="golemIcon">🗿</div><div id="golemLabel">0%</div></button>
+    <button id="steerL" class="steerBtn">◀</button>
+    <button id="steerR" class="steerBtn">▶</button>
   </div>
 
   <div id="bossBar" class="hidden">
@@ -229,9 +251,11 @@
       </div>
 
       <button class="mcbtn" id="btnShop">🧑 SKINS &amp; SHOP</button>
-      <button class="mcbtn small" id="btnAch">🏆 ACHIEVEMENTS</button>
-      <button class="mcbtn small" id="btnCamera">📷 CAMERA: FAR</button>
-      <button class="mcbtn small" id="btnSound">🔊 SOUND ON</button>
+      <div class="btnRow3">
+        <button class="mcbtn small" id="btnAch">🏆 GOALS</button>
+        <button class="mcbtn small" id="btnCamera">📷 FAR</button>
+        <button class="mcbtn small" id="btnSound">🔊 ON</button>
+      </div>
     </div>
   </div>
 
