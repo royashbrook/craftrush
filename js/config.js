@@ -52,8 +52,8 @@ export const TUNE = {
   powerupDur: 9,
 
   // pickup magnet + victory vacuum
-  magnetRange: 3.46,    // blocks (sqrt of the old 12)
-  magnetPull: 3.2,      // per-second lerp toward the crowd
+  magnetRange: 4.6,     // blocks — covers the full lane so nothing slips past
+  magnetPull: 5,        // per-second lerp toward the crowd
   vacuumPull: 7,        // post-boss suck-in lerp
 
   // enemy/combat tuning

@@ -339,10 +339,21 @@ export const CombatMixin = {
         const dx = px - p.x, dz = pz - p.z, d2 = dx * dx + dz * dz;
         if (d2 < TUNE.magnetRange * TUNE.magnetRange) { p.x += dx * dt * TUNE.magnetPull; p.z += dz * dt * TUNE.magnetPull; }
       }
-      if (Math.abs(p.z - pz) < 2.2) {
-        let near = false;
-        for (const m of this.crowd) {
-          if (Math.abs(px + m.ox - p.x) < 1.0 && Math.abs(pz + m.oz - p.z) < 1.1) { near = true; break; }
+      // within the crowd's z-footprint (front to back)?
+      if (p.z < pz + 1.5 && p.z > pz - 2.4) {
+        let near;
+        if (def && def.magnet) {
+          // emeralds/rods: harvested anywhere the crowd sweeps the lane, so a
+          // giant-heavy army can never run one over without collecting it
+          near = Math.abs(px - p.x) < 2.6;
+        } else {
+          // physical pickups (apple, tnt, chest, powerups) need a unit to touch
+          near = Math.abs(px - p.x) < 1.3 && Math.abs(pz - p.z) < 1.3;
+          if (!near) {
+            for (const u of this._units) {
+              if (Math.abs(px + u.ox - p.x) < 1.1 && Math.abs(pz + u.oz - p.z) < 1.2) { near = true; break; }
+            }
+          }
         }
         if (near) this.collect(p);
       }
