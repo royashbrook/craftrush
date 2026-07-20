@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit } from './assets.js';
 import { Audio } from './audio.js';
@@ -39,6 +39,7 @@ export class UI {
     };
     this.returnTo = 'menu';   // where BACK from shop/achievements goes
     this.achQueue = [];
+    const vt = $('verTag'); if (vt) vt.textContent = 'v' + VERSION;
     // currency icon: bake the green emerald sprite into a CSS var so name + icon agree
     try {
       const em = getSprite('emerald');

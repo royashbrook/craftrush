@@ -6,6 +6,13 @@ Iron Golem, and beat a boss at the end of every biome. All art and sound are
 generated procedurally — original pixel art "in the style of", zero downloaded
 assets, fully offline after first load.
 
+## Versioning
+
+The build version lives in one place — `VERSION` in `js/config.js` — and shows
+in the top corner of the menu. Bump the patch each build (`0.2.1`, `0.2.2`, …)
+as work lands; tag the next `0.x` milestone in git (`v0.3`, …) when cutting a
+release.
+
 ## Develop
 
 No dependencies to install. Node 18+ only.

@@ -179,6 +179,8 @@
     background: #141218; color: #7dff5a; font-weight: 900; font-size: 18px; letter-spacing: 2px; }
   /* roy's maker's mark , the same colophon that rides every project (ported from royashbrook.com's
      Footer.astro to the game's monospace/dark theme). the red heart + gold sponsor stay literal. */
+  #verTag { position: absolute; top: calc(6px + env(safe-area-inset-top)); right: 10px; z-index: 11;
+    font-size: 10px; font-weight: 900; letter-spacing: 1px; color: rgba(255,255,255,0.4); pointer-events: none; }
   .makerMark { margin: 2px auto 0; text-align: center; font-family: inherit;
     font-size: 10px; letter-spacing: .3px; color: #8f88a0; line-height: 1.6; }
   .makerMark .mmHeart { display: inline-block; width: .9em; height: .9em; fill: #e0746a; vertical-align: -.12em; }
@@ -242,6 +244,7 @@
   </div>
 
   <div id="menu" class="overlay hidden">
+    <div id="verTag"></div>
     <div class="logo">CRAFT<br>RUSH<small>MOB RUNNER</small></div>
     <div class="panel">
       <div class="chipRow">

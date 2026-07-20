@@ -3,6 +3,10 @@
 // here, so a full reskin = new sprite packs + new tables. No engine changes.
 import { Audio } from './audio.js';
 
+// Build version shown in the UI. Bump the patch each build (0.2.1, 0.2.2, ...);
+// tag the next 0.x milestone in git when cutting a release.
+export const VERSION = '0.2.0';
+
 export const TUNE = {
   // world/camera
   laneHalf: 3.1,        // how far the crowd center can steer (blocks)
