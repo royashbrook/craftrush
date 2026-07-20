@@ -21,7 +21,8 @@ export const ACHIEVEMENTS = [
   { id: 'collector',    name: 'Collector',       desc: 'Own 8 cosmetics',              icon: 'golden_apple',  check: (s) => s.cosmeticsOwned.filter((x) => x !== 'none').length >= 8 },
   { id: 'deepdark',     name: 'Into the Deep',   desc: 'Reach The Deep Dark',          icon: 'head_enderman', check: (s) => s.bestLevel >= 8 },
   { id: 'warden',       name: 'Silence',         desc: 'Defeat the Warden',            icon: 'boss_warden',   check: (s) => !!s.stats.bossWins.deepdark, special: true },
-  { id: 'worldtour',    name: 'World Tour',      desc: 'Loop the whole world (level 9)', icon: 'heart',       check: (s) => s.bestLevel >= 9, special: true },
+  { id: 'worldtour',    name: 'World Tour',      desc: 'Reach level 9',                icon: 'heart',         check: (s) => s.bestLevel >= 9, special: true },
+  { id: 'fortress',     name: 'Fortress Raider', desc: 'Collect 15 blaze rods',        icon: 'blaze_rod',     check: (s) => (s.inventory && s.inventory.blazeRods || 0) >= 15, special: true },
   { id: 'explorer',     name: 'Explorer',        desc: 'Finish a daily expedition',    icon: 'chest',         check: (s) => (s.stats.expeditions || 0) >= 1 },
   { id: 'streak7',      name: 'Daily Grinder',   desc: 'Reach a 7-day expedition streak', icon: 'golden_apple', check: (s) => (s.expedition && s.expedition.streak || 0) >= 7, special: true },
 ];

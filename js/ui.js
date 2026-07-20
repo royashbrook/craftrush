@@ -496,6 +496,7 @@ export class UI {
       ...(r.win && !isExp ? [['🏆 Victory bonus', `+${r.bonus}`]] : []),
       ...(expFirst && r.emeraldMul > 1 ? [['✨ Expedition bonus', `${r.emeraldMul}× emeralds`]] : []),
       ...(streakBonus > 0 ? [[`🔥 Day ${streak} streak`, `+${streakBonus}`]] : []),
+      ...(r.rods > 0 ? [['🔥 Blaze rods', `+${r.rods}`]] : []),
       ...(isExp && !expFirst && r.win ? [['↻ Replay', 'base reward only']] : []),
       ['👥 Biggest crowd', `${r.bestCrowd}`],
       ...(r.mode === 'shooter' ? [['🏹 Mobs blasted', `${r.kills}`]] : []),

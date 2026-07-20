@@ -154,6 +154,18 @@ export const PICKUPS = {
   },
 };
 
+// Campaign resource: blaze rods drop from blazes in the Nether Fortress and
+// bank into the save inventory (the first step toward the structure campaign).
+PICKUPS.blaze_rod = {
+  sprite: 'blaze_rod', worldH: 0.7, magnet: true,
+  onCollect(g, p) {
+    g.runRods = (g.runRods || 0) + 1;
+    Audio.sfx('emerald', 60);
+    g.floaty('+1 ROD', p.x, p.z, '#ffd94d', 1.2);
+    g.burst(p.x, 1, p.z, ['#f5c542', '#ff8c1a'], 5, 3);
+  },
+};
+
 const POWERUP_NAMES = { triple: 'TRIPLE SHOT!', rapid: 'RAPID FIRE!', power: 'POWER SHOT!', sword: 'SWORD TIME!', axe: 'AXE TIME!' };
 for (const k of Object.keys(POWERUP_NAMES)) {
   PICKUPS['powerup_' + k] = {
@@ -238,6 +250,17 @@ export const BIOMES = [
     scenery: ['deepslate_pillar', 'sculk_sensor', 'sculk_shrieker', 'deepslate_pillar'],
     enemies: ['enderman', 'skeleton', 'creeper', 'spider'],
     obstacle: 'deepslate_pillar', boss: 'boss_warden',
+  },
+  {
+    // First campaign STRUCTURE: the Nether Fortress. Blaze-heavy, rods drop
+    // and bank to the save inventory. Boss: the Wither.
+    id: 'nether_fortress', name: 'Nether Fortress', structure: true, dropsRods: true,
+    sky: ['#160406', '#43101a'], sun: null, clouds: false, embers: true,
+    hillFar: '#3a1218', hillNear: '#2a0d12', fog: '#43101a',
+    ground: { a: '#4e1a22', b: '#451620', c: '#3a1218', pathA: '#5a2028', pathB: '#4e1a22', edge: '#6e2028' },
+    scenery: ['nether_brick_pillar', 'nether_brick_pillar', 'crimson_fungus', 'basalt_pillar'],
+    enemies: ['blaze', 'zombified_piglin', 'skeleton', 'blaze'],
+    obstacle: 'nether_brick_pillar', boss: 'boss_wither',
   },
 ];
 
@@ -373,7 +396,8 @@ export function loadSave() {
     cosmeticsOwned: ['none'],
     stats: { runs: 0, wins: 0, kills: 0, golems: 0, gigas: 0, totalEmeralds: 0, bossWins: {}, expeditions: 0 },
     achievements: [],
-    expedition: { lastDay: null, streak: 0 } };
+    expedition: { lastDay: null, streak: 0 },
+    inventory: { blazeRods: 0, obsidian: 0 } };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return def;

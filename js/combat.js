@@ -27,6 +27,10 @@ export const CombatMixin = {
       if (Math.random() < TUNE.killDropChance) {
         this.pickups.push({ kind: 'emerald', x: e.x, z: e.z, t: 0, hp: 0 });
       }
+      // blazes in the Nether Fortress drop blaze rods for the campaign inventory
+      if (this.biome.dropsRods && e.id === 'blaze') {
+        this.pickups.push({ kind: 'blaze_rod', x: e.x, z: e.z, t: 0, hp: 0 });
+      }
     }
   },
 

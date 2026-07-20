@@ -88,7 +88,7 @@ export class Game {
     this.playerX = 0; this.playerZ = 0; this.targetX = 0;
     this.speed = 0;
     this.redstone = 0;
-    this.runEmeralds = 0; this.kills = 0; this.bestCrowd = 0;
+    this.runEmeralds = 0; this.kills = 0; this.bestCrowd = 0; this.runRods = 0;
     this.volleyT = 0;
     this.power = { triple: 0, rapid: 0, power: 0, sword: 0, axe: 0 };
     this.events = [];
@@ -253,11 +253,15 @@ export class Game {
         st.bossWins[this.biome.id] = (st.bossWins[this.biome.id] || 0) + 1;
       }
     }
+    // bank campaign resources collected this run
+    if (this.runRods > 0 && this.save.inventory) {
+      this.save.inventory.blazeRods = (this.save.inventory.blazeRods || 0) + this.runRods;
+    }
     this.hooks.onRunEnd({
       win, level: this.level, emeralds: total, pickupEmeralds: this.runEmeralds, bonus,
-      emeraldMul: mul,
+      emeraldMul: mul, rods: this.runRods,
       kills: this.kills, bestCrowd: this.bestCrowd,
-      biome: this.biome.name, mode: this.mode,
+      biome: this.biome.name, mode: this.mode, structure: !!this.biome.structure,
       expedition: this.expedition ? { id: this.expedition.id, name: this.expedition.name } : null,
     });
   }
