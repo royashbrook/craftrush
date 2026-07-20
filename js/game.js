@@ -1,11 +1,10 @@
 // Craft Rush core game: crowd sim, dual-mode (shooter / gates), procedural
 // levels, enemies, bosses, effects. World units: blocks; +z is down-track.
-import { TUNE, ENEMY_TYPES, BOSS_TYPES, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS } from './config.js';
+import { TUNE, ENEMY_TYPES, BOSS_TYPES, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS, PICKUPS } from './config.js';
 import { Camera, renderWorld, DrawQueue, drawShadow, outlineText, mulberry32, hash2 } from './engine.js';
 import { getSprite, blit, hasSprite } from './assets.js';
 import { Audio } from './audio.js';
 
-const PPB_ART = 12.5; // art pixels per world block (runner is 18px ≈ 1.45 blocks)
 
 export class Game {
   constructor(canvas, save, hooks) {
@@ -516,7 +515,7 @@ export class Game {
     this.boss = {
       id: this.biome.boss, type: bt, name: bt.name,
       hp, maxHp: hp,
-      x: 0, z: this.length + 17, targetZ: this.length + 10,
+      x: 0, z: this.length + TUNE.bossSpawnZ, targetZ: this.length + TUNE.bossHoldZ,
       t: 0, flash: 0, attackT: 3.2, attackIdx: 0, lunge: 0, entering: true,
     };
     this.state = 'boss';
@@ -680,7 +679,7 @@ export class Game {
   arrowHitTest(a) {
     for (const e of this.enemies) {
       if (e.dead || e.z < a.z - 0.5 || e.z > a.z + 0.6) continue;
-      if (Math.abs(e.x - a.x) < 0.55) {
+      if (Math.abs(e.x - a.x) < TUNE.arrowHitX) {
         this.damageEnemy(e, a.dmg);
         this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerHit);
         a.dead = true;
@@ -693,7 +692,7 @@ export class Game {
     }
     for (const o of this.obstacles) {
       if (o.hp <= 0 || Math.abs(o.z - a.z) > 0.6) continue;
-      if (Math.abs(a.x - o.x) < 0.55) { o.hp--; o.wobble = 0.15; a.dead = true; if (o.hp <= 0) this.breakObstacle(o); return; }
+      if (Math.abs(a.x - o.x) < TUNE.arrowHitX) { o.hp--; o.wobble = 0.15; a.dead = true; if (o.hp <= 0) this.breakObstacle(o); return; }
     }
     for (const p of this.pickups) {
       if (p.kind !== 'chest' || p.dead || Math.abs(p.z - a.z) > 0.6) continue;
@@ -730,7 +729,7 @@ export class Game {
       e.flash = Math.max(0, e.flash - dt);
       const distZ = e.z - pz;
       if (distZ < -3) { e.dead = true; continue; } // passed behind
-      const aggro = distZ < 26;
+      const aggro = distZ < TUNE.aggroRange;
       const type = e.type;
 
       if (type.kind === 'exploder') {
@@ -786,7 +785,7 @@ export class Game {
         if (e.biteT <= 0 && distZ < 1.2 && distZ > -1) {
           let hit = false;
           for (const u of [...this.crowd, ...this.bigs.flat()]) {
-            if (Math.abs(px + u.ox - e.x) < 0.9 && Math.abs(pz + u.oz - e.z) < 1.1) { hit = true; break; }
+            if (Math.abs(px + u.ox - e.x) < TUNE.biteReachX && Math.abs(pz + u.oz - e.z) < TUNE.biteReachZ) { hit = true; break; }
           }
           if (hit) {
             e.biteT = type.bitePeriod || 0.8;
@@ -812,7 +811,7 @@ export class Game {
     for (const z of new Set(crossing.map(g => g.z))) {
       const pair = crossing.filter(g => g.z === z);
       const hit = pair
-        .filter(g => Math.abs(px - g.x) < g.halfW + 0.25)
+        .filter(g => Math.abs(px - g.x) < g.halfW + TUNE.gateHitMargin)
         .sort((a, b) => Math.abs(px - a.x) - Math.abs(px - b.x))[0];
       if (hit) this.applyGate(hit);
       pair.forEach(g => { g.used = true; });
@@ -850,14 +849,15 @@ export class Game {
     for (const p of this.pickups) {
       if (p.dead) continue;
       p.t += dt;
-      // victory vacuum: after the boss dies, everything flies into the crowd
-      if (this.bossDead && p.kind !== 'chest') {
-        p.x += (px - p.x) * Math.min(1, dt * 7);
-        p.z += (pz - p.z) * Math.min(1, dt * 7);
-      } else if (p.kind === 'emerald') {
+      const def = PICKUPS[p.kind];
+      // victory vacuum: after the boss dies, everything (bar grounded) flies in
+      if (this.bossDead && !(def && def.grounded)) {
+        p.x += (px - p.x) * Math.min(1, dt * TUNE.vacuumPull);
+        p.z += (pz - p.z) * Math.min(1, dt * TUNE.vacuumPull);
+      } else if (def && def.magnet) {
         // gentle always-on magnet so mob drops visibly get scooped up
         const dx = px - p.x, dz = pz - p.z, d2 = dx * dx + dz * dz;
-        if (d2 < 12) { p.x += dx * dt * 3.2; p.z += dz * dt * 3.2; }
+        if (d2 < TUNE.magnetRange * TUNE.magnetRange) { p.x += dx * dt * TUNE.magnetPull; p.z += dz * dt * TUNE.magnetPull; }
       }
       if (Math.abs(p.z - pz) < 2.2) {
         let near = false;
@@ -871,35 +871,12 @@ export class Game {
   }
 
   collect(p) {
-    if (p.kind === 'chest') {
-      if (this.mode === 'gates') this.openChest(p);
-      return; // shooter: must shoot it open
-    }
+    const def = PICKUPS[p.kind];
+    if (!def) return;
+    // shooterAuto:false items (chests) can't be grabbed by touch in shooter mode
+    if (this.mode === 'shooter' && def.shooterAuto === false) return;
     p.dead = true;
-    if (p.kind === 'emerald') {
-      this.runEmeralds += TUNE.emeraldPickup;
-      if (this.mode === 'gates') this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerEmeraldGatesMode);
-      Audio.sfx('emerald', 60);
-      this.burst(p.x, 1, p.z, ['#2eff70', '#1fcf58'], 4, 3);
-    } else if (p.kind === 'apple') {
-      this.addRunners(3);
-      Audio.sfx('apple');
-    } else if (p.kind === 'tnt') {
-      this.flashFx = 0.8;
-      this.freeze = 0.09;
-      Audio.sfx('bigboom');
-      this.cam.shake = 1;
-      const hits = this.enemies.filter(e => !e.dead && e.z > this.playerZ - 2 && e.z < this.playerZ + 30);
-      for (const e of hits) this.damageEnemy(e, 999, true);
-      for (const o of this.obstacles) if (o.z < this.playerZ + 30) { o.hp = 0; this.breakObstacle(o); }
-      this.floaty('BOOM!', this.playerX, this.playerZ + 5, '#ff9d3c', 2.2);
-    } else if (p.kind.startsWith('powerup_')) {
-      const k = p.kind.slice(8);
-      this.power[k] = TUNE.powerupDur;
-      Audio.sfx('powerup');
-      const names = { triple: 'TRIPLE SHOT!', rapid: 'RAPID FIRE!', power: 'POWER SHOT!', sword: 'SWORD TIME!', axe: 'AXE TIME!' };
-      this.floaty(names[k] || k.toUpperCase(), p.x, p.z, '#ffd94d', 1.4);
-    }
+    def.onCollect(this, p);
   }
 
   updateSummons(dt) {
@@ -998,7 +975,7 @@ export class Game {
       this.chargeT = (this.chargeT || 0) - dt;
       if (this.chargeT <= 0 && this.worth() > 0) {
         this.chargeT = 0.09;
-        const spend = Math.max(1, Math.ceil(this.worth() / 40));
+        const spend = Math.max(1, Math.ceil(this.worth() / TUNE.chargeSpendDivisor));
         this.setWorth(this.worth() - spend);
         b.hp -= spend * 3; b.flash = 0.07;
         this.burst(b.x + (Math.random() - 0.5) * 1.6, 1.2, b.z - 0.8, [this.skin.palette.t, '#ffd94d'], 6);
@@ -1217,11 +1194,10 @@ export class Game {
   renderPickups(q) {
     for (const p of this.pickups) {
       if (p.dead) continue;
-      const bob = Math.sin(p.t * 3 + p.z) * 0.12 + 0.5;
-      const idMap = { emerald: 'emerald', apple: 'golden_apple', tnt: 'tnt_block', chest: 'chest', powerup_triple: 'powerup_triple', powerup_rapid: 'powerup_rapid', powerup_power: 'powerup_power', powerup_sword: 'powerup_sword', powerup_axe: 'powerup_axe' };
-      const id = idMap[p.kind] || 'emerald';
+      const def = PICKUPS[p.kind] || PICKUPS.emerald;
+      const bob = def.grounded ? 0 : Math.sin(p.t * 3 + p.z) * 0.12 + 0.5;
       const frame = Math.floor(p.t * 3) % 2;
-      this.bb(q, id, p.x, p.z, p.kind === 'chest' ? 1.0 : 0.72, { yOff: p.kind === 'chest' ? 0 : bob, frame, zBias: -0.01 });
+      this.bb(q, def.sprite, p.x, p.z, def.worldH, { yOff: bob, frame, zBias: -0.01 });
     }
   }
 

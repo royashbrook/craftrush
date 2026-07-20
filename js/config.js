@@ -1,6 +1,7 @@
 // Craft Rush — tuning, biomes, skins, modes, persistence.
 // Everything gameplay-mechanical references ROLES (enemy ids, sprite ids) from
 // here, so a full reskin = new sprite packs + new tables. No engine changes.
+import { Audio } from './audio.js';
 
 export const TUNE = {
   // world/camera
@@ -49,6 +50,21 @@ export const TUNE = {
 
   // powerups
   powerupDur: 9,
+
+  // pickup magnet + victory vacuum
+  magnetRange: 3.46,    // blocks (sqrt of the old 12)
+  magnetPull: 3.2,      // per-second lerp toward the crowd
+  vacuumPull: 7,        // post-boss suck-in lerp
+
+  // enemy/combat tuning
+  aggroRange: 26,       // blocks at which enemies notice the crowd
+  biteReachX: 0.9, biteReachZ: 1.1,   // contact-bite box
+  arrowHitX: 0.55,      // arrow vs enemy/obstacle half-width
+  gateHitMargin: 0.25,  // gate crossing overlap slack
+
+  // boss arena (blocks past the track end)
+  bossSpawnZ: 17, bossHoldZ: 10,
+  chargeSpendDivisor: 40, // gates-mode charge: worth spent per tick = worth/this
 };
 
 // Camera presets — live-switchable in the menu, persisted in the save.
@@ -104,6 +120,51 @@ export const BOSS_TYPES = {
   boss_dragon:  { name: 'ENDER DRAGON',  hp: 220, worldH: 5.4, attacks: ['skulls', 'charge', 'minions'] },
   boss_warden:  { name: 'THE WARDEN',    hp: 300, worldH: 5.0, attacks: ['sonicboom', 'minions', 'sonicboom', 'charge'] },
 };
+
+// Pickup registry: sprite + behavior for every collectible. Adding a new
+// minecrafty pickup (obsidian, blaze rods, wither skulls) is one entry here.
+// grounded = sits on the ground (no float bob). shooterAuto:false = must be
+// shot open, not collected by touch (chests). magnet = drawn toward the crowd.
+export const PICKUPS = {
+  emerald: {
+    sprite: 'emerald', worldH: 0.72, magnet: true,
+    onCollect(g, p) {
+      g.runEmeralds += TUNE.emeraldPickup;
+      if (g.mode === 'gates') g.redstone = Math.min(TUNE.redstoneMax, g.redstone + TUNE.redstonePerEmeraldGatesMode);
+      Audio.sfx('emerald', 60);
+      g.burst(p.x, 1, p.z, ['#2eff70', '#1fcf58'], 4, 3);
+    },
+  },
+  apple: {
+    sprite: 'golden_apple', worldH: 0.72,
+    onCollect(g) { g.addRunners(3); Audio.sfx('apple'); },
+  },
+  tnt: {
+    sprite: 'tnt_block', worldH: 0.72,
+    onCollect(g) {
+      g.flashFx = 0.8; g.freeze = 0.09; Audio.sfx('bigboom'); g.cam.shake = 1;
+      for (const e of g.enemies) if (!e.dead && e.z > g.playerZ - 2 && e.z < g.playerZ + 30) g.damageEnemy(e, 999, true);
+      for (const o of g.obstacles) if (o.z < g.playerZ + 30) { o.hp = 0; g.breakObstacle(o); }
+      g.floaty('BOOM!', g.playerX, g.playerZ + 5, '#ff9d3c', 2.2);
+    },
+  },
+  chest: {
+    sprite: 'chest', worldH: 1.0, grounded: true, shooterAuto: false,
+    onCollect(g, p) { g.openChest(p); },
+  },
+};
+
+const POWERUP_NAMES = { triple: 'TRIPLE SHOT!', rapid: 'RAPID FIRE!', power: 'POWER SHOT!', sword: 'SWORD TIME!', axe: 'AXE TIME!' };
+for (const k of Object.keys(POWERUP_NAMES)) {
+  PICKUPS['powerup_' + k] = {
+    sprite: 'powerup_' + k, worldH: 0.72,
+    onCollect(g, p) {
+      g.power[k] = TUNE.powerupDur;
+      Audio.sfx('powerup');
+      g.floaty(POWERUP_NAMES[k], p.x, p.z, '#ffd94d', 1.4);
+    },
+  };
+}
 
 export const BIOMES = [
   {

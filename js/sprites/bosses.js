@@ -289,7 +289,7 @@ export const BOSSES = {
   },
   boss_warden: {
     w: 34, h: 38, anchor: 'bottom',
-    palette: { k: '#0a1416', d: '#16303a', t: '#20454f', h: '#2c5a66', r: '#0f2228', c: '#2fd6d6', C: '#aeffff', y: '#112024' },
+    palette: { k: '#0a1416', d: '#16303a', t: '#20454f', h: '#2c5a66', r: '#0f2228', c: '#2fd6d6', C: '#aeffff' },
     frames: [
       [
         "..........C..C......C..C..........",
