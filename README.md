@@ -11,11 +11,21 @@ assets, fully offline after first load.
 No dependencies to install. Node 18+ only.
 
 ```sh
-node --test tests/*.test.mjs      # run the pure-logic test suite
+node --test tests/*.test.mjs      # unit + headless integration tests (25, no deps)
 node tools/build.mjs              # build dist/ with a generated SW precache
 node tools/validate_sprites.mjs js/sprites/*.js   # validate sprite packs
 python3 tools/devserver.py 8300   # no-cache dev server for iterating on modules
 ```
+
+Two test layers:
+- **Unit + integration** (`tests/*.test.mjs`, zero dependencies) — pure logic
+  plus a headless harness that drives the real `Game` class through full runs
+  with a stubbed canvas, so cross-module regressions surface without a browser.
+- **Browser e2e** (Playwright, dev-only). One-time setup then run:
+  ```sh
+  npm install && npx playwright install chromium
+  npx playwright test              # desktop + mobile viewports
+  ```
 
 `tools/build.mjs` copies the runtime files into `dist/` and regenerates the
 service-worker precache list and a content-hashed cache version from the actual

@@ -1,0 +1,17 @@
+{
+  "name": "craftrush",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Craft Rush — a blocky Minecraft-style crowd-runner PWA.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:e2e": "playwright test",
+    "build": "node tools/build.mjs",
+    "sprites": "node tools/validate_sprites.mjs js/sprites/*.js",
+    "dev": "python3 tools/devserver.py 8300"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}
