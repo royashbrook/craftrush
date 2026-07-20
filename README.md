@@ -6,6 +6,22 @@ Iron Golem, and beat a boss at the end of every biome. All art and sound are
 generated procedurally — original pixel art "in the style of", zero downloaded
 assets, fully offline after first load.
 
+## Develop
+
+No dependencies to install. Node 18+ only.
+
+```sh
+node --test tests/*.test.mjs      # run the pure-logic test suite
+node tools/build.mjs              # build dist/ with a generated SW precache
+node tools/validate_sprites.mjs js/sprites/*.js   # validate sprite packs
+python3 tools/devserver.py 8300   # no-cache dev server for iterating on modules
+```
+
+`tools/build.mjs` copies the runtime files into `dist/` and regenerates the
+service-worker precache list and a content-hashed cache version from the actual
+file tree, so the precache can never drift. All asset paths are relative, so
+`dist/` serves correctly under a subpath such as `/craftrush`.
+
 ## Contributing
 
 This repo requires every commit message to reference a GitHub issue (e.g.
