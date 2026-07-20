@@ -1,0 +1,30 @@
+name: deploy royashbrook.com
+
+# on push to main, rebuild + redeploy royashbrook.com so it re-pulls this game into /craftrush and the
+# update shows up right away (instead of waiting for the site's daily cron). reuses the SAME fleet
+# Cloudflare "Edit Workers" token the site itself deploys with (repo secret CLOUDFLARE_API_TOKEN), so
+# there is no new credential to mint. skips green if the secret is absent, so it is safe to merge now.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: build + deploy royashbrook.com (its build re-pulls this game into /craftrush)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN not set , skipping the site redeploy (add the secret to enable)."
+            exit 0
+          fi
+          git clone --depth 1 https://github.com/royashbrook/royashbrook.com site
+          cd site
+          npm ci
+          npm run build
+          npx wrangler deploy
