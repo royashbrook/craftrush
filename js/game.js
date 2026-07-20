@@ -476,7 +476,8 @@ export class Game {
 
   applyGate(gt) {
     gt.used = true;
-    const n = this.crowd.length;
+    // multiply/divide act on the WHOLE army worth, not just the rendered runners
+    const n = this.worth();
     if (gt.op === 'add') { this.addRunners(gt.val); Audio.sfx('gate_good'); }
     else if (gt.op === 'mul') { this.addRunners(n * (gt.val - 1)); Audio.sfx('gate_good'); }
     else if (gt.op === 'sub') { if (gt.val > 0) { this.killRunners(gt.val); Audio.sfx('gate_bad'); this.floaty(`−${gt.val}`, gt.x, gt.z, '#ff6d5a', 1.5); } }
@@ -558,24 +559,31 @@ export class Game {
   // ---------- input ----------
   _initInput() {
     const c = this.canvas;
-    let dragging = false, lastX = 0;
-    const down = (px) => { dragging = true; lastX = px; };
-    const move = (px) => {
-      if (!dragging || (this.state !== 'run' && this.state !== 'boss')) return;
+    let dragging = false, lastX = null;
+    // relative steer from a pointer delta (blocks per on-screen pixel)
+    const steer = (px) => {
+      if (this.paused || (this.state !== 'run' && this.state !== 'boss')) { lastX = px; return; }
+      if (lastX === null) { lastX = px; return; }
       const p = this.cam.project(0, 0, this.playerZ);
       const pxPerBlock = p ? p.s : 60;
       this.targetX = Math.max(-TUNE.laneHalf, Math.min(TUNE.laneHalf, this.targetX + (px - lastX) / (pxPerBlock * 0.75)));
       lastX = px;
       if (!this.save.tutorialSeen) { this.save.tutorialSeen = true; this.hooks.onTutorial(null); }
     };
-    c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); down(e.clientX); });
-    c.addEventListener('pointermove', (e) => move(e.clientX));
+    c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); dragging = true; lastX = e.clientX; });
+    c.addEventListener('pointermove', (e) => {
+      // mouse steers on plain movement (no button); touch/pen require a drag
+      if (e.pointerType === 'mouse' || dragging) steer(e.clientX);
+    });
     c.addEventListener('pointerup', () => { dragging = false; });
     c.addEventListener('pointercancel', () => { dragging = false; });
+    // reset the reference point when the mouse leaves, so re-entry doesn't jump
+    c.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') lastX = null; });
     this.keys = {};
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
       if (e.code === 'Space') { e.preventDefault(); this.summonGolem(); }
+      else if (e.code === 'Escape') { e.preventDefault(); this.hooks.onPause && this.hooks.onPause(); }
     });
     window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
   }

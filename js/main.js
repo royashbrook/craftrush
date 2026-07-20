@@ -19,8 +19,16 @@ async function boot() {
     onHud: (s) => ui && ui.updateHud(s),
     onRunEnd: (r) => ui && ui.showResult(r),
     onTutorial: (k) => ui && ui.toast(k),
+    onPause: () => ui && ui.togglePause(),
   });
   ui = new UI(game, save);
+
+  // auto-pause when the tab is hidden so runs don't die in the background
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && (game.state === 'run' || game.state === 'boss') && !game.paused) {
+      ui.openPause();
+    }
+  });
 
   const stage = document.getElementById('stage');
   function fit() {

@@ -106,6 +106,7 @@ export class UI {
   openPause() {
     if (this.game.state !== 'run' && this.game.state !== 'boss') return;
     this.game.paused = true;
+    Audio.stopMusic(); // don't let the sequencer pile up notes while hidden/paused
     this.refreshPause();
     this.els.pause.classList.remove('hidden');
   }
@@ -113,6 +114,14 @@ export class UI {
   closePause() {
     this.game.paused = false;
     this.els.pause.classList.add('hidden');
+    if (this.save.sound) Audio.music(this.game.state === 'boss' ? 'boss' : 'run');
+  }
+
+  // Escape key: toggle pause during a run; ignore on other screens
+  togglePause() {
+    if (this.game.state !== 'run' && this.game.state !== 'boss') return;
+    if (this.game.paused) { Audio.sfx('click'); this.closePause(); }
+    else { Audio.sfx('click'); this.openPause(); }
   }
 
   refreshPause() {
