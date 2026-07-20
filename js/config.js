@@ -69,10 +69,11 @@ export const TUNE = {
 
 // Camera presets — live-switchable in the menu, persisted in the save.
 export const CAMERAS = {
-  // pulled back overall so the crowd sits higher and more track shows —
-  // portrait phones especially were showing everything too close/low
-  close:    { label: 'CLOSE',    camBack: 8.6,  camHeight: 5.6,  focal: 5.0, horizonFrac: 0.34 },
-  far:      { label: 'FAR',      camBack: 12.5, camHeight: 8.0,  focal: 4.3, horizonFrac: 0.30 },
+  // crowd should sit in the bottom third with lots of track receding ahead, so
+  // you can see hazards coming. FAR (the default) is a steep behind-and-above
+  // view; sprites are billboards so they still read face-on at any angle.
+  close:    { label: 'CLOSE',    camBack: 9.0,  camHeight: 9.0,  focal: 4.6, horizonFrac: 0.32 },
+  far:      { label: 'FAR',      camBack: 12.0, camHeight: 18.0, focal: 3.9, horizonFrac: 0.30 },
   overhead: { label: 'OVERHEAD', camBack: 6.5,  camHeight: 11.5, focal: 3.4, horizonFrac: 0.18 },
 };
 
@@ -409,4 +410,25 @@ export function loadSave() {
 
 export function persistSave(save) {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* private mode */ }
+}
+
+// ---- backup codes (Cookie-Clicker style) + reset ----
+// A save code is base64(JSON) with a short "CR1|" prefix so it's recognizable.
+export function exportSave(save) {
+  try { return 'CR1|' + btoa(unescape(encodeURIComponent(JSON.stringify(save)))); } catch { return ''; }
+}
+
+export function importSave(code) {
+  try {
+    const raw = String(code).trim().replace(/^CR1\|/, '');
+    const obj = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    if (!obj || typeof obj !== 'object' || typeof obj.level !== 'number') return null;
+    const merged = { ...loadSave(), ...obj }; // fill any missing fields with defaults
+    localStorage.setItem(SAVE_KEY, JSON.stringify(merged));
+    return merged;
+  } catch { return null; }
+}
+
+export function resetSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
 }

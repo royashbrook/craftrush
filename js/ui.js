@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, dailyExpedition, expeditionStatus, recordExpedition, persistSave } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit } from './assets.js';
 import { Audio } from './audio.js';
@@ -33,6 +33,9 @@ export class UI {
       expCard: $('expCard'), expIcon: $('expIcon'), expName: $('expName'),
       expDesc: $('expDesc'), expStreak: $('expStreak'), btnExpedition: $('btnExpedition'),
       steerL: $('steerL'), steerR: $('steerR'),
+      btnData: $('btnData'), settings: $('settings'), saveExport: $('saveExport'),
+      saveImport: $('saveImport'), btnCopySave: $('btnCopySave'), btnLoadSave: $('btnLoadSave'),
+      btnReset: $('btnReset'), setMsg: $('setMsg'), btnSettingsBack: $('btnSettingsBack'),
     };
     this.returnTo = 'menu';   // where BACK from shop/achievements goes
     this.achQueue = [];
@@ -56,6 +59,24 @@ export class UI {
     E.btnShopBack.addEventListener('click', () => { Audio.sfx('click'); this.back(); });
     E.btnExpedition.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.startExpedition(); });
     E.btnAch.addEventListener('click', () => { Audio.sfx('click'); this.showAchievements('menu'); });
+    E.btnData.addEventListener('click', () => { Audio.sfx('click'); this.showSettings(); });
+    E.btnSettingsBack.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
+    E.btnCopySave.addEventListener('click', () => {
+      E.saveExport.select();
+      try { navigator.clipboard.writeText(E.saveExport.value); } catch { document.execCommand('copy'); }
+      E.setMsg.textContent = 'Copied! Keep it somewhere safe.';
+    });
+    E.btnLoadSave.addEventListener('click', () => {
+      const merged = importSave(E.saveImport.value);
+      if (merged) { E.setMsg.textContent = 'Loaded! Restarting…'; setTimeout(() => location.reload(), 700); }
+      else { E.setMsg.textContent = 'That code did not work. Check for typos.'; }
+    });
+    E.btnReset.addEventListener('click', () => {
+      if (confirm('Reset EVERYTHING? Your emeralds, skins, and progress will be erased. This cannot be undone.')) {
+        resetSave();
+        location.reload();
+      }
+    });
     E.btnAchBack.addEventListener('click', () => { Audio.sfx('click'); this.back(); });
     E.btnSound.addEventListener('click', () => {
       this.save.sound = !this.save.sound;
@@ -168,8 +189,16 @@ export class UI {
     this.toast(null);
   }
 
+  showSettings() {
+    this.hideAll();
+    this.els.saveExport.value = exportSave(this.save);
+    this.els.saveImport.value = '';
+    this.els.setMsg.textContent = '';
+    this.els.settings.classList.remove('hidden');
+  }
+
   hideAll() {
-    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen']) this.els[k].classList.add('hidden');
+    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings']) this.els[k].classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
     // clear cached HUD values so the next run repaints from scratch
     this._bossShown = false;
