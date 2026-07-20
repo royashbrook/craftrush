@@ -1,0 +1,31 @@
+name: notify royashbrook.com
+
+# on push to main, ping royashbrook.com to redeploy, its build re-pulls this game from main, so a
+# change here shows up on the site right away instead of waiting for the site's daily cron.
+#
+# needs one repo secret: SITE_DISPATCH_TOKEN , a fine-grained PAT scoped to ONLY
+# royashbrook/royashbrook.com with "Contents: read and write" (repository_dispatch needs write).
+# without the secret this step just skips (stays green), so it is safe to merge before the token exists.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: dispatch site redeploy
+        env:
+          TOKEN: ${{ secrets.SITE_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "SITE_DISPATCH_TOKEN not set , skipping the site redeploy ping (add the secret to enable)."
+            exit 0
+          fi
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/royashbrook/royashbrook.com/dispatches \
+            -d '{"event_type":"craftrush-update"}'
+          echo "dispatched craftrush-update to royashbrook.com"
