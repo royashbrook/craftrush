@@ -75,6 +75,46 @@ export const CORE = {
       ],
     ],
   },
+  // Villager head: bald brown head, unibrow, dot eyes, long central nose. Shared
+  // by every home villager; profession is read from the robe body, not the face.
+  head_villager: {
+    w: 8, h: 8, anchor: 'center',
+    palette: { s: '#a8763f', n: '#8a5f30', w: '#4a3420', k: '#241a10', m: '#7a5228' },
+    frames: [
+      [
+        "ssssssss",
+        "ssssssss",
+        "swwwwwws",
+        "sksnnsks",
+        "sssnnsss",
+        "sssnnsss",
+        "ssmmmmss",
+        "ssssssss",
+      ],
+    ],
+  },
+  // Villager robe body: crossed arms over a center apron stripe, robe to the feet.
+  // Robe colours (r/R/a) are overridden per profession; s = hands.
+  villager_body: {
+    w: 12, h: 12, anchor: 'bottom',
+    palette: { r: '#7a5a3a', R: '#5f4528', a: '#9a7a4a', s: '#a8763f' },
+    frames: [
+      [
+        "..rrrrrrrr..",
+        "..rrraarrr..",
+        "..rRraarRr..",
+        "..rrraarrr..",
+        "..rssaassr..",
+        "..rssaassr..",
+        "..rrraarrr..",
+        "..rrraarrr..",
+        "..rRraarRr..",
+        "..rrraarrr..",
+        "..rrrrrrrr..",
+        "...RR..RR...",
+      ],
+    ],
+  },
   // Enderman lives in core (End-biome enemy) so the roster works even if a pack fails.
   enderman: {
     w: 14, h: 28, anchor: 'bottom',

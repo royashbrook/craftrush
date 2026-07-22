@@ -250,7 +250,7 @@ export class UI {
         cv.width = 40; cv.height = 56;
         cv.style.width = '40px'; cv.style.height = '56px';
         cv.style.animationDelay = `${(VILLAGERS.indexOf(v) % 5) * 0.2}s`;
-        this.drawSkinPreview(cv, this.skinFor(v));
+        this.drawSkinPreview(cv, v);
         wrap.appendChild(cv);
         const cnt = document.createElement('div');
         cnt.className = 'cnt'; cnt.textContent = `×${h.villagers[v.id]}`;
@@ -269,7 +269,7 @@ export class UI {
       card.className = 'vCard';
       const cv = document.createElement('canvas');
       cv.width = 64; cv.height = 88;
-      this.drawSkinPreview(cv, this.skinFor(v));
+      this.drawSkinPreview(cv, v);
       card.appendChild(cv);
       const info = document.createElement('div');
       info.className = 'vInfo';
@@ -284,8 +284,6 @@ export class UI {
       E.villagerList.appendChild(card);
     }
   }
-
-  skinFor(villager) { return SKINS.find(s => s.id === villager.skin) || SKINS[0]; }
 
   buyVillager(id) {
     const h = this.homeData();
@@ -493,7 +491,7 @@ export class UI {
     const g = cv.getContext('2d');
     g.imageSmoothingEnabled = false;
     const head = getSprite(skin.head);
-    const body = getSprite('runner_body_front', skin.palette, `body_${skin.id}`);
+    const body = getSprite(skin.body || 'runner_body_front', skin.palette, `body_${skin.id}`);
     blit(g, body, 0, 32, 86, 46);
     blit(g, head, 0, 32, 22, 36);
   }

@@ -335,12 +335,17 @@ export const COSMETICS = {
 // you're away. Each additional villager of a type costs base * costRate^owned
 // (the classic idle curve). Art reuses existing character skins — no new sprites.
 export const HOME = { costRate: 1.15, idleCapMs: 8 * 3600 * 1000 };
+// Every villager shares the villager head + robe body; the profession reads from
+// the robe colours (like Minecraft profession robes). s = hands (shared skin).
+const VSKIN = '#a8763f';
+const villager = (id, name, base, income, r, R, a) =>
+  ({ id, name, base, income, head: 'head_villager', body: 'villager_body', palette: { s: VSKIN, r, R, a } });
 export const VILLAGERS = [
-  { id: 'farmer',    name: 'Farmer',    skin: 'steve',    base: 50,    income: 5 },
-  { id: 'miner',     name: 'Miner',     skin: 'alex',     base: 250,   income: 24 },
-  { id: 'fisher',    name: 'Fisher',    skin: 'zombie',   base: 1000,  income: 85 },
-  { id: 'trader',    name: 'Trader',    skin: 'piglin',   base: 4000,  income: 300 },
-  { id: 'librarian', name: 'Librarian', skin: 'enderman', base: 15000, income: 1000 },
+  villager('farmer',    'Farmer',    50,    5,    '#8a6a2f', '#6a4f22', '#c9a94a'), // straw brown
+  villager('miner',     'Miner',     250,   24,   '#3a3f47', '#282c32', '#6a7078'), // toolsmith apron
+  villager('fisher',    'Fisher',    1000,  85,   '#4a6a8a', '#35506a', '#7aa0c0'), // blue
+  villager('trader',    'Trader',    4000,  300,  '#7a4a8a', '#5a3468', '#a06ab0'), // cleric purple
+  villager('librarian', 'Librarian', 15000, 1000, '#dcd6c0', '#b0a890', '#f4f0e4'), // white robe
 ];
 
 // cost of the NEXT villager of `id` given how many are already owned
