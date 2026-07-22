@@ -1,6 +1,7 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
+const BLOCK_COLORS = { stone: '#8a8a8a', coal: '#42413f', iron: '#c8a878', gold: '#e8c84a', diamond: '#5ce0e0', emerald: '#2ecc5e' };
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit } from './assets.js';
 import { Audio } from './audio.js';
@@ -36,6 +37,9 @@ export class UI {
       btnHome: $('btnHome'), homeBadge: $('homeBadge'), home: $('home'), homeEmeralds: $('homeEmeralds'),
       homeWelcome: $('homeWelcome'), homeIncome: $('homeIncome'), homeScene: $('homeScene'),
       villagerList: $('villagerList'), btnHomeBack: $('btnHomeBack'),
+      btnMine: $('btnMine'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
+      mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'), digFace: $('digFace'),
+      btnPickUp: $('btnPickUp'), btnMineBack: $('btnMineBack'),
       btnData: $('btnData'), settings: $('settings'), saveExport: $('saveExport'),
       saveImport: $('saveImport'), btnCopySave: $('btnCopySave'), btnLoadSave: $('btnLoadSave'),
       btnReset: $('btnReset'), setMsg: $('setMsg'), btnSettingsBack: $('btnSettingsBack'),
@@ -65,6 +69,9 @@ export class UI {
     E.btnAch.addEventListener('click', () => { Audio.sfx('click'); this.showAchievements('menu'); });
     E.btnHome.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showHome(); });
     E.btnHomeBack.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
+    E.btnMine.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showMine(); });
+    E.btnMineBack.addEventListener('click', () => { Audio.sfx('click'); persistSave(this.save); this.showMenu(); });
+    E.btnPickUp.addEventListener('click', () => this.upgradePickaxe());
     E.btnData.addEventListener('click', () => { Audio.sfx('click'); this.showSettings(); });
     E.btnSettingsBack.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
     E.btnCopySave.addEventListener('click', () => {
@@ -307,6 +314,106 @@ export class UI {
     this.renderHome();
   }
 
+  // ---- mining minigame ----
+  mineData() {
+    const m = this.save.mine || (this.save.mine = { depth: 0, energy: MINE.energyCap, energyTs: 0, pickaxe: 'wood' });
+    if (typeof m.depth !== 'number') m.depth = 0;
+    if (typeof m.energy !== 'number') m.energy = MINE.energyCap;
+    if (typeof m.energyTs !== 'number') m.energyTs = 0;
+    if (!m.pickaxe) m.pickaxe = 'wood';
+    return m;
+  }
+
+  makeBlock(depth) { return { depth, kind: blockKind(depth), maxHp: blockHp(depth), hp: blockHp(depth) }; }
+
+  showMine() {
+    this.hideAll();
+    const m = this.mineData();
+    if (!m.energyTs) { m.energyTs = Date.now(); persistSave(this.save); } // seed the recharge clock
+    this.buildDigFace();
+    this.els.mine.classList.remove('hidden');
+    this.renderMine();
+  }
+
+  buildDigFace() {
+    const m = this.mineData(), n = MINE.cols * MINE.rows;
+    this.digGrid = Array.from({ length: n }, () => this.makeBlock(m.depth));
+    const face = this.els.digFace;
+    face.innerHTML = '';
+    this.digCells = [];
+    for (let i = 0; i < n; i++) {
+      const cell = document.createElement('button');
+      cell.className = 'block';
+      const crack = document.createElement('span'); crack.className = 'crack';
+      cell.appendChild(crack);
+      cell.addEventListener('click', () => this.mineTap(i));
+      face.appendChild(cell);
+      this.digCells.push(cell);
+    }
+  }
+
+  renderMine() {
+    const E = this.els, m = this.mineData(), now = Date.now();
+    E.mineEmeralds.textContent = `${this.save.emeralds}`;
+    const cur = mineEnergy(m, now), cap = MINE.energyCap;
+    E.energyBar.style.width = `${(cur / cap) * 100}%`;
+    E.energyText.textContent = `⚡ ${cur} / ${cap}`;
+    E.digFace.classList.toggle('spent', cur <= 0);
+    const pick = PICKAXES.find(p => p.id === m.pickaxe) || PICKAXES[0];
+    E.mineStats.textContent = `Depth ${m.depth}  ·  ${pick.name} Pickaxe (⛏ ${pick.dmg})`;
+    for (let i = 0; i < this.digCells.length; i++) {
+      const cell = this.digCells[i], blk = this.digGrid[i];
+      cell.style.background = BLOCK_COLORS[blk.kind] || '#8a8a8a';
+      const dmg = 1 - blk.hp / blk.maxHp;
+      cell.querySelector('.crack').style.opacity = dmg > 0 ? (0.15 + dmg * 0.6).toFixed(2) : '0';
+    }
+    const next = nextPickaxe(m.pickaxe);
+    if (next) {
+      E.btnPickUp.innerHTML = `⬆ ${next.name} Pickaxe (⛏ ${next.dmg}) · <span class="em"></span> ${next.cost}`;
+      E.btnPickUp.style.opacity = this.save.emeralds >= next.cost ? '1' : '0.6';
+    } else {
+      E.btnPickUp.innerHTML = '⛏ Netherite Pickaxe — maxed!';
+      E.btnPickUp.style.opacity = '0.6';
+    }
+  }
+
+  mineTap(i) {
+    const m = this.mineData(), now = Date.now();
+    const cur = mineEnergy(m, now);
+    if (cur <= 0) { Audio.sfx('gate_bad'); this.renderMine(); return; }
+    m.energy = cur - 1; m.energyTs = now; // spend one swing of energy
+    const blk = this.digGrid[i], cell = this.digCells[i];
+    blk.hp -= pickaxeDmg(m.pickaxe);
+    if (blk.hp <= 0) {
+      m.depth += 1;
+      let pay = blockPay(blk.depth);
+      const crit = Math.random() < MINE.gemCritChance;
+      if (crit) pay *= MINE.gemCritMult;
+      this.save.emeralds += pay;
+      cell.classList.remove('pop'); void cell.offsetWidth; cell.classList.add('pop');
+      const pop = document.createElement('span'); pop.className = 'pay';
+      pop.textContent = (crit ? '💎 +' : '+') + pay;
+      cell.appendChild(pop); setTimeout(() => pop.remove(), 700);
+      Audio.sfx(crit ? 'chest' : 'emerald');
+      this.digGrid[i] = this.makeBlock(m.depth);
+    } else {
+      Audio.sfx('hit', 30);
+    }
+    persistSave(this.save);
+    this.renderMine();
+  }
+
+  upgradePickaxe() {
+    const m = this.mineData(), next = nextPickaxe(m.pickaxe);
+    if (!next) return;
+    if (this.save.emeralds < next.cost) { Audio.sfx('gate_bad'); return; }
+    this.save.emeralds -= next.cost;
+    m.pickaxe = next.id;
+    persistSave(this.save);
+    Audio.sfx('buy');
+    this.renderMine();
+  }
+
   showSettings() {
     this.hideAll();
     this.els.saveExport.value = exportSave(this.save);
@@ -316,7 +423,7 @@ export class UI {
   }
 
   hideAll() {
-    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home']) this.els[k].classList.add('hidden');
+    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home', 'mine']) this.els[k].classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
     // clear cached HUD values so the next run repaints from scratch
     this._bossShown = false;
@@ -343,6 +450,7 @@ export class UI {
     E.modeGates.classList.toggle('sel', this.save.mode === 'gates');
     E.modeDesc.textContent = MODES[this.save.mode].desc;
     E.homeBadge.classList.toggle('hidden', this.homePending() <= 0); // idle emeralds waiting
+    E.mineBadge.classList.toggle('hidden', mineEnergy(this.mineData(), Date.now()) < MINE.energyCap); // fully charged
     this.refreshExpedition();
   }
 

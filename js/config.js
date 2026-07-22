@@ -368,6 +368,38 @@ export function pendingIdle(villagers, lastCollect, now) {
   return Math.floor(homeIncomeRate(villagers) * elapsed / 3600000);
 }
 
+// Mining minigame: tap a dig face to break blocks for emeralds, dig endlessly
+// downward, upgrade the pickaxe. Energy-gated (refills over real time) so it
+// can't out-earn the runner and gives a recharge return-hook.
+export const MINE = { energyCap: 60, energyRefillMs: 20000, gemCritChance: 0.06, gemCritMult: 5, cols: 4, rows: 4 };
+export const PICKAXES = [
+  { id: 'wood',      name: 'Wooden',    dmg: 1,  cost: 0 },
+  { id: 'stone',     name: 'Stone',     dmg: 2,  cost: 200 },
+  { id: 'iron',      name: 'Iron',      dmg: 4,  cost: 1000 },
+  { id: 'gold',      name: 'Gold',      dmg: 7,  cost: 4000 },
+  { id: 'diamond',   name: 'Diamond',   dmg: 12, cost: 15000 },
+  { id: 'netherite', name: 'Netherite', dmg: 20, cost: 50000 },
+];
+// strata by depth — deeper is rarer/prettier
+const MINE_STRATA = [
+  { at: 200, kind: 'emerald' }, { at: 100, kind: 'diamond' }, { at: 50, kind: 'gold' },
+  { at: 25, kind: 'iron' }, { at: 10, kind: 'coal' }, { at: 0, kind: 'stone' },
+];
+export const blockHp = (depth) => 1 + Math.floor(depth / 6);
+export const blockPay = (depth) => 1 + Math.floor(depth / 8);
+export const blockKind = (depth) => (MINE_STRATA.find(s => depth >= s.at) || MINE_STRATA[MINE_STRATA.length - 1]).kind;
+export const pickaxeDmg = (id) => (PICKAXES.find(p => p.id === id) || PICKAXES[0]).dmg;
+export const pickaxeCost = (id) => { const p = PICKAXES.find(x => x.id === id); return p ? p.cost : Infinity; };
+export function nextPickaxe(id) {
+  const i = PICKAXES.findIndex(p => p.id === id);
+  return (i >= 0 && i < PICKAXES.length - 1) ? PICKAXES[i + 1] : null;
+}
+// current energy given the stored value + real time since energyTs, capped
+export function mineEnergy(mine, now) {
+  const gained = Math.floor((now - (mine.energyTs || now)) / MINE.energyRefillMs);
+  return Math.max(0, Math.min(MINE.energyCap, (mine.energy ?? MINE.energyCap) + gained));
+}
+
 // Daily Expeditions: one date-seeded themed run per day, identical for everyone
 // with no server. `mut` holds the run modifiers the engine reads.
 export const EXPEDITIONS = [
@@ -450,7 +482,8 @@ export function loadSave() {
     achievements: [],
     expedition: { lastDay: null, streak: 0 },
     inventory: { blazeRods: 0, obsidian: 0 },
-    home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 } };
+    home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 },
+    mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' } };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return def;
