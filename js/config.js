@@ -483,7 +483,8 @@ export function loadSave() {
     expedition: { lastDay: null, streak: 0 },
     inventory: { blazeRods: 0, obsidian: 0 },
     home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 },
-    mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' } };
+    mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' },
+    playmates: [] };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return def;
@@ -497,6 +498,9 @@ export function winBonus(level, bestPower) {
   return TUNE.winBonusBase + level * TUNE.winBonusPerLevel
     + Math.round(Math.log10(Math.max(1, bestPower)) * TUNE.winBonusPowerK);
 }
+
+// clamp a normalized fraction (used for draggable playmate positions)
+export const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
 export function persistSave(save) {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* private mode */ }

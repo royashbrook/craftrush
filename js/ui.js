@@ -1,9 +1,9 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
 const BLOCK_COLORS = { stone: '#8a8a8a', coal: '#42413f', iron: '#c8a878', gold: '#e8c84a', diamond: '#5ce0e0', emerald: '#2ecc5e' };
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
-import { getSprite, blit } from './assets.js';
+import { getSprite, blit, hasSprite } from './assets.js';
 import { Audio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -37,6 +37,8 @@ export class UI {
       btnHome: $('btnHome'), homeBadge: $('homeBadge'), home: $('home'), homeEmeralds: $('homeEmeralds'),
       homeWelcome: $('homeWelcome'), homeIncome: $('homeIncome'), homeScene: $('homeScene'),
       villagerList: $('villagerList'), btnHomeBack: $('btnHomeBack'),
+      btnPlayroom: $('btnPlayroom'), playroom: $('playroom'), btnAddFriend: $('btnAddFriend'),
+      playScene: $('playScene'), dressPanel: $('dressPanel'), btnPlayroomBack: $('btnPlayroomBack'), playHint: $('playHint'),
       btnMine: $('btnMine'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
       mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'), digFace: $('digFace'),
       btnPickUp: $('btnPickUp'), btnMineBack: $('btnMineBack'),
@@ -69,6 +71,9 @@ export class UI {
     E.btnAch.addEventListener('click', () => { Audio.sfx('click'); this.showAchievements('menu'); });
     E.btnHome.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showHome(); });
     E.btnHomeBack.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
+    E.btnPlayroom.addEventListener('click', () => { Audio.sfx('click'); this.showPlayroom(); });
+    E.btnPlayroomBack.addEventListener('click', () => { Audio.sfx('click'); persistSave(this.save); this.showHome(); });
+    E.btnAddFriend.addEventListener('click', () => this.addFriend());
     E.btnMine.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showMine(); });
     E.btnMineBack.addEventListener('click', () => { Audio.sfx('click'); persistSave(this.save); this.showMenu(); });
     E.btnPickUp.addEventListener('click', () => this.upgradePickaxe());
@@ -414,6 +419,195 @@ export class UI {
     this.renderMine();
   }
 
+  // ---- playroom (dressable playmates) ----
+  ownedSkins() { return SKINS.filter(s => this.save.unlocked.includes(s.id)); }
+  ownedCos(cat) { return COSMETICS[cat].filter(c => c.id === 'none' || this.save.cosmeticsOwned.includes(c.id)); }
+  skinById(id) { return SKINS.find(s => s.id === id) || SKINS[0]; }
+
+  // compose a front-facing dressed character (skin + cape behind + hat) at any size
+  drawDressedCharacter(cv, skinObj, cos = {}) {
+    const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+    g.clearRect(0, 0, cv.width, cv.height);
+    const S = cv.height / 88, cx = cv.width / 2;
+    if (cos.cape && cos.cape !== 'none') {
+      const def = COSMETICS.cape.find(c => c.id === cos.cape);
+      if (def) {
+        const cape = getSprite('cape', def.rainbow ? { c: '#ff5545', C: '#3fa9ff' } : def.colors, `pm_cape_${cos.cape}`);
+        blit(g, cape, 0, cx, 48 * S, 20 * S); // a mantle at the shoulders (front view)
+      }
+    }
+    const body = getSprite(skinObj.body || 'runner_body_front', skinObj.palette, `pm_body_${skinObj.id}`);
+    blit(g, body, 0, cx, 86 * S, 46 * S);
+    const head = getSprite(skinObj.head);
+    blit(g, head, 0, cx, 22 * S, 36 * S);
+    if (cos.hat && cos.hat !== 'none') {
+      const def = COSMETICS.hat.find(h => h.id === cos.hat);
+      if (def && hasSprite(def.sprite)) {
+        const hat = getSprite(def.sprite);
+        blit(g, hat, 0, cx, 8 * S, (hat.h / hat.w) * 30 * S);
+      }
+    }
+  }
+
+  // ensure save.playmates exists and every entry references owned/valid items
+  playmatesData() {
+    if (!Array.isArray(this.save.playmates)) this.save.playmates = [];
+    const owned = new Set(this.save.unlocked);
+    for (const p of this.save.playmates) {
+      if (!owned.has(p.skin)) p.skin = 'steve';
+      if (!p.cosmetics) p.cosmetics = { cape: 'none', hat: 'none' };
+      for (const cat of ['cape', 'hat']) {
+        const id = p.cosmetics[cat];
+        if (id && id !== 'none' && !this.save.cosmeticsOwned.includes(id)) p.cosmetics[cat] = 'none';
+      }
+      p.x = clamp01(typeof p.x === 'number' ? p.x : 0.5);
+      p.y = clamp01(typeof p.y === 'number' ? p.y : 0.7);
+    }
+    return this.save.playmates;
+  }
+
+  showPlayroom() {
+    this.hideAll();
+    this.playmatesData();
+    this.els.dressPanel.classList.add('hidden');
+    this.els.playroom.classList.remove('hidden');
+    this.renderPlayroom();
+  }
+
+  addFriend() {
+    const owned = this.ownedSkins();
+    const list = this.playmatesData();
+    const skin = owned[list.length % owned.length].id; // cycle through owned skins
+    list.push({ skin, cosmetics: { cape: 'none', hat: 'none' }, x: 0.3 + Math.random() * 0.4, y: 0.55 + Math.random() * 0.3 });
+    persistSave(this.save);
+    Audio.sfx('powerup');
+    this.renderPlayroom();
+  }
+
+  renderPlayroom() {
+    const E = this.els, list = this.playmatesData();
+    const scene = E.playScene;
+    scene.innerHTML = '';
+    if (!list.length) {
+      const empty = document.createElement('div');
+      empty.className = 'playEmpty';
+      empty.textContent = 'No friends yet — tap ＋ FRIEND to bring one home!';
+      scene.appendChild(empty);
+      return;
+    }
+    list.forEach((p, i) => {
+      const el = document.createElement('div');
+      el.className = 'playmate';
+      el.style.left = `${p.x * 100}%`;
+      el.style.top = `${p.y * 100}%`;
+      const cv = document.createElement('canvas');
+      cv.width = 52; cv.height = 72;
+      this.drawDressedCharacter(cv, this.skinById(p.skin), p.cosmetics);
+      el.appendChild(cv);
+      const rm = document.createElement('div');
+      rm.className = 'rm'; rm.textContent = '✕';
+      rm.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.removePlaymate(i); });
+      el.appendChild(rm);
+      this.wirePlaymateDrag(el, i);
+      scene.appendChild(el);
+    });
+  }
+
+  wirePlaymateDrag(el, i) {
+    let moved = false, startX = 0, startY = 0;
+    const onMove = (e) => {
+      const rect = this.els.playScene.getBoundingClientRect();
+      const nx = clamp01((e.clientX - rect.left) / rect.width);
+      const ny = clamp01((e.clientY - rect.top) / rect.height);
+      if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 6) moved = true;
+      el.style.left = `${nx * 100}%`; el.style.top = `${ny * 100}%`;
+      this.save.playmates[i].x = nx; this.save.playmates[i].y = ny;
+    };
+    const onUp = () => {
+      el.classList.remove('dragging');
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      persistSave(this.save);
+      if (!moved) this.openDress(i); // a tap (not a drag) opens the dress panel
+    };
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      moved = false; startX = e.clientX; startY = e.clientY;
+      el.classList.add('dragging');
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    });
+  }
+
+  removePlaymate(i) {
+    this.save.playmates.splice(i, 1);
+    persistSave(this.save);
+    Audio.sfx('pop');
+    this.els.dressPanel.classList.add('hidden');
+    this.renderPlayroom();
+  }
+
+  openDress(i) {
+    const p = this.playmatesData()[i];
+    if (!p) return;
+    const panel = this.els.dressPanel;
+    panel.innerHTML = '';
+    Audio.sfx('click');
+
+    const rowFor = (label, items, isSel, drawInto) => {
+      const lab = document.createElement('div'); lab.className = 'dressLabel'; lab.textContent = label; panel.appendChild(lab);
+      const row = document.createElement('div'); row.className = 'dressRow';
+      for (const it of items) {
+        const cell = document.createElement('button');
+        cell.className = 'dressItem' + (isSel(it) ? ' sel' : '');
+        drawInto(cell, it);
+        cell.addEventListener('click', () => it.onPick());
+        row.appendChild(cell);
+      }
+      panel.appendChild(row);
+    };
+
+    // skins
+    rowFor('SKIN', this.ownedSkins().map(s => ({ s, onPick: () => this.setPlaymate(i, 'skin', s.id) })),
+      (o) => p.skin === o.s.id,
+      (cell, o) => { const cv = document.createElement('canvas'); cv.width = 40; cv.height = 54; this.drawSkinPreview(cv, o.s); cell.appendChild(cv); });
+
+    // hats + capes (owned; 'none' always available)
+    for (const cat of ['hat', 'cape']) {
+      rowFor(cat.toUpperCase(), this.ownedCos(cat).map(c => ({ c, onPick: () => this.setPlaymate(i, cat, c.id) })),
+        (o) => (p.cosmetics[cat] || 'none') === o.c.id,
+        (cell, o) => {
+          if (o.c.id === 'none') { const n = document.createElement('span'); n.className = 'none'; n.textContent = 'NONE'; cell.appendChild(n); return; }
+          if (cat === 'hat' && o.c.sprite && hasSprite(o.c.sprite)) {
+            const cv = document.createElement('canvas'); cv.width = 40; cv.height = 42;
+            const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+            const hat = getSprite(o.c.sprite); blit(g, hat, 0, 20, 40, (hat.h / hat.w) * 32);
+            cell.appendChild(cv); return;
+          }
+          const sw = document.createElement('div'); sw.className = 'swatch';
+          const col = o.c.colors ? (Array.isArray(o.c.colors) ? o.c.colors[0] : o.c.colors.c) : '#7a5a3a';
+          sw.style.background = col; cell.appendChild(sw);
+        });
+    }
+
+    const close = document.createElement('button');
+    close.className = 'mcbtn small dressClose'; close.textContent = '✔ DONE';
+    close.addEventListener('click', () => { Audio.sfx('click'); panel.classList.add('hidden'); });
+    panel.appendChild(close);
+    panel.classList.remove('hidden');
+  }
+
+  setPlaymate(i, field, value) {
+    const p = this.save.playmates[i];
+    if (!p) return;
+    if (field === 'skin') p.skin = value;
+    else p.cosmetics[field] = value;
+    persistSave(this.save);
+    Audio.sfx('buy');
+    this.renderPlayroom();
+    this.openDress(i); // refresh selection highlights
+  }
+
   showSettings() {
     this.hideAll();
     this.els.saveExport.value = exportSave(this.save);
@@ -423,7 +617,7 @@ export class UI {
   }
 
   hideAll() {
-    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home', 'mine']) this.els[k].classList.add('hidden');
+    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home', 'mine', 'playroom']) this.els[k].classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
     // clear cached HUD values so the next run repaints from scratch
     this._bossShown = false;

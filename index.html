@@ -42,6 +42,34 @@
   .btnGrid3 .mcbtn { padding: 10px 2px; font-size: 13px; }
   #btnMine { position: relative; }
 
+  /* playroom */
+  #playroom .panel { width: min(360px, 94%); height: 100%; }
+  .playHint { font-size: 10px; color: #cfc9d8; text-align: center; }
+  .playScene { position: relative; width: 100%; flex: 1 1 auto; min-height: 260px; overflow: hidden;
+    border: 2px solid #000; border-radius: 2px; touch-action: none;
+    background: linear-gradient(#c9b28a 0%, #bda379 38%, #a98f66 38%, #6f7f4a 78%, #5f6f3e 78%);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -3px 0 rgba(0,0,0,0.3); }
+  .playmate { position: absolute; transform: translate(-50%, -100%); cursor: grab; touch-action: none; }
+  .playmate.dragging { cursor: grabbing; filter: drop-shadow(0 4px 5px rgba(0,0,0,0.5)); z-index: 5; }
+  .playmate canvas { display: block; image-rendering: pixelated; pointer-events: none; }
+  .playmate .rm { position: absolute; top: -6px; right: -8px; width: 18px; height: 18px; border-radius: 50%;
+    background: #a3332a; color: #fff; border: 2px solid #000; font-size: 11px; font-weight: 900; line-height: 14px;
+    text-align: center; cursor: pointer; }
+  .playEmpty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #4a3a22; font-size: 13px; font-weight: 900; text-align: center; padding: 0 20px; }
+  .dressPanel { position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 62%; overflow-y: auto;
+    background: rgba(22,19,28,0.97); border: 3px solid #000; padding: 8px; display: flex; flex-direction: column; gap: 6px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6); z-index: 20; }
+  .dressRow { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .dressLabel { font-size: 11px; font-weight: 900; color: #ffd94d; text-shadow: 1px 1px 0 #000; }
+  .dressItem { flex: 0 0 auto; width: 46px; height: 58px; background: #3a3444; border: 2px solid #000; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; position: relative; }
+  .dressItem.sel { background: #2a7fd4; }
+  .dressItem canvas { image-rendering: pixelated; }
+  .dressItem .swatch { width: 30px; height: 30px; border: 2px solid #000; }
+  .dressItem .none { font-size: 9px; color: #cfc9d8; font-weight: 900; }
+  .dressClose { align-self: center; }
+
   /* mine minigame */
   .mineStats { font-size: 12px; font-weight: 900; color: #ffd94d; text-shadow: 1px 1px 0 #000; text-align: center; }
   .energyWrap { position: relative; width: 100%; height: 18px; background: #222; border: 2px solid #000; overflow: hidden; }
@@ -365,8 +393,19 @@
       <div id="homeWelcome" class="homeWelcome hidden"></div>
       <div id="homeIncome" class="homeIncome"></div>
       <div id="homeScene" class="homeScene"></div>
+      <button class="mcbtn small" id="btnPlayroom">🧸 PLAYROOM</button>
       <div id="villagerList" class="villagerList"></div>
       <button class="mcbtn small" id="btnHomeBack">◀ BACK</button>
+    </div>
+  </div>
+
+  <div id="playroom" class="overlay hidden">
+    <div class="panel">
+      <div class="chipRow"><span style="color:#fff">🧸 PLAYROOM</span><button class="mcbtn small" id="btnAddFriend">＋ FRIEND</button></div>
+      <div id="playHint" class="playHint">Drag your friends around · tap one to dress them</div>
+      <div id="playScene" class="playScene"></div>
+      <div id="dressPanel" class="dressPanel hidden"></div>
+      <button class="mcbtn small" id="btnPlayroomBack">◀ BACK</button>
     </div>
   </div>
 
