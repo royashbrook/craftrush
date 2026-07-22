@@ -8,10 +8,13 @@ assets, fully offline after first load.
 
 ## Versioning
 
-The build version lives in one place — `VERSION` in `js/config.js` — and shows
-in the top corner of the menu. Bump the patch each build (`0.2.1`, `0.2.2`, …)
-as work lands; tag the next `0.x` milestone in git (`v0.3`, …) when cutting a
-release.
+The version shown in the top corner of the menu is **computed at build time** by
+`tools/build.mjs` and stamped into `dist/`, you don't hand-edit it. It's semver:
+**major.minor come from the latest git tag, and the patch is the number of commits
+since that tag.** So every deploy bumps the patch automatically (`0.2.3`, `0.2.4`, …),
+and cutting a milestone is just tagging the next `v0.x` in git (`v0.3`, …), which
+resets the patch. (`VERSION` in `js/config.js` is only a fallback for an unbuilt or
+git-less checkout.)
 
 ## Develop
 
