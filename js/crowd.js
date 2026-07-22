@@ -22,9 +22,19 @@ export const CrowdMixin = {
     while (arr.length < target) arr.push(this.makeUnit());
   },
 
+  // effective strength = visible worth boosted by every graduation star
+  armyPower() {
+    return this.worth() * Math.pow(TIERS.starMult, this.stars || 0);
+  },
+
   // rebalance the tier arrays to represent `total` worth (greedy from the top)
   setWorth(total, fx = false) {
     total = Math.max(0, Math.floor(total));
+    // star graduation: once the clump reaches gradWorth it compacts and earns a
+    // permanent star, so the visible army stays bounded while power climbs
+    this.stars = this.stars || 0;
+    let graduated = 0;
+    while (total >= TIERS.gradWorth) { this.stars++; graduated++; total = Math.round(total / TIERS.starMult); }
     const prev = this.bigs.map(a => a.length);
     let rem = total;
     for (let i = TIERS.units.length - 1; i >= 0; i--) {
@@ -42,18 +52,24 @@ export const CrowdMixin = {
     this._reformDirty = true;
     if (fx) {
       this.flushReform(); // promotions are rare; place now so the pop lands right
-      for (let i = TIERS.units.length - 1; i >= 0; i--) {
-        if (this.bigs[i].length > prev[i]) {
-          const u = TIERS.units[i];
-          this.tierPop(`${u.name}!`, this.bigs[i][this.bigs[i].length - 1], u.color);
-          break; // announce only the highest new tier
+      if (graduated) {
+        const top = this.bigs[this.bigs.length - 1];
+        const unit = top.length ? top[top.length - 1] : this._units[this._units.length - 1];
+        this.tierPop(`SUPER STEVE ★${this.stars}`, unit, '#ffe14d');
+      } else {
+        for (let i = TIERS.units.length - 1; i >= 0; i--) {
+          if (this.bigs[i].length > prev[i]) {
+            const u = TIERS.units[i];
+            this.tierPop(`${u.name}!`, this.bigs[i][this.bigs[i].length - 1], u.color);
+            break; // announce only the highest new tier
+          }
         }
       }
     }
     if (this.save.stats && this.bigs[0].length > prev[0]) {
       this.save.stats.gigas = (this.save.stats.gigas || 0) + (this.bigs[0].length - prev[0]);
     }
-    this.bestCrowd = Math.max(this.bestCrowd, this.worth());
+    this.bestCrowd = Math.max(this.bestCrowd, this.armyPower());
   },
 
   tierPop(text, unit, color) {
@@ -72,8 +88,11 @@ export const CrowdMixin = {
     if (!silent) this.floaty(`+${this.worth() - before}`, this.playerX, this.playerZ + 1, '#7dff7d', 1.4);
   },
 
-  // lose `n` worth; pops fx near the impact point; ends the run when worth hits 0
-  killRunners(n, atX = null, atZ = null) {
+  // lose `n` worth; pops fx near the impact point; ends the run when worth hits 0.
+  // enemy damage is softened by stars (the "health" half of graduation); gate
+  // penalties pass mitigate=false so their stated value always lands.
+  killRunners(n, atX = null, atZ = null, mitigate = true) {
+    if (mitigate && this.stars) n = Math.max(1, Math.round(n / (1 + this.stars)));
     const before = this.worth();
     const lost = Math.min(n, before);
     if (lost <= 0) return;
@@ -95,11 +114,6 @@ export const CrowdMixin = {
     Audio.sfx('pop', 70);
     this.setWorth(before - lost);
     if (this.worth() <= 0 && !this.bossDead && (this.state === 'run' || this.state === 'boss')) this.endRun(false);
-  },
-
-  topTierScale() {
-    const top = TIERS.units[TIERS.units.length - 1];
-    return top.scale * (1 + TIERS.topMaxGrow * Math.min(1, this.reserve / TIERS.reserveFullScale));
   },
 
   // ONE mixed clump: every unit (all sizes) packed in a single phyllotaxis

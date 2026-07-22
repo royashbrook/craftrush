@@ -1,6 +1,6 @@
 // Craft Rush core game: crowd sim, dual-mode (shooter / gates), procedural
 // levels, enemies, bosses, effects. World units: blocks; +z is down-track.
-import { TUNE, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS } from './config.js';
+import { TUNE, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS, winBonus } from './config.js';
 import { Camera, renderWorld, DrawQueue } from './engine.js';
 import { Audio } from './audio.js';
 import { CrowdMixin } from './crowd.js';
@@ -83,6 +83,7 @@ export class Game {
     this.bossDead = false;
     this.bigs = TIERS.units.map(() => []); // one array per ladder tier
     this.reserve = 0;
+    this.stars = 0;            // graduation stars this run (reset every run)
     this._units = [];          // cached flat list of every crowd unit
     this._reformDirty = false;
     this.playerX = 0; this.playerZ = 0; this.targetX = 0;
@@ -207,7 +208,7 @@ export class Game {
         }
       }
     }
-    this.bestCrowd = Math.max(this.bestCrowd, this.worth());
+    this.bestCrowd = Math.max(this.bestCrowd, this.armyPower());
 
     // powerup timers tick in both modes (gates mode has sword/axe)
     for (const k of Object.keys(this.power)) this.power[k] = Math.max(0, this.power[k] - dt);
@@ -242,7 +243,7 @@ export class Game {
     this.paused = false;
     Audio.stopMusic();
     Audio.sfx(win ? 'fanfare' : 'defeat');
-    const bonus = win ? TUNE.winBonusBase + this.level * TUNE.winBonusPerLevel + Math.floor(this.bestCrowd / 4) : 0;
+    const bonus = win ? winBonus(this.level, this.bestCrowd) : 0;
     const mul = this.mut.emeraldMul || 1;
     const total = Math.round((this.runEmeralds + bonus) * mul);
     const st = this.save.stats;
@@ -272,7 +273,7 @@ export class Game {
     // reuse one object + one nested boss object to avoid per-call allocation
     const h = this._hud || (this._hud = { boss: { name: '', hp: 0, max: 1, needRunners: null } });
     h.emeralds = this.save.emeralds + this.runEmeralds;
-    h.crowd = this.worth();
+    h.crowd = this.armyPower(); h.stars = this.stars;
     h.progress = Math.min(1, this.playerZ / this.length);
     h.redstone = this.redstone; h.redstoneMax = TUNE.redstoneMax;
     h.level = this.level; h.biome = this.biome.name; h.mode = this.mode;

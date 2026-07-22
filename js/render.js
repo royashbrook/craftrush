@@ -190,9 +190,8 @@ export const RenderMixin = {
         Math.floor(this.t * 8 + m.phase) % 2,
         Math.abs(Math.sin(this.t * 9 + m.phase)) * 0.12, m.phase, 0, false);
     }
-    const topIdx = TIERS.units.length - 1;
     TIERS.units.forEach((u, i) => {
-      const scale = 1.45 * (i === topIdx ? this.topTierScale() : u.scale);
+      const scale = 1.45 * u.scale; // hard-capped; no runaway top-tier growth
       const rate = Math.max(3, 8 - i * 1.5);
       for (const g of this.bigs[i]) {
         drawUnit(this.playerX + g.ox, this.playerZ + g.oz, scale,
@@ -291,9 +290,13 @@ export const RenderMixin = {
     if (this.state !== 'run' && this.state !== 'boss') return;
     const p = this.cam.project(this.playerX, 2.3, this.playerZ);
     if (!p) return;
-    // show total army worth — the number just keeps climbing, no cap
-    const w = this.worth();
-    const low = w <= 3;
-    outlineText(ctx, `${w}`, p.sx, p.sy, Math.max(15, p.s * 0.62), low ? '#ff8d7a' : '#ffffff');
+    // show true power (worth boosted by stars) — climbs forever, no cap
+    const power = this.armyPower();
+    const low = power <= 3;
+    const size = Math.max(15, p.s * 0.62);
+    if (this.stars > 0) {
+      outlineText(ctx, `★${this.stars}`, p.sx, p.sy - size * 0.95, size * 0.7, '#ffe14d');
+    }
+    outlineText(ctx, `${power}`, p.sx, p.sy, size, low ? '#ff8d7a' : '#ffffff');
   },
 };

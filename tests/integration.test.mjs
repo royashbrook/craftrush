@@ -90,9 +90,10 @@ test('a multiply gate scales the whole army worth (end to end)', () => {
   const g = makeGame({ mode: 'gates', level: 1 });
   g.startRun();
   g.setWorth(4000, true);
-  const before = g.worth();
+  const before = g.armyPower();
   g.applyGate({ x: 0, z: g.playerZ, halfW: 2, op: 'mul', val: 2, used: false });
-  assert.equal(g.worth(), before * 2);
+  // x2 doubles the WHOLE army's power (may cross a graduation, which preserves power)
+  assert.ok(Math.abs(g.armyPower() - before * 2) <= 3, `power ${g.armyPower()} ~= ${before * 2}`);
 });
 
 test('a giant-heavy army collects emeralds it runs over (integration)', () => {

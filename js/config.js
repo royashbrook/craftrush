@@ -5,7 +5,7 @@ import { Audio } from './audio.js';
 
 // Build version shown in the UI. Bump the patch each build (0.2.1, 0.2.2, ...);
 // tag the next 0.x milestone in git when cutting a release.
-export const VERSION = '0.2.1';
+export const VERSION = '0.2.0'; // fallback only — tools/build.mjs stamps the real version into dist/
 
 export const TUNE = {
   // world/camera
@@ -51,6 +51,7 @@ export const TUNE = {
   killDropChance: 0.12,
   winBonusBase: 12,
   winBonusPerLevel: 6,
+  winBonusPowerK: 8,    // log-scaled power term (bounded — no more uncapped exploit)
 
   // powerups
   powerupDur: 9,
@@ -86,14 +87,21 @@ export const CAMERAS = {
 // top tier bigger and hits harder ("bigger and bigger", no max).
 export const TIERS = {
   maxRunners: 96,
-  // ladder above the basic runner; each unit fires one arrow worth `worth`
+  // ladder above the basic runner; each unit fires one arrow worth `worth`.
+  // scales are gentle with a HARD cap (top tier ~2.15) so no sprite ever eats
+  // the screen — the old runaway top-tier growth is gone.
   units: [
-    { name: 'MEGA STEVE',  worth: 10,   scale: 1.7, max: 12, boots: '#f3c53f', weight: 3,  color: '#ffd94d' },
-    { name: 'GIGA STEVE',  worth: 100,  scale: 2.6, max: 10, boots: '#ff8c1a', weight: 6,  color: '#ff8c1a' },
-    { name: 'ULTRA STEVE', worth: 1000, scale: 3.8, max: 8,  boots: '#c76bff', weight: 10, color: '#c76bff' },
+    { name: 'MEGA STEVE',  worth: 10,   scale: 1.35, max: 12, boots: '#f3c53f', weight: 3,  color: '#ffd94d' },
+    { name: 'GIGA STEVE',  worth: 100,  scale: 1.7,  max: 10, boots: '#ff8c1a', weight: 6,  color: '#ff8c1a' },
+    { name: 'ULTRA STEVE', worth: 1000, scale: 2.15, max: 6,  boots: '#c76bff', weight: 10, color: '#c76bff' },
   ],
-  topMaxGrow: 1.5,          // extra top-tier scale at very high reserve
-  reserveFullScale: 30000,  // reserve worth at which top tier reaches topMaxGrow
+  // Star graduation: when the visible army reaches gradWorth it "graduates" —
+  // the clump compacts (worth / starMult) and gains a permanent star. Each star
+  // multiplies arrow damage by starMult and softens damage taken. worth stays
+  // bounded (< gradWorth) forever, so both sprite size AND count stay readable,
+  // while true power = worth * starMult^stars climbs without limit.
+  gradWorth: 5000,
+  starMult: 3,
 };
 
 export const MODES = {
@@ -275,17 +283,17 @@ export const BIOMES = [
 export const SKINS = [
   { id: 'steve',    name: 'Steve',    cost: 0,   head: 'head_steve',
     palette: { h: '#4a2f1b', s: '#d8a077', t: '#00afaf', T: '#008f8f', l: '#3d55b8', L: '#2e4090', b: '#6e6e6e' } },
-  { id: 'alex',     name: 'Alex',     cost: 25,  head: 'head_alex',
+  { id: 'alex',     name: 'Alex',     cost: 40,  head: 'head_alex',
     palette: { h: '#e5843c', s: '#eab88f', t: '#7ea33c', T: '#63822c', l: '#6b4f35', L: '#573f2a', b: '#4a4a4a' } },
-  { id: 'zombie',   name: 'Zombie',   cost: 60,  head: 'head_zombie',
+  { id: 'zombie',   name: 'Zombie',   cost: 120, head: 'head_zombie',
     palette: { h: '#2e7d32', s: '#4fa554', t: '#1e8b8b', T: '#177070', l: '#5e3f8f', L: '#4a3172', b: '#333333' } },
-  { id: 'skeleton', name: 'Skeleton', cost: 140, head: 'head_skeleton',
+  { id: 'skeleton', name: 'Skeleton', cost: 300, head: 'head_skeleton',
     palette: { h: '#d6d6d6', s: '#e8e8e8', t: '#9e9e9e', T: '#7d7d7d', l: '#cfcfcf', L: '#ababab', b: '#8a8a8a' } },
-  { id: 'creeper',  name: 'Creeper Kid', cost: 250, head: 'head_creeper',
+  { id: 'creeper',  name: 'Creeper Kid', cost: 700, head: 'head_creeper',
     palette: { h: '#4fbf3c', s: '#66d94f', t: '#3da52e', T: '#2b7d20', l: '#2b7d20', L: '#1e4f16', b: '#173d10' } },
-  { id: 'piglin',   name: 'Piglin',   cost: 400, head: 'head_piglin',
+  { id: 'piglin',   name: 'Piglin',   cost: 1500, head: 'head_piglin',
     palette: { h: '#f3c53f', s: '#efa08f', t: '#8a6d3b', T: '#6f562d', l: '#4d3a22', L: '#3d2d1a', b: '#3a2a16' } },
-  { id: 'enderman', name: 'Enderman', cost: 650, head: 'head_enderman',
+  { id: 'enderman', name: 'Enderman', cost: 3000, head: 'head_enderman',
     palette: { h: '#171717', s: '#101010', t: '#1c1c1c', T: '#0c0c0c', l: '#171717', L: '#0b0b0b', b: '#7b2fbe' } },
 ];
 
@@ -294,32 +302,32 @@ export const SKINS = [
 export const COSMETICS = {
   cape: [
     { id: 'none', name: 'No Cape', cost: 0 },
-    { id: 'cape_red', name: 'Hero Red', cost: 40, colors: { c: '#c8322a', C: '#8f1f14' } },
-    { id: 'cape_emerald', name: 'Emerald', cost: 60, colors: { c: '#2ecc5e', C: '#1d8f3e' } },
-    { id: 'cape_ice', name: 'Frost', cost: 80, colors: { c: '#9fd8f0', C: '#6aaece' } },
-    { id: 'cape_ender', name: 'Ender', cost: 120, colors: { c: '#8b3fd6', C: '#5c2496' } },
-    { id: 'cape_gold', name: 'Royal Gold', cost: 180, colors: { c: '#f3c53f', C: '#c29222' } },
-    { id: 'cape_rainbow', name: 'Rainbow', cost: 300, rainbow: true, colors: { c: '#ff5545', C: '#3fa9ff' } },
+    { id: 'cape_red', name: 'Hero Red', cost: 80, colors: { c: '#c8322a', C: '#8f1f14' } },
+    { id: 'cape_emerald', name: 'Emerald', cost: 200, colors: { c: '#2ecc5e', C: '#1d8f3e' } },
+    { id: 'cape_ice', name: 'Frost', cost: 400, colors: { c: '#9fd8f0', C: '#6aaece' } },
+    { id: 'cape_ender', name: 'Ender', cost: 800, colors: { c: '#8b3fd6', C: '#5c2496' } },
+    { id: 'cape_gold', name: 'Royal Gold', cost: 1400, colors: { c: '#f3c53f', C: '#c29222' } },
+    { id: 'cape_rainbow', name: 'Rainbow', cost: 2500, rainbow: true, colors: { c: '#ff5545', C: '#3fa9ff' } },
   ],
   hat: [
     { id: 'none', name: 'No Hat', cost: 0 },
-    { id: 'hat_pumpkin', name: 'Pumpkin', cost: 50, sprite: 'hat_pumpkin' },
-    { id: 'hat_slime', name: 'Slime Blob', cost: 70, sprite: 'hat_slime' },
-    { id: 'hat_crown', name: 'Crown', cost: 100, sprite: 'hat_crown' },
-    { id: 'hat_tnt', name: 'TNT Cap', cost: 130, sprite: 'hat_tnt' },
-    { id: 'hat_santa', name: 'Santa', cost: 160, sprite: 'hat_santa' },
+    { id: 'hat_pumpkin', name: 'Pumpkin', cost: 120, sprite: 'hat_pumpkin' },
+    { id: 'hat_slime', name: 'Slime Blob', cost: 300, sprite: 'hat_slime' },
+    { id: 'hat_crown', name: 'Crown', cost: 550, sprite: 'hat_crown' },
+    { id: 'hat_tnt', name: 'TNT Cap', cost: 900, sprite: 'hat_tnt' },
+    { id: 'hat_santa', name: 'Santa', cost: 1500, sprite: 'hat_santa' },
   ],
   trail: [
     { id: 'none', name: 'No Trail', cost: 0 },
-    { id: 'trail_emerald', name: 'Emerald', cost: 50, colors: ['#2eff70', '#1fcf58'] },
-    { id: 'trail_fire', name: 'Fire', cost: 90, colors: ['#ffb63c', '#ff5e2e'] },
-    { id: 'trail_ender', name: 'Ender', cost: 140, colors: ['#c76bff', '#8b3fd6'] },
-    { id: 'trail_rainbow', name: 'Rainbow', cost: 240, rainbow: true, colors: ['#ff5545', '#ffd94d', '#2eff70', '#3fa9ff'] },
+    { id: 'trail_emerald', name: 'Emerald', cost: 150, colors: ['#2eff70', '#1fcf58'] },
+    { id: 'trail_fire', name: 'Fire', cost: 400, colors: ['#ffb63c', '#ff5e2e'] },
+    { id: 'trail_ender', name: 'Ender', cost: 800, colors: ['#c76bff', '#8b3fd6'] },
+    { id: 'trail_rainbow', name: 'Rainbow', cost: 1600, rainbow: true, colors: ['#ff5545', '#ffd94d', '#2eff70', '#3fa9ff'] },
   ],
   pet: [
     { id: 'none', name: 'No Pet', cost: 0 },
-    { id: 'pet_wolf', name: 'Wolf', cost: 150, sprite: 'wolf' },
-    { id: 'pet_parrot', name: 'Parrot', cost: 260, sprite: 'parrot' },
+    { id: 'pet_wolf', name: 'Wolf', cost: 500, sprite: 'wolf' },
+    { id: 'pet_parrot', name: 'Parrot', cost: 1200, sprite: 'parrot' },
   ],
 };
 
@@ -410,6 +418,13 @@ export function loadSave() {
     if (!raw) return def;
     return { ...def, ...JSON.parse(raw) };
   } catch { return def; }
+}
+
+// Win bonus: flat base + per-level, plus a LOG-scaled term on best power so a
+// giant run pays a little more, never thousands. Bounded by design.
+export function winBonus(level, bestPower) {
+  return TUNE.winBonusBase + level * TUNE.winBonusPerLevel
+    + Math.round(Math.log10(Math.max(1, bestPower)) * TUNE.winBonusPowerK);
 }
 
 export function persistSave(save) {

@@ -12,20 +12,24 @@ function makeCrowd() {
   }, CrowdMixin);
 }
 
-test('setWorth round-trips total worth across tiers and reserve', () => {
-  for (const w of [0, 1, 4, 50, 96, 100, 216, 1000, 5000, 49999, 50000]) {
+test('setWorth round-trips worth below the graduation threshold', () => {
+  for (const w of [0, 1, 4, 50, 96, 100, 216, 1000, 4999]) {
     const g = makeCrowd();
     g.setWorth(w);
     assert.equal(g.worth(), w, `worth ${w} should decompose and sum back`);
+    assert.equal(g.stars, 0);
   }
 });
 
-test('setWorth respects render caps and parks overflow in reserve', () => {
+test('worth at/above the threshold graduates instead of ballooning', () => {
   const g = makeCrowd();
   g.setWorth(50000);
+  assert.ok(g.worth() < TIERS.gradWorth, 'visible worth stays bounded');
   assert.ok(g.crowd.length <= TIERS.maxRunners);
   TIERS.units.forEach((u, i) => assert.ok(g.bigs[i].length <= u.max));
-  assert.ok(g.reserve > 0, 'huge worth should overflow into reserve');
+  assert.ok(g.stars > 0, 'overflow becomes permanent stars');
+  // true power is preserved across graduations (within rounding)
+  assert.ok(g.armyPower() >= 45000 && g.armyPower() <= 55000);
 });
 
 test('losing worth converges to zero, never negative', () => {

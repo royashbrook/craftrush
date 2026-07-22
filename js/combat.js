@@ -59,7 +59,8 @@ export const CombatMixin = {
   },
 
   fireVolley() {
-    const powerMul = this.power.power > 0 ? 2 : 1;
+    // stars permanently multiply every arrow's damage (the offensive half of graduation)
+    const powerMul = (this.power.power > 0 ? 2 : 1) * Math.pow(TIERS.starMult, this.stars || 0);
     const n = Math.min(this.crowd.length, TUNE.maxShooters);
     const dmgScale = Math.max(1, Math.round(this.crowd.length / TUNE.maxShooters));
     const dmg = dmgScale * powerMul;
@@ -126,8 +127,8 @@ export const CombatMixin = {
     const n = this.worth();
     if (gt.op === 'add') { this.addRunners(gt.val); Audio.sfx('gate_good'); }
     else if (gt.op === 'mul') { this.addRunners(n * (gt.val - 1)); Audio.sfx('gate_good'); }
-    else if (gt.op === 'sub') { if (gt.val > 0) { this.killRunners(gt.val); Audio.sfx('gate_bad'); this.floaty(`−${gt.val}`, gt.x, gt.z, '#ff6d5a', 1.5); } }
-    else if (gt.op === 'div') { const k = n - Math.ceil(n / gt.val); if (k > 0) { this.killRunners(k); Audio.sfx('gate_bad'); this.floaty(`÷${gt.val}`, gt.x, gt.z, '#ff6d5a', 1.5); } }
+    else if (gt.op === 'sub') { if (gt.val > 0) { this.killRunners(gt.val, null, null, false); Audio.sfx('gate_bad'); this.floaty(`−${gt.val}`, gt.x, gt.z, '#ff6d5a', 1.5); } }
+    else if (gt.op === 'div') { const k = n - Math.ceil(n / gt.val); if (k > 0) { this.killRunners(k, null, null, false); Audio.sfx('gate_bad'); this.floaty(`÷${gt.val}`, gt.x, gt.z, '#ff6d5a', 1.5); } }
     if (this.gateGood(gt)) this.floaty(this.gateLabel(gt), gt.x, gt.z, '#7dcfff', 1.6);
   },
 
