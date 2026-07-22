@@ -331,6 +331,38 @@ export const COSMETICS = {
   ],
 };
 
+// Home hub: buy villager friends who populate the home and earn emeralds while
+// you're away. Each additional villager of a type costs base * costRate^owned
+// (the classic idle curve). Art reuses existing character skins — no new sprites.
+export const HOME = { costRate: 1.15, idleCapMs: 8 * 3600 * 1000 };
+export const VILLAGERS = [
+  { id: 'farmer',    name: 'Farmer',    skin: 'steve',    base: 50,    income: 5 },
+  { id: 'miner',     name: 'Miner',     skin: 'alex',     base: 250,   income: 24 },
+  { id: 'fisher',    name: 'Fisher',    skin: 'zombie',   base: 1000,  income: 85 },
+  { id: 'trader',    name: 'Trader',    skin: 'piglin',   base: 4000,  income: 300 },
+  { id: 'librarian', name: 'Librarian', skin: 'enderman', base: 15000, income: 1000 },
+];
+
+// cost of the NEXT villager of `id` given how many are already owned
+export function villagerCost(id, owned) {
+  const v = VILLAGERS.find(x => x.id === id);
+  return v ? Math.round(v.base * Math.pow(HOME.costRate, owned)) : Infinity;
+}
+
+// total idle income in emeralds per hour
+export function homeIncomeRate(villagers) {
+  let r = 0;
+  for (const v of VILLAGERS) r += (villagers && villagers[v.id] || 0) * v.income;
+  return r;
+}
+
+// emeralds accrued since lastCollect, clamped to the idle cap. A falsy
+// lastCollect (fresh save) banks nothing until the home is first opened.
+export function pendingIdle(villagers, lastCollect, now) {
+  const elapsed = Math.max(0, Math.min(now - (lastCollect || now), HOME.idleCapMs));
+  return Math.floor(homeIncomeRate(villagers) * elapsed / 3600000);
+}
+
 // Daily Expeditions: one date-seeded themed run per day, identical for everyone
 // with no server. `mut` holds the run modifiers the engine reads.
 export const EXPEDITIONS = [
@@ -412,7 +444,8 @@ export function loadSave() {
     stats: { runs: 0, wins: 0, kills: 0, golems: 0, gigas: 0, totalEmeralds: 0, bossWins: {}, expeditions: 0 },
     achievements: [],
     expedition: { lastDay: null, streak: 0 },
-    inventory: { blazeRods: 0, obsidian: 0 } };
+    inventory: { blazeRods: 0, obsidian: 0 },
+    home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 } };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return def;

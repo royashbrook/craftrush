@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit } from './assets.js';
 import { Audio } from './audio.js';
@@ -33,6 +33,9 @@ export class UI {
       expCard: $('expCard'), expIcon: $('expIcon'), expName: $('expName'),
       expDesc: $('expDesc'), expStreak: $('expStreak'), btnExpedition: $('btnExpedition'),
       steerL: $('steerL'), steerR: $('steerR'),
+      btnHome: $('btnHome'), homeBadge: $('homeBadge'), home: $('home'), homeEmeralds: $('homeEmeralds'),
+      homeWelcome: $('homeWelcome'), homeIncome: $('homeIncome'), homeScene: $('homeScene'),
+      villagerList: $('villagerList'), btnHomeBack: $('btnHomeBack'),
       btnData: $('btnData'), settings: $('settings'), saveExport: $('saveExport'),
       saveImport: $('saveImport'), btnCopySave: $('btnCopySave'), btnLoadSave: $('btnLoadSave'),
       btnReset: $('btnReset'), setMsg: $('setMsg'), btnSettingsBack: $('btnSettingsBack'),
@@ -60,6 +63,8 @@ export class UI {
     E.btnShopBack.addEventListener('click', () => { Audio.sfx('click'); this.back(); });
     E.btnExpedition.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.startExpedition(); });
     E.btnAch.addEventListener('click', () => { Audio.sfx('click'); this.showAchievements('menu'); });
+    E.btnHome.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showHome(); });
+    E.btnHomeBack.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
     E.btnData.addEventListener('click', () => { Audio.sfx('click'); this.showSettings(); });
     E.btnSettingsBack.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
     E.btnCopySave.addEventListener('click', () => {
@@ -190,6 +195,120 @@ export class UI {
     this.toast(null);
   }
 
+  // ---- home hub ----
+  homeData() {
+    // defensively migrate older saves that predate the home field
+    const h = this.save.home || (this.save.home = { villagers: {}, lastCollect: 0 });
+    if (!h.villagers) h.villagers = {};
+    for (const v of VILLAGERS) if (typeof h.villagers[v.id] !== 'number') h.villagers[v.id] = 0;
+    return h;
+  }
+
+  homePending() {
+    const h = this.homeData();
+    return pendingIdle(h.villagers, h.lastCollect, Date.now());
+  }
+
+  showHome() {
+    this.hideAll();
+    const h = this.homeData();
+    if (!h.lastCollect) { h.lastCollect = Date.now(); persistSave(this.save); } // seed the clock on first visit
+    this.els.home.classList.remove('hidden');
+    this.renderHome();
+  }
+
+  renderHome() {
+    const E = this.els, h = this.homeData();
+    E.homeEmeralds.textContent = `${this.save.emeralds}`;
+    const rate = homeIncomeRate(h.villagers);
+    E.homeIncome.textContent = rate > 0 ? `Your village earns +${rate}/hr while you're away` : 'Buy a villager to start earning emeralds!';
+
+    const pending = this.homePending();
+    if (pending > 0) {
+      E.homeWelcome.classList.remove('hidden');
+      E.homeWelcome.innerHTML = `<span>Villagers gathered <span class="em"></span> ${pending}!</span>`;
+      const btn = document.createElement('button');
+      btn.className = 'mcbtn small'; btn.textContent = 'COLLECT';
+      btn.addEventListener('click', () => this.collectIdle());
+      E.homeWelcome.appendChild(btn);
+    } else {
+      E.homeWelcome.classList.add('hidden');
+    }
+
+    // scene: one bobbing sprite per owned villager type, with a count
+    E.homeScene.innerHTML = '';
+    const owned = VILLAGERS.filter(v => h.villagers[v.id] > 0);
+    if (!owned.length) {
+      const empty = document.createElement('div');
+      empty.className = 'homeEmpty'; empty.textContent = 'Your home is empty… bring a villager home!';
+      E.homeScene.appendChild(empty);
+    } else {
+      for (const v of owned) {
+        const wrap = document.createElement('div');
+        wrap.className = 'homeSprite';
+        const cv = document.createElement('canvas');
+        cv.width = 40; cv.height = 56;
+        cv.style.width = '40px'; cv.style.height = '56px';
+        cv.style.animationDelay = `${(VILLAGERS.indexOf(v) % 5) * 0.2}s`;
+        this.drawSkinPreview(cv, this.skinFor(v));
+        wrap.appendChild(cv);
+        const cnt = document.createElement('div');
+        cnt.className = 'cnt'; cnt.textContent = `×${h.villagers[v.id]}`;
+        wrap.appendChild(cnt);
+        E.homeScene.appendChild(wrap);
+      }
+    }
+
+    // villager shop list
+    E.villagerList.innerHTML = '';
+    for (const v of VILLAGERS) {
+      const count = h.villagers[v.id];
+      const cost = villagerCost(v.id, count);
+      const canAfford = this.save.emeralds >= cost;
+      const card = document.createElement('div');
+      card.className = 'vCard';
+      const cv = document.createElement('canvas');
+      cv.width = 64; cv.height = 88;
+      this.drawSkinPreview(cv, this.skinFor(v));
+      card.appendChild(cv);
+      const info = document.createElement('div');
+      info.className = 'vInfo';
+      info.innerHTML = `<div class="vName">${v.name} <span style="color:#b8f0c8">×${count}</span></div>`
+        + `<div class="vMeta">+${v.income}/hr each · next <span class="em"></span> ${cost}</div>`;
+      card.appendChild(info);
+      const buy = document.createElement('button');
+      buy.className = 'vBuy' + (canAfford ? '' : ' cant');
+      buy.innerHTML = `<span class="em"></span> ${cost}`;
+      buy.addEventListener('click', () => this.buyVillager(v.id));
+      card.appendChild(buy);
+      E.villagerList.appendChild(card);
+    }
+  }
+
+  skinFor(villager) { return SKINS.find(s => s.id === villager.skin) || SKINS[0]; }
+
+  buyVillager(id) {
+    const h = this.homeData();
+    const cost = villagerCost(id, h.villagers[id]);
+    if (this.save.emeralds < cost) { Audio.sfx('gate_bad'); return; }
+    this.save.emeralds -= cost;
+    h.villagers[id]++;
+    persistSave(this.save);
+    Audio.sfx('buy');
+    this.renderHome();
+  }
+
+  collectIdle() {
+    const h = this.homeData();
+    const pending = this.homePending();
+    if (pending <= 0) return;
+    this.save.emeralds += pending;
+    h.lastCollect = Date.now();
+    persistSave(this.save);
+    Audio.sfx('emerald');
+    this.renderHome();
+  }
+
   showSettings() {
     this.hideAll();
     this.els.saveExport.value = exportSave(this.save);
@@ -199,7 +318,7 @@ export class UI {
   }
 
   hideAll() {
-    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings']) this.els[k].classList.add('hidden');
+    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home']) this.els[k].classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
     // clear cached HUD values so the next run repaints from scratch
     this._bossShown = false;
@@ -225,6 +344,7 @@ export class UI {
     E.modeShooter.classList.toggle('sel', this.save.mode === 'shooter');
     E.modeGates.classList.toggle('sel', this.save.mode === 'gates');
     E.modeDesc.textContent = MODES[this.save.mode].desc;
+    E.homeBadge.classList.toggle('hidden', this.homePending() <= 0); // idle emeralds waiting
     this.refreshExpedition();
   }
 
