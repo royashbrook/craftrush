@@ -1,8 +1,11 @@
 // Cache-first service worker: full offline play after first load.
-const CACHE = 'craftrush-v2';
+const CACHE = 'craftrush-v3';
 const ASSETS = [
+  // NOTE: precache './' (the dir index), NOT './index.html'. Some static hosts (e.g. Cloudflare
+  // static assets, which serves this under a subpath) 30x-redirect '/index.html' -> '/'. cache.addAll
+  // rejects on a redirected response, and it is all-or-nothing, so that one redirect silently aborts
+  // the ENTIRE precache and the app never works offline. './' serves the same shell at a plain 200.
   './',
-  './index.html',
   './manifest.webmanifest',
   './js/main.js',
   './js/config.js',
@@ -63,7 +66,7 @@ self.addEventListener('fetch', (e) => {
       const hit = await caches.match(e.request);
       if (hit) return hit;
       if (e.request.mode === 'navigate') {
-        const shell = await caches.match('./index.html');
+        const shell = await caches.match('./');   // the precached shell (see ASSETS note re: redirects)
         if (shell) return shell;
       }
       return new Response('offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
