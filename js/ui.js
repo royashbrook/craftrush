@@ -40,6 +40,7 @@ export class UI {
       btnPlayroom: $('btnPlayroom'), playroom: $('playroom'), btnAddFriend: $('btnAddFriend'),
       btnDecor: $('btnDecor'), btnRoom: $('btnRoom'), playEmeralds: $('playEmeralds'),
       playScene: $('playScene'), dressPanel: $('dressPanel'), btnPlayroomBack: $('btnPlayroomBack'), playHint: $('playHint'),
+      roomBg: $('roomBg'), roomItems: $('roomItems'), trashZone: $('trashZone'),
       btnMine: $('btnMine'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
       mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'), digFace: $('digFace'),
       btnPickUp: $('btnPickUp'), btnMineBack: $('btnMineBack'),
@@ -495,9 +496,12 @@ export class UI {
   }
 
   roomData() {
-    if (!this.save.roomTier || !roomTierById(this.save.roomTier)) this.save.roomTier = 'yard';
-    if (!Array.isArray(this.save.roomTiersOwned)) this.save.roomTiersOwned = ['yard'];
-    if (!this.save.roomTiersOwned.includes('yard')) this.save.roomTiersOwned.unshift('yard');
+    // validate against real tier ids so older saves (e.g. the old 'yard') migrate
+    const ids = ROOM_TIERS.map(r => r.id), first = ROOM_TIERS[0].id;
+    if (!ids.includes(this.save.roomTier)) this.save.roomTier = first;
+    if (!Array.isArray(this.save.roomTiersOwned)) this.save.roomTiersOwned = [first];
+    this.save.roomTiersOwned = this.save.roomTiersOwned.filter(id => ids.includes(id));
+    if (!this.save.roomTiersOwned.includes(first)) this.save.roomTiersOwned.unshift(first);
     return this.save;
   }
 
@@ -512,52 +516,91 @@ export class UI {
     blit(g, spr, 0, cv.width / 2, cv.height - 2, h);
   }
 
+  // paint the house interior: patterned wall, floor with depth, baseboard, window + door
+  drawRoom() {
+    const cv = this.els.roomBg, rect = this.els.playScene.getBoundingClientRect();
+    if (!cv || rect.width < 20 || rect.height < 20) return; // not laid out yet
+    const LW = 128, LH = Math.max(60, Math.min(400, Math.round(LW * rect.height / rect.width)));
+    cv.width = LW; cv.height = LH;
+    const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+    const t = roomTierById(this.save.roomTier);
+    const floorY = Math.round(LH * 0.56);
+
+    g.fillStyle = t.wall; g.fillRect(0, 0, LW, floorY);
+    g.fillStyle = t.wallAlt;
+    if (t.pattern === 'bricks') {
+      for (let y = 0, row = 0; y < floorY; y += 6, row++) {
+        g.fillRect(0, y + 5, LW, 1);
+        for (let x = (row % 2 ? 0 : 6); x < LW; x += 12) g.fillRect(x, y, 1, 5);
+      }
+    } else if (t.pattern === 'tiles') {
+      for (let y = 0; y < floorY; y += 8) g.fillRect(0, y, LW, 1);
+      for (let x = 0; x < LW; x += 8) g.fillRect(x, 0, 1, floorY);
+    } else {
+      for (let y = 0, row = 0; y < floorY; y += 7, row++) {
+        g.fillRect(0, y, LW, 1);
+        g.fillRect(row % 2 ? 40 : 88, y, 1, 7); // staggered plank joints
+      }
+    }
+
+    g.fillStyle = t.floor; g.fillRect(0, floorY, LW, LH - floorY);
+    g.fillStyle = t.floorAlt;
+    for (let y = floorY + 3, step = 3; y < LH; step *= 1.38, y += step) g.fillRect(0, Math.round(y), LW, 1);
+    if (t.pattern === 'tiles') for (let x = 0; x < LW; x += 10) g.fillRect(x, floorY, 1, LH - floorY);
+
+    g.fillStyle = t.trim; g.fillRect(0, floorY - 3, LW, 4);
+
+    // keep these modest: they are room furniture, not the whole wall
+    if (hasSprite('room_window')) blit(g, getSprite('room_window'), 0, Math.round(LW * 0.26), Math.round(floorY * 0.40), Math.round(floorY * 0.24));
+    if (hasSprite('room_door')) blit(g, getSprite('room_door'), 0, Math.round(LW * 0.84), floorY + 1, Math.round(floorY * 0.46));
+  }
+
   renderPlayroom() {
     const E = this.els, list = this.playmatesData(), decor = this.decorData();
     this.roomData();
     E.playEmeralds.textContent = `${this.save.emeralds}`;
-    const scene = E.playScene;
-    scene.style.background = roomTierById(this.save.roomTier).bg;
-    scene.innerHTML = '';
+    this.drawRoom();
+    const layer = E.roomItems;
+    layer.innerHTML = '';
     if (!list.length && !decor.length) {
       const empty = document.createElement('div');
       empty.className = 'playEmpty';
-      empty.textContent = 'Empty room — add a friend or some decor to make it cozy!';
-      scene.appendChild(empty);
+      empty.textContent = 'Your house is empty — add a friend or some decor!';
+      layer.appendChild(empty);
       return;
     }
-    // decor first so it sits behind the friends
+    // decor first so furniture sits behind the friends
     decor.forEach((d, i) => {
       const el = document.createElement('div');
       el.className = 'playmate decor';
       el.style.left = `${d.x * 100}%`; el.style.top = `${d.y * 100}%`;
-      const cv = document.createElement('canvas'); cv.width = 52; cv.height = 52;
+      const cv = document.createElement('canvas'); cv.width = 56; cv.height = 56;
       this.drawSprite(cv, decorById(d.item) && decorById(d.item).sprite);
       el.appendChild(cv);
-      const rm = document.createElement('div'); rm.className = 'rm'; rm.textContent = '✕';
-      rm.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.removeDecor(i); });
-      el.appendChild(rm);
-      this.wireDrag(el, d, null);
-      scene.appendChild(el);
+      this.wireDrag(el, d, { onRemove: () => this.removeDecor(i) });
+      layer.appendChild(el);
     });
     list.forEach((p, i) => {
       const el = document.createElement('div');
       el.className = 'playmate';
       el.style.left = `${p.x * 100}%`; el.style.top = `${p.y * 100}%`;
       const cv = document.createElement('canvas'); cv.width = 52; cv.height = 72;
+      cv.style.animationDelay = `${(i % 5) * 0.4}s`;
       this.drawDressedCharacter(cv, this.skinById(p.skin), p.cosmetics);
       el.appendChild(cv);
-      const rm = document.createElement('div'); rm.className = 'rm'; rm.textContent = '✕';
-      rm.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.removePlaymate(i); });
-      el.appendChild(rm);
-      this.wireDrag(el, p, () => this.openDress(i));
-      scene.appendChild(el);
+      this.wireDrag(el, p, { onTap: () => this.openDress(i), onRemove: () => this.removePlaymate(i) });
+      layer.appendChild(el);
     });
   }
 
-  // generic drag for any positioned room item ({x,y} fractions); onTap fires on a click (no drag)
-  wireDrag(el, obj, onTap) {
-    let moved = false, startX = 0, startY = 0;
+  // Drag for any room item ({x,y} fractions). Toca-Boca feel: the sprite swings
+  // from the point you're holding it, then wobbles upright when you let go.
+  // Drop it on the bin to put it away (no permanent X on every item).
+  wireDrag(el, obj, { onTap, onRemove } = {}) {
+    let moved = false, startX = 0, startY = 0, lastX = 0, angle = 0, overBin = false;
+    const bin = this.els.trashZone;
+    const put = (a, s) => { el.style.transform = `translate(-50%, -100%) rotate(${a.toFixed(2)}deg) scale(${s})`; };
+
     const onMove = (e) => {
       const rect = this.els.playScene.getBoundingClientRect();
       const nx = clamp01((e.clientX - rect.left) / rect.width);
@@ -565,18 +608,40 @@ export class UI {
       if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 6) moved = true;
       el.style.left = `${nx * 100}%`; el.style.top = `${ny * 100}%`;
       obj.x = nx; obj.y = ny;
+      // swing opposite the direction of travel, eased toward the target angle
+      const vx = e.clientX - lastX; lastX = e.clientX;
+      angle += (Math.max(-22, Math.min(22, -vx * 1.6)) - angle) * 0.35;
+      put(angle, 1.08);
+      if (onRemove) {
+        const b = bin.getBoundingClientRect();
+        const hot = e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
+        if (hot !== overBin) { overBin = hot; bin.classList.toggle('hot', hot); }
+      }
     };
+
     const onUp = () => {
       el.classList.remove('dragging');
+      bin.classList.remove('show', 'hot');
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      if (overBin && onRemove) { Audio.sfx('pop'); onRemove(); return; }
       persistSave(this.save);
-      if (!moved && onTap) onTap();
+      if (!moved) { put(0, 1); el.style.transform = 'translate(-50%, -100%)'; if (onTap) onTap(); return; }
+      let a = angle, v = 0; // damped spring back to upright
+      const settle = () => {
+        v += -a * 0.26; v *= 0.80; a += v;
+        put(a, 1);
+        if (Math.abs(a) > 0.2 || Math.abs(v) > 0.2) requestAnimationFrame(settle);
+        else el.style.transform = 'translate(-50%, -100%)';
+      };
+      requestAnimationFrame(settle);
     };
+
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      moved = false; startX = e.clientX; startY = e.clientY;
+      moved = false; startX = lastX = e.clientX; startY = e.clientY; angle = 0; overBin = false;
       el.classList.add('dragging');
+      if (onRemove) bin.classList.add('show');
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     });

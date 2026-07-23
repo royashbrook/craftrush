@@ -52,12 +52,24 @@
     border: 2px solid #000; border-radius: 2px; touch-action: none;
     background: linear-gradient(#c9b28a 0%, #bda379 38%, #a98f66 38%, #6f7f4a 78%, #5f6f3e 78%);
     box-shadow: inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -3px 0 rgba(0,0,0,0.3); }
-  .playmate { position: absolute; transform: translate(-50%, -100%); cursor: grab; touch-action: none; }
-  .playmate.dragging { cursor: grabbing; filter: drop-shadow(0 4px 5px rgba(0,0,0,0.5)); z-index: 5; }
-  .playmate canvas { display: block; image-rendering: pixelated; pointer-events: none; }
-  .playmate .rm { position: absolute; top: -6px; right: -8px; width: 18px; height: 18px; border-radius: 50%;
-    background: #a3332a; color: #fff; border: 2px solid #000; font-size: 11px; font-weight: 900; line-height: 14px;
-    text-align: center; cursor: pointer; }
+  .roomBg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  .roomItems { position: absolute; inset: 0; }
+  /* drag an item onto the bin to put it away (no permanent X clutter on every item) */
+  .trashZone { position: absolute; right: 8px; bottom: 8px; width: 46px; height: 46px; z-index: 30;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    border: 3px solid #000; background: rgba(52,44,38,0.88); border-radius: 4px;
+    opacity: 0; transform: scale(0.8); pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s, background 0.15s; }
+  .trashZone.show { opacity: 0.95; transform: scale(1); }
+  .trashZone.hot { background: #c8322a; transform: scale(1.2); }
+
+  .playmate { position: absolute; transform: translate(-50%, -100%); cursor: grab; touch-action: none;
+    transform-origin: 50% 12%; }
+  .playmate.dragging { cursor: grabbing; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.45)); z-index: 5; }
+  .playmate canvas { display: block; image-rendering: pixelated; pointer-events: none;
+    animation: idleSway 3.4s ease-in-out infinite; transform-origin: 50% 90%; }
+  .playmate.decor canvas, .playmate.dragging canvas { animation: none; }
+  @keyframes idleSway { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
   .playEmpty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: #4a3a22; font-size: 13px; font-weight: 900; text-align: center; padding: 0 20px; }
   .dressPanel { position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 62%; overflow-y: auto;
@@ -413,7 +425,11 @@
         <button class="mcbtn small" id="btnRoom">🎨 ROOM</button>
       </div>
       <div id="playHint" class="playHint">Drag friends &amp; decor around · tap a friend to dress them</div>
-      <div id="playScene" class="playScene"></div>
+      <div id="playScene" class="playScene">
+        <canvas id="roomBg" class="roomBg"></canvas>
+        <div id="roomItems" class="roomItems"></div>
+        <div id="trashZone" class="trashZone">🗑️</div>
+      </div>
       <div id="dressPanel" class="dressPanel hidden"></div>
       <button class="mcbtn small" id="btnPlayroomBack">◀ BACK</button>
     </div>

@@ -376,16 +376,24 @@ export const DECOR = [
   { id: 'potted_plant',   name: 'Plant',      sprite: 'potted_plant',   cost: 60 },
   { id: 'crafting_table', name: 'Crafting',   sprite: 'crafting_table', cost: 90 },
   { id: 'cake',           name: 'Cake',       sprite: 'cake',           cost: 120 },
+  { id: 'room_rug',       name: 'Rug',        sprite: 'room_rug',       cost: 140 },
+  { id: 'room_lamp',      name: 'Lamp',       sprite: 'room_lamp',      cost: 160 },
   { id: 'painting',       name: 'Painting',   sprite: 'painting',       cost: 180 },
+  { id: 'room_shelf',     name: 'Shelf',      sprite: 'room_shelf',     cost: 200 },
   { id: 'bed',            name: 'Bed',        sprite: 'bed',            cost: 250 },
 ];
 export const decorById = (id) => DECOR.find(d => d.id === id);
-// backdrops (CSS gradients); the first is free, the rest are one-time buys you keep
+// Room styles are real house interiors: a patterned wall, a floor with depth, and
+// baseboard trim, drawn to a pixel canvas. The first is free; the rest you keep.
 export const ROOM_TIERS = [
-  { id: 'yard',   name: 'Grassy Yard',   cost: 0,    bg: 'linear-gradient(#c9b28a 0%, #bda379 38%, #a98f66 38%, #6f7f4a 78%, #5f6f3e 78%)' },
-  { id: 'oak',    name: 'Oak Cabin',     cost: 600,  bg: 'linear-gradient(#caa96b 0%, #b78f52 46%, #8c6a3b 46%, #6f5330 100%)' },
-  { id: 'stone',  name: 'Stone Hall',    cost: 2000, bg: 'linear-gradient(#9c9c9c 0%, #838383 46%, #6a6a6a 46%, #545454 100%)' },
-  { id: 'quartz', name: 'Quartz Palace', cost: 6000, bg: 'linear-gradient(#f1ede5 0%, #ddd7c9 46%, #c7bfae 46%, #ada592 100%)' },
+  { id: 'cabin',  name: 'Cozy Cabin',    cost: 0,    pattern: 'planks',
+    wall: '#c08b4e', wallAlt: '#a9773f', trim: '#6f4a28', floor: '#8f5f36', floorAlt: '#7c4f2c' },
+  { id: 'oak',    name: 'Oak Hall',      cost: 600,  pattern: 'planks',
+    wall: '#d6a969', wallAlt: '#bb8f52', trim: '#7a5730', floor: '#a06e3e', floorAlt: '#8b5e34' },
+  { id: 'stone',  name: 'Stone Keep',    cost: 2000, pattern: 'bricks',
+    wall: '#9d9d9d', wallAlt: '#868686', trim: '#5f5f5f', floor: '#7a7a7a', floorAlt: '#6b6b6b' },
+  { id: 'quartz', name: 'Quartz Palace', cost: 6000, pattern: 'tiles',
+    wall: '#efeade', wallAlt: '#dbd4c3', trim: '#b6ad99', floor: '#dcd5c4', floorAlt: '#cac2af' },
 ];
 export const roomTierById = (id) => ROOM_TIERS.find(r => r.id === id) || ROOM_TIERS[0];
 
@@ -506,7 +514,7 @@ export function loadSave() {
     home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 },
     mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' },
     playmates: [],
-    decor: [], roomTier: 'yard', roomTiersOwned: ['yard'] };
+    decor: [], roomTier: 'cabin', roomTiersOwned: ['cabin'] };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return def;

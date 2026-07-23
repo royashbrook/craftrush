@@ -36,8 +36,8 @@ test('a fresh save has empty decor and the free starter room', () => {
   withStorage(null);
   const s = loadSave();
   assert.deepEqual(s.decor, []);
-  assert.equal(s.roomTier, 'yard');
-  assert.deepEqual(s.roomTiersOwned, ['yard']);
+  assert.equal(s.roomTier, ROOM_TIERS[0].id);
+  assert.deepEqual(s.roomTiersOwned, [ROOM_TIERS[0].id]);
 });
 
 test('decor and room lookups resolve valid ids and fall back safely', () => {
@@ -45,6 +45,15 @@ test('decor and room lookups resolve valid ids and fall back safely', () => {
   assert.equal(decorById('nonsense'), undefined);
   assert.equal(ROOM_TIERS[0].cost, 0); // starter room is free
   assert.equal(roomTierById('quartz').name, 'Quartz Palace');
-  assert.equal(roomTierById('nonsense').id, 'yard'); // safe fallback
+  assert.equal(roomTierById('nonsense').id, ROOM_TIERS[0].id); // safe fallback
   assert.ok(DECOR.every(d => d.sprite && d.cost >= 0));
+});
+
+test('every room tier carries the materials the renderer needs', () => {
+  for (const t of ROOM_TIERS) {
+    for (const k of ['wall', 'wallAlt', 'trim', 'floor', 'floorAlt', 'pattern']) {
+      assert.ok(t[k], `${t.id} missing ${k}`);
+    }
+    assert.ok(['planks', 'bricks', 'tiles'].includes(t.pattern));
+  }
 });
