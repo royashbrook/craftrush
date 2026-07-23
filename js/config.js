@@ -368,6 +368,27 @@ export function pendingIdle(villagers, lastCollect, now) {
   return Math.floor(homeIncomeRate(villagers) * elapsed / 3600000);
 }
 
+// Playroom decorations: buyable placeable furniture (an emerald sink) and room
+// backdrops. Each buy drops one draggable instance into the playroom.
+export const DECOR = [
+  { id: 'chest',          name: 'Chest',      sprite: 'chest',          cost: 40 },
+  { id: 'torch',          name: 'Torch',      sprite: 'torch',          cost: 30 },
+  { id: 'potted_plant',   name: 'Plant',      sprite: 'potted_plant',   cost: 60 },
+  { id: 'crafting_table', name: 'Crafting',   sprite: 'crafting_table', cost: 90 },
+  { id: 'cake',           name: 'Cake',       sprite: 'cake',           cost: 120 },
+  { id: 'painting',       name: 'Painting',   sprite: 'painting',       cost: 180 },
+  { id: 'bed',            name: 'Bed',        sprite: 'bed',            cost: 250 },
+];
+export const decorById = (id) => DECOR.find(d => d.id === id);
+// backdrops (CSS gradients); the first is free, the rest are one-time buys you keep
+export const ROOM_TIERS = [
+  { id: 'yard',   name: 'Grassy Yard',   cost: 0,    bg: 'linear-gradient(#c9b28a 0%, #bda379 38%, #a98f66 38%, #6f7f4a 78%, #5f6f3e 78%)' },
+  { id: 'oak',    name: 'Oak Cabin',     cost: 600,  bg: 'linear-gradient(#caa96b 0%, #b78f52 46%, #8c6a3b 46%, #6f5330 100%)' },
+  { id: 'stone',  name: 'Stone Hall',    cost: 2000, bg: 'linear-gradient(#9c9c9c 0%, #838383 46%, #6a6a6a 46%, #545454 100%)' },
+  { id: 'quartz', name: 'Quartz Palace', cost: 6000, bg: 'linear-gradient(#f1ede5 0%, #ddd7c9 46%, #c7bfae 46%, #ada592 100%)' },
+];
+export const roomTierById = (id) => ROOM_TIERS.find(r => r.id === id) || ROOM_TIERS[0];
+
 // Mining minigame: tap a dig face to break blocks for emeralds, dig endlessly
 // downward, upgrade the pickaxe. Energy-gated (refills over real time) so it
 // can't out-earn the runner and gives a recharge return-hook.
@@ -484,7 +505,8 @@ export function loadSave() {
     inventory: { blazeRods: 0, obsidian: 0 },
     home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 },
     mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' },
-    playmates: [] };
+    playmates: [],
+    decor: [], roomTier: 'yard', roomTiersOwned: ['yard'] };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return def;

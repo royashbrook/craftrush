@@ -44,7 +44,10 @@
 
   /* playroom */
   #playroom .panel { width: min(360px, 94%); height: 100%; }
+  .playBtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
+  .playBtns .mcbtn { padding: 8px 2px; font-size: 12px; }
   .playHint { font-size: 10px; color: #cfc9d8; text-align: center; }
+  .roomSwatch { width: 40px; height: 30px; border: 2px solid #000; }
   .playScene { position: relative; width: 100%; flex: 1 1 auto; min-height: 260px; overflow: hidden;
     border: 2px solid #000; border-radius: 2px; touch-action: none;
     background: linear-gradient(#c9b28a 0%, #bda379 38%, #a98f66 38%, #6f7f4a 78%, #5f6f3e 78%);
@@ -62,9 +65,11 @@
     box-shadow: 0 6px 20px rgba(0,0,0,0.6); z-index: 20; }
   .dressRow { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
   .dressLabel { font-size: 11px; font-weight: 900; color: #ffd94d; text-shadow: 1px 1px 0 #000; }
-  .dressItem { flex: 0 0 auto; width: 46px; height: 58px; background: #3a3444; border: 2px solid #000; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; position: relative; }
+  .dressItem { flex: 0 0 auto; width: 48px; min-height: 58px; background: #3a3444; border: 2px solid #000; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative; padding: 2px; }
   .dressItem.sel { background: #2a7fd4; }
+  .dressItem.cant { opacity: 0.5; }
+  .dItemCost { font-size: 9px; font-weight: 900; color: #b8f0c8; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
   .dressItem canvas { image-rendering: pixelated; }
   .dressItem .swatch { width: 30px; height: 30px; border: 2px solid #000; }
   .dressItem .none { font-size: 9px; color: #cfc9d8; font-weight: 900; }
@@ -401,8 +406,13 @@
 
   <div id="playroom" class="overlay hidden">
     <div class="panel">
-      <div class="chipRow"><span style="color:#fff">🧸 PLAYROOM</span><button class="mcbtn small" id="btnAddFriend">＋ FRIEND</button></div>
-      <div id="playHint" class="playHint">Drag your friends around · tap one to dress them</div>
+      <div class="chipRow"><span style="color:#fff">🧸 PLAYROOM</span><span class="chip green"><span class="em"></span> <span id="playEmeralds">0</span></span></div>
+      <div class="playBtns">
+        <button class="mcbtn small" id="btnAddFriend">🙂 FRIEND</button>
+        <button class="mcbtn small" id="btnDecor">🛋️ DECOR</button>
+        <button class="mcbtn small" id="btnRoom">🎨 ROOM</button>
+      </div>
+      <div id="playHint" class="playHint">Drag friends &amp; decor around · tap a friend to dress them</div>
       <div id="playScene" class="playScene"></div>
       <div id="dressPanel" class="dressPanel hidden"></div>
       <button class="mcbtn small" id="btnPlayroomBack">◀ BACK</button>

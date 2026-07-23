@@ -12,6 +12,7 @@ const PACK_FILES = [
   ['./sprites/bosses.js', 'BOSSES'],
   ['./sprites/scenery.js', 'SCENERY'],
   ['./sprites/items.js', 'ITEMS'],
+  ['./sprites/decor.js', 'DECOR'],
 ];
 
 export const missingPacks = [];

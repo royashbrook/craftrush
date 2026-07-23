@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
 const BLOCK_COLORS = { stone: '#8a8a8a', coal: '#42413f', iron: '#c8a878', gold: '#e8c84a', diamond: '#5ce0e0', emerald: '#2ecc5e' };
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit, hasSprite } from './assets.js';
@@ -38,6 +38,7 @@ export class UI {
       homeWelcome: $('homeWelcome'), homeIncome: $('homeIncome'), homeScene: $('homeScene'),
       villagerList: $('villagerList'), btnHomeBack: $('btnHomeBack'),
       btnPlayroom: $('btnPlayroom'), playroom: $('playroom'), btnAddFriend: $('btnAddFriend'),
+      btnDecor: $('btnDecor'), btnRoom: $('btnRoom'), playEmeralds: $('playEmeralds'),
       playScene: $('playScene'), dressPanel: $('dressPanel'), btnPlayroomBack: $('btnPlayroomBack'), playHint: $('playHint'),
       btnMine: $('btnMine'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
       mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'), digFace: $('digFace'),
@@ -74,6 +75,8 @@ export class UI {
     E.btnPlayroom.addEventListener('click', () => { Audio.sfx('click'); this.showPlayroom(); });
     E.btnPlayroomBack.addEventListener('click', () => { Audio.sfx('click'); persistSave(this.save); this.showHome(); });
     E.btnAddFriend.addEventListener('click', () => this.addFriend());
+    E.btnDecor.addEventListener('click', () => this.showDecorCatalog());
+    E.btnRoom.addEventListener('click', () => this.showRoomPicker());
     E.btnMine.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showMine(); });
     E.btnMineBack.addEventListener('click', () => { Audio.sfx('click'); persistSave(this.save); this.showMenu(); });
     E.btnPickUp.addEventListener('click', () => this.upgradePickaxe());
@@ -484,36 +487,76 @@ export class UI {
     this.renderPlayroom();
   }
 
+  decorData() {
+    if (!Array.isArray(this.save.decor)) this.save.decor = [];
+    this.save.decor = this.save.decor.filter(d => decorById(d.item));
+    for (const d of this.save.decor) { d.x = clamp01(typeof d.x === 'number' ? d.x : 0.5); d.y = clamp01(typeof d.y === 'number' ? d.y : 0.8); }
+    return this.save.decor;
+  }
+
+  roomData() {
+    if (!this.save.roomTier || !roomTierById(this.save.roomTier)) this.save.roomTier = 'yard';
+    if (!Array.isArray(this.save.roomTiersOwned)) this.save.roomTiersOwned = ['yard'];
+    if (!this.save.roomTiersOwned.includes('yard')) this.save.roomTiersOwned.unshift('yard');
+    return this.save;
+  }
+
+  // draw a single decoration sprite fitted (bottom-anchored) into a canvas
+  drawSprite(cv, name) {
+    const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+    g.clearRect(0, 0, cv.width, cv.height);
+    if (!name || !hasSprite(name)) return;
+    const spr = getSprite(name);
+    let h = cv.height * 0.92;
+    if (spr.w * (h / spr.h) > cv.width * 0.95) h = cv.width * 0.95 * spr.h / spr.w;
+    blit(g, spr, 0, cv.width / 2, cv.height - 2, h);
+  }
+
   renderPlayroom() {
-    const E = this.els, list = this.playmatesData();
+    const E = this.els, list = this.playmatesData(), decor = this.decorData();
+    this.roomData();
+    E.playEmeralds.textContent = `${this.save.emeralds}`;
     const scene = E.playScene;
+    scene.style.background = roomTierById(this.save.roomTier).bg;
     scene.innerHTML = '';
-    if (!list.length) {
+    if (!list.length && !decor.length) {
       const empty = document.createElement('div');
       empty.className = 'playEmpty';
-      empty.textContent = 'No friends yet — tap ＋ FRIEND to bring one home!';
+      empty.textContent = 'Empty room — add a friend or some decor to make it cozy!';
       scene.appendChild(empty);
       return;
     }
+    // decor first so it sits behind the friends
+    decor.forEach((d, i) => {
+      const el = document.createElement('div');
+      el.className = 'playmate decor';
+      el.style.left = `${d.x * 100}%`; el.style.top = `${d.y * 100}%`;
+      const cv = document.createElement('canvas'); cv.width = 52; cv.height = 52;
+      this.drawSprite(cv, decorById(d.item) && decorById(d.item).sprite);
+      el.appendChild(cv);
+      const rm = document.createElement('div'); rm.className = 'rm'; rm.textContent = '✕';
+      rm.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.removeDecor(i); });
+      el.appendChild(rm);
+      this.wireDrag(el, d, null);
+      scene.appendChild(el);
+    });
     list.forEach((p, i) => {
       const el = document.createElement('div');
       el.className = 'playmate';
-      el.style.left = `${p.x * 100}%`;
-      el.style.top = `${p.y * 100}%`;
-      const cv = document.createElement('canvas');
-      cv.width = 52; cv.height = 72;
+      el.style.left = `${p.x * 100}%`; el.style.top = `${p.y * 100}%`;
+      const cv = document.createElement('canvas'); cv.width = 52; cv.height = 72;
       this.drawDressedCharacter(cv, this.skinById(p.skin), p.cosmetics);
       el.appendChild(cv);
-      const rm = document.createElement('div');
-      rm.className = 'rm'; rm.textContent = '✕';
+      const rm = document.createElement('div'); rm.className = 'rm'; rm.textContent = '✕';
       rm.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.removePlaymate(i); });
       el.appendChild(rm);
-      this.wirePlaymateDrag(el, i);
+      this.wireDrag(el, p, () => this.openDress(i));
       scene.appendChild(el);
     });
   }
 
-  wirePlaymateDrag(el, i) {
+  // generic drag for any positioned room item ({x,y} fractions); onTap fires on a click (no drag)
+  wireDrag(el, obj, onTap) {
     let moved = false, startX = 0, startY = 0;
     const onMove = (e) => {
       const rect = this.els.playScene.getBoundingClientRect();
@@ -521,14 +564,14 @@ export class UI {
       const ny = clamp01((e.clientY - rect.top) / rect.height);
       if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 6) moved = true;
       el.style.left = `${nx * 100}%`; el.style.top = `${ny * 100}%`;
-      this.save.playmates[i].x = nx; this.save.playmates[i].y = ny;
+      obj.x = nx; obj.y = ny;
     };
     const onUp = () => {
       el.classList.remove('dragging');
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       persistSave(this.save);
-      if (!moved) this.openDress(i); // a tap (not a drag) opens the dress panel
+      if (!moved && onTap) onTap();
     };
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -537,6 +580,74 @@ export class UI {
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     });
+  }
+
+  showDecorCatalog() {
+    const panel = this.els.dressPanel; panel.innerHTML = ''; Audio.sfx('click');
+    const lab = document.createElement('div'); lab.className = 'dressLabel'; lab.textContent = 'BUY DECOR · drag it around after'; panel.appendChild(lab);
+    const row = document.createElement('div'); row.className = 'dressRow';
+    for (const d of DECOR) {
+      const cell = document.createElement('button');
+      cell.className = 'dressItem' + (this.save.emeralds < d.cost ? ' cant' : '');
+      const cv = document.createElement('canvas'); cv.width = 40; cv.height = 40; this.drawSprite(cv, d.sprite); cell.appendChild(cv);
+      const cost = document.createElement('div'); cost.className = 'dItemCost'; cost.innerHTML = `<span class="em"></span>${d.cost}`; cell.appendChild(cost);
+      cell.addEventListener('click', () => this.buyDecor(d.id));
+      row.appendChild(cell);
+    }
+    panel.appendChild(row);
+    this._dressClose(panel);
+  }
+
+  buyDecor(id) {
+    const def = decorById(id); if (!def) return;
+    if (this.save.emeralds < def.cost) { Audio.sfx('gate_bad'); return; }
+    this.save.emeralds -= def.cost;
+    this.decorData().push({ item: id, x: 0.3 + Math.random() * 0.4, y: 0.6 + Math.random() * 0.22 });
+    persistSave(this.save); Audio.sfx('buy');
+    this.renderPlayroom(); this.showDecorCatalog();
+  }
+
+  removeDecor(i) {
+    this.save.decor.splice(i, 1);
+    persistSave(this.save); Audio.sfx('pop');
+    this.renderPlayroom();
+  }
+
+  showRoomPicker() {
+    const panel = this.els.dressPanel; panel.innerHTML = ''; Audio.sfx('click'); this.roomData();
+    const lab = document.createElement('div'); lab.className = 'dressLabel'; lab.textContent = 'ROOM STYLE'; panel.appendChild(lab);
+    const row = document.createElement('div'); row.className = 'dressRow';
+    for (const t of ROOM_TIERS) {
+      const owned = this.save.roomTiersOwned.includes(t.id);
+      const cell = document.createElement('button');
+      cell.className = 'dressItem' + (this.save.roomTier === t.id ? ' sel' : '') + (!owned && this.save.emeralds < t.cost ? ' cant' : '');
+      const sw = document.createElement('div'); sw.className = 'roomSwatch'; sw.style.background = t.bg; cell.appendChild(sw);
+      const cap = document.createElement('div'); cap.className = 'dItemCost';
+      cap.innerHTML = owned ? (this.save.roomTier === t.id ? '✔ ON' : 'OWNED') : `<span class="em"></span>${t.cost}`;
+      cell.appendChild(cap);
+      cell.addEventListener('click', () => this.setRoomTier(t.id));
+      row.appendChild(cell);
+    }
+    panel.appendChild(row);
+    this._dressClose(panel);
+  }
+
+  setRoomTier(id) {
+    const t = roomTierById(id); this.roomData();
+    if (!this.save.roomTiersOwned.includes(id)) {
+      if (this.save.emeralds < t.cost) { Audio.sfx('gate_bad'); return; }
+      this.save.emeralds -= t.cost; this.save.roomTiersOwned.push(id); Audio.sfx('buy');
+    } else Audio.sfx('click');
+    this.save.roomTier = id;
+    persistSave(this.save);
+    this.renderPlayroom(); this.showRoomPicker();
+  }
+
+  _dressClose(panel) {
+    const close = document.createElement('button'); close.className = 'mcbtn small dressClose'; close.textContent = '✔ DONE';
+    close.addEventListener('click', () => { Audio.sfx('click'); panel.classList.add('hidden'); });
+    panel.appendChild(close);
+    panel.classList.remove('hidden');
   }
 
   removePlaymate(i) {
