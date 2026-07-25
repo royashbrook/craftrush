@@ -33,16 +33,22 @@ async function boot() {
   const stage = document.getElementById('stage');
   function fit() {
     const aw = window.innerWidth, ah = window.innerHeight;
-    let cssW, cssH;
-    if (aw / ah <= 0.68) { cssW = aw; cssH = ah; }        // phone portrait: fullscreen
-    else { cssH = ah; cssW = Math.round(ah * 0.58); }     // desktop/landscape: centered column
-    stage.style.width = cssW + 'px';
-    stage.style.height = cssH + 'px';
-    const resH = Math.min(1000, Math.round(RES_W * (cssH / cssW)));
+    // Phone portrait fills the screen via CSS (100dvh), so the bars sit on the real
+    // top and bottom edges even as Safari's URL bar slides in and out. Measuring
+    // innerHeight in JS can't track that and left the nav floating above the bottom.
+    const phone = aw / ah <= 0.68;
+    stage.classList.toggle('fullscreen', phone);
+    if (phone) { stage.style.width = ''; stage.style.height = ''; }
+    else { stage.style.width = Math.round(ah * 0.58) + 'px'; stage.style.height = ah + 'px'; }
+    const r = stage.getBoundingClientRect();
+    const resH = Math.min(1000, Math.round(RES_W * (r.height / Math.max(1, r.width))));
     game.resize(RES_W, resH);
   }
   fit();
   window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', fit);
+  // the visual viewport changes as mobile browser chrome collapses; keep up with it
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
 
   // audio needs a user gesture
   const unlock = () => { Audio.unlock(); if (game.state === 'menu' && save.sound) Audio.music('menu'); };

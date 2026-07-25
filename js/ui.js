@@ -14,7 +14,7 @@ export class UI {
     this.save = save;
     this.els = {
       menu: $('menu'), shop: $('shop'), result: $('result'), hud: $('hud'),
-      menuLevel: $('menuLevel'), menuEmeralds: $('menuEmeralds'),
+      menuLevel: $('menuLevel'),
       btnPlayShooter: $('btnPlayShooter'), btnPlayGates: $('btnPlayGates'),
       cardShooter: $('cardShooter'), cardGates: $('cardGates'),
       shopGrid: $('shopGrid'), shopEmeralds: $('shopEmeralds'),
@@ -1291,7 +1291,6 @@ export class UI {
     const E = this.els;
     const biome = BIOMES[(this.save.level - 1) % BIOMES.length];
     E.menuLevel.textContent = `LV ${this.save.level} · ${biome.name.toUpperCase()}`;
-    E.menuEmeralds.textContent = `${this.save.emeralds}`;
     E.cardShooter.classList.toggle('sel', this.save.mode === 'shooter');
     E.cardGates.classList.toggle('sel', this.save.mode === 'gates');
     this.refreshBadges(); // the "come back" dots live on the nav bar now
