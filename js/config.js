@@ -405,6 +405,98 @@ export const ROOM_TIERS = [
 ];
 export const roomTierById = (id) => ROOM_TIERS.find(r => r.id === id) || ROOM_TIERS[0];
 
+// ---------------------------------------------------------------------------
+// World: biome towns you unlock, each holding houses you buy and decorate.
+// Every town has a native interior style (free in that town) and a preset of
+// starting furniture, so an unlocked house is never an empty box.
+// ---------------------------------------------------------------------------
+const PRESET_COZY = [
+  { item: 'bed', x: 0.10, y: 0.80 }, { item: 'room_rug', x: 0.34, y: 0.95 },
+  { item: 'room_lamp', x: 0.56, y: 0.86 }, { item: 'crafting_table', x: 0.74, y: 0.95 },
+  { item: 'potted_plant', x: 0.90, y: 0.92 },
+];
+const PRESET_HALL = [
+  { item: 'room_shelf', x: 0.16, y: 0.70 }, { item: 'chest', x: 0.30, y: 0.93 },
+  { item: 'room_rug', x: 0.50, y: 0.96 }, { item: 'painting', x: 0.66, y: 0.66 },
+  { item: 'bed', x: 0.86, y: 0.82 },
+];
+const PRESET_PARTY = [
+  { item: 'cake', x: 0.22, y: 0.92 }, { item: 'torch', x: 0.40, y: 0.72 },
+  { item: 'room_rug', x: 0.56, y: 0.96 }, { item: 'room_lamp', x: 0.78, y: 0.88 },
+  { item: 'potted_plant', x: 0.92, y: 0.94 },
+];
+
+export const TOWNS = [
+  { id: 'plains', name: 'Plains Village', icon: '🌳', cost: 0, preset: PRESET_COZY,
+    style: { id: 'plains', name: 'Village Oak', pattern: 'planks',
+      wall: '#c08b4e', wallAlt: '#a9773f', trim: '#6f4a28', floor: '#8f5f36', floorAlt: '#7c4f2c' } },
+  { id: 'cherry', name: 'Cherry Grove', icon: '🌸', cost: 800, preset: PRESET_PARTY,
+    style: { id: 'cherry', name: 'Cherry Wood', pattern: 'planks',
+      wall: '#e8b6c8', wallAlt: '#d29bb0', trim: '#8f5f70', floor: '#c98fa4', floorAlt: '#b47b90' } },
+  { id: 'desert', name: 'Desert Town', icon: '🏜️', cost: 2000, preset: PRESET_HALL,
+    style: { id: 'desert', name: 'Sandstone', pattern: 'bricks',
+      wall: '#e0cf9a', wallAlt: '#cbb884', trim: '#9a8a5c', floor: '#d6c48c', floorAlt: '#c0ae78' } },
+  { id: 'snowy', name: 'Snowy City', icon: '❄️', cost: 4000, preset: PRESET_COZY,
+    style: { id: 'snowy', name: 'Packed Ice', pattern: 'tiles',
+      wall: '#cfe4f2', wallAlt: '#b6d2e6', trim: '#7fa0b8', floor: '#bcd8ea', floorAlt: '#a6c4d8' } },
+  { id: 'savanna', name: 'Savanna Camp', icon: '🌾', cost: 7000, preset: PRESET_HALL,
+    style: { id: 'savanna', name: 'Acacia', pattern: 'planks',
+      wall: '#d08a52', wallAlt: '#b8743f', trim: '#7d4c26', floor: '#b3763f', floorAlt: '#9c6434' } },
+  { id: 'mushroom', name: 'Mushroom Isle', icon: '🍄', cost: 11000, preset: PRESET_PARTY,
+    style: { id: 'mushroom', name: 'Mushroom Stem', pattern: 'tiles',
+      wall: '#e8e0d0', wallAlt: '#d2c8b4', trim: '#a4544c', floor: '#cdbfa6', floorAlt: '#b8a98f' } },
+  { id: 'end', name: 'End City', icon: '🌌', cost: 16000, preset: PRESET_HALL,
+    style: { id: 'end', name: 'Purpur', pattern: 'tiles',
+      wall: '#b295b8', wallAlt: '#9b7ba3', trim: '#5f4468', floor: '#a487ab', floorAlt: '#8e7095' } },
+  { id: 'nether', name: 'Nether Bastion', icon: '🔥', cost: 22000, preset: PRESET_PARTY,
+    style: { id: 'nether', name: 'Blackstone', pattern: 'bricks',
+      wall: '#4a4048', wallAlt: '#3a323a', trim: '#8f3b2c', floor: '#3f3740', floorAlt: '#332c34' } },
+];
+export const townById = (id) => TOWNS.find(t => t.id === id) || TOWNS[0];
+
+export const MAX_HOUSES = 4;
+// cost of the NEXT house in a town given how many it already has
+export const housePrice = (owned) => Math.round(400 * Math.pow(1.8, owned));
+
+// a fresh house for a town: town's native style, pre-decorated, nobody home yet
+export function makeHouse(townId) {
+  const t = townById(townId);
+  return { style: t.style.id, decor: t.preset.map(d => ({ ...d })), people: [] };
+}
+
+// resolve a house style id to materials: a bought ROOM_TIER, else the town's native
+export function styleById(id, townId) {
+  const t = townById(townId);
+  if (id === t.style.id) return t.style;
+  return ROOM_TIERS.find(r => r.id === id) || t.style;
+}
+
+// Build or repair save.world, folding a legacy flat playroom into plains house 0.
+// Idempotent: safe to call on every load.
+export function migrateWorld(save) {
+  const w = save.world && typeof save.world === 'object' ? save.world : (save.world = {});
+  if (!w.towns || typeof w.towns !== 'object') w.towns = {};
+  for (const t of TOWNS) {
+    const rec = w.towns[t.id] || (w.towns[t.id] = { unlocked: t.cost === 0, houses: [] });
+    if (!Array.isArray(rec.houses)) rec.houses = [];
+    if (rec.unlocked && !rec.houses.length) rec.houses.push(makeHouse(t.id));
+  }
+  // legacy flat playroom -> plains house 0 (only once; the flat keys are dropped)
+  const legacy = Array.isArray(save.playmates) || Array.isArray(save.decor);
+  if (legacy) {
+    const h = w.towns.plains.houses[0] || (w.towns.plains.houses[0] = makeHouse('plains'));
+    if (Array.isArray(save.playmates) && save.playmates.length) h.people = save.playmates;
+    if (Array.isArray(save.decor) && save.decor.length) h.decor = save.decor;
+    if (save.roomTier) h.style = save.roomTier;
+    delete save.playmates; delete save.decor; delete save.roomTier;
+  }
+  if (!w.towns[w.town]) w.town = 'plains';
+  const houses = w.towns[w.town].houses;
+  if (typeof w.house !== 'number' || w.house < 0 || w.house >= houses.length) w.house = 0;
+  if (w.carry === undefined) w.carry = null;
+  return w;
+}
+
 // Mining minigame: tap a dig face to break blocks for emeralds, dig endlessly
 // downward, upgrade the pickaxe. Energy-gated (refills over real time) so it
 // can't out-earn the runner and gives a recharge return-hook.
@@ -521,13 +613,16 @@ export function loadSave() {
     inventory: { blazeRods: 0, obsidian: 0 },
     home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 },
     mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' },
-    playmates: [],
-    decor: [], roomTier: 'cabin', roomTiersOwned: ['cabin'] };
+    roomTiersOwned: ['cabin'],
+    // world/towns/houses live here; migrateWorld() builds and repairs it on load
+    world: null };
+  let save = def;
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return def;
-    return { ...def, ...JSON.parse(raw) };
-  } catch { return def; }
+    if (raw) save = { ...def, ...JSON.parse(raw) };
+  } catch { save = def; }
+  migrateWorld(save); // build/repair the world, folding in any legacy flat playroom
+  return save;
 }
 
 // Win bonus: flat base + per-level, plus a LOG-scaled term on best power so a

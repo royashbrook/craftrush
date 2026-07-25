@@ -4,7 +4,7 @@ import { clamp01, loadSave, DECOR, decorById, ROOM_TIERS, roomTierById } from '.
 
 function withStorage(initial) {
   const store = {};
-  if (initial) store['craftrush.v1'] = JSON.stringify(initial);
+  if (initial) store['craftrush_save_v1'] = JSON.stringify(initial); // must match SAVE_KEY
   global.localStorage = {
     getItem: (k) => (k in store ? store[k] : null),
     setItem: (k, v) => { store[k] = v; },
@@ -20,23 +20,32 @@ test('clamp01 keeps drag positions inside [0,1]', () => {
   assert.equal(clamp01(1), 1);
 });
 
-test('a fresh save starts with no playmates', () => {
+test('a fresh save starts with one pre-decorated house and nobody in it', () => {
   withStorage(null);
-  assert.deepEqual(loadSave().playmates, []);
+  const h = loadSave().world.towns.plains.houses[0];
+  assert.deepEqual(h.people, []);
+  assert.ok(h.decor.length > 0);
 });
 
-test('an older save without playmates migrates to an empty list', () => {
-  withStorage({ emeralds: 100, level: 2 }); // predates the field
+test('a save predating the world is migrated on load', () => {
+  withStorage({ emeralds: 100, level: 2 }); // predates the whole playroom
   const s = loadSave();
-  assert.ok(Array.isArray(s.playmates));
-  assert.equal(s.playmates.length, 0);
+  assert.ok(s.world && s.world.towns.plains.houses.length === 1);
+  assert.equal(s.world.town, 'plains');
 });
 
-test('a fresh save has empty decor and the free starter room', () => {
-  withStorage(null);
+test('a legacy flat playroom is carried into the first house on load', () => {
+  withStorage({
+    emeralds: 100,
+    playmates: [{ skin: 'steve', cosmetics: { cape: 'none', hat: 'none' }, x: 0.4, y: 0.8 }],
+    decor: [{ item: 'bed', x: 0.2, y: 0.9 }],
+    roomTier: 'quartz',
+  });
   const s = loadSave();
-  assert.deepEqual(s.decor, []);
-  assert.equal(s.roomTier, ROOM_TIERS[0].id);
+  const h = s.world.towns.plains.houses[0];
+  assert.equal(h.people.length, 1, 'the player keeps the friend they had');
+  assert.equal(h.decor.length, 1);
+  assert.equal(h.style, 'quartz');
   assert.deepEqual(s.roomTiersOwned, [ROOM_TIERS[0].id]);
 });
 

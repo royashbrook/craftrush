@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
 const BLOCK_COLORS = { stone: '#8a8a8a', coal: '#42413f', iron: '#c8a878', gold: '#e8c84a', diamond: '#5ce0e0', emerald: '#2ecc5e' };
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit, hasSprite } from './assets.js';
@@ -41,6 +41,10 @@ export class UI {
       btnDecor: $('btnDecor'), btnRoom: $('btnRoom'), playEmeralds: $('playEmeralds'),
       playScene: $('playScene'), dressPanel: $('dressPanel'), btnPlayroomBack: $('btnPlayroomBack'), playHint: $('playHint'),
       roomWorld: $('roomWorld'), roomBg: $('roomBg'), roomItems: $('roomItems'), trashZone: $('trashZone'),
+      carryZone: $('carryZone'), btnPlaceCarry: $('btnPlaceCarry'), playHouseTitle: $('playHouseTitle'),
+      world: $('world'), worldEmeralds: $('worldEmeralds'), townGrid: $('townGrid'), btnWorldBack: $('btnWorldBack'),
+      town: $('town'), townTitle: $('townTitle'), townEmeralds: $('townEmeralds'), townHint: $('townHint'),
+      houseGrid: $('houseGrid'), btnBuyHouse: $('btnBuyHouse'), btnTownBack: $('btnTownBack'),
       btnMine: $('btnMine'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
       mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'), digFace: $('digFace'),
       btnPickUp: $('btnPickUp'), btnMineBack: $('btnMineBack'),
@@ -73,8 +77,12 @@ export class UI {
     E.btnAch.addEventListener('click', () => { Audio.sfx('click'); this.showAchievements('menu'); });
     E.btnHome.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showHome(); });
     E.btnHomeBack.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
-    E.btnPlayroom.addEventListener('click', () => { Audio.sfx('click'); this.showPlayroom(); });
-    E.btnPlayroomBack.addEventListener('click', () => { Audio.sfx('click'); persistSave(this.save); this.showHome(); });
+    E.btnPlayroom.addEventListener('click', () => { Audio.sfx('click'); this.showWorld(); });
+    E.btnWorldBack.addEventListener('click', () => { Audio.sfx('click'); this.showHome(); });
+    E.btnTownBack.addEventListener('click', () => { Audio.sfx('click'); this.showWorld(); });
+    E.btnBuyHouse.addEventListener('click', () => this.buyHouse());
+    E.btnPlaceCarry.addEventListener('click', () => this.placeCarry());
+    E.btnPlayroomBack.addEventListener('click', () => { Audio.sfx('click'); persistSave(this.save); this.showTown(); });
     E.btnAddFriend.addEventListener('click', () => this.addFriend());
     E.btnDecor.addEventListener('click', () => this.showDecorCatalog());
     E.btnRoom.addEventListener('click', () => this.showRoomPicker());
@@ -485,11 +493,143 @@ export class UI {
     }
   }
 
-  // ensure save.playmates exists and every entry references owned/valid items
+  // ensure the current house's people list exists and references owned/valid items
+  // ---- world / towns / houses ----
+  worldData() { return migrateWorld(this.save); }
+  townRec(id) { const w = this.worldData(); return w.towns[id || w.town]; }
+  curHouse() {
+    const w = this.worldData();
+    const houses = w.towns[w.town].houses;
+    return houses[w.house] || houses[0];
+  }
+
+  showWorld() {
+    this.hideAll();
+    this.worldData();
+    this.els.world.classList.remove('hidden');
+    this.renderWorld();
+  }
+
+  renderWorld() {
+    const E = this.els, w = this.worldData();
+    E.worldEmeralds.textContent = `${this.save.emeralds}`;
+    E.townGrid.innerHTML = '';
+    for (const t of TOWNS) {
+      const rec = w.towns[t.id];
+      const affordable = this.save.emeralds >= t.cost;
+      const card = document.createElement('button');
+      card.className = 'townCard' + (rec.unlocked ? (t.id === w.town ? ' here' : '') : (affordable ? ' locked' : ' locked cant'));
+      const icon = document.createElement('div'); icon.className = 'townIcon'; icon.textContent = rec.unlocked ? t.icon : '🔒';
+      const name = document.createElement('div'); name.className = 'townName'; name.textContent = t.name;
+      const meta = document.createElement('div');
+      if (rec.unlocked) {
+        meta.className = 'townMeta';
+        meta.textContent = `${rec.houses.length} ${rec.houses.length === 1 ? 'house' : 'houses'}`;
+      } else {
+        meta.className = 'townMeta cost';
+        meta.innerHTML = `<span class="em"></span> ${t.cost}`;
+      }
+      card.append(icon, name, meta);
+      card.addEventListener('click', () => (rec.unlocked ? this.enterTown(t.id) : this.unlockTown(t.id)));
+      E.townGrid.appendChild(card);
+    }
+  }
+
+  unlockTown(id) {
+    const t = townById(id), rec = this.townRec(id);
+    if (rec.unlocked) return;
+    if (this.save.emeralds < t.cost) { Audio.sfx('gate_bad'); return; }
+    this.save.emeralds -= t.cost;
+    rec.unlocked = true;
+    if (!rec.houses.length) rec.houses.push(makeHouse(id)); // arrives pre-decorated
+    persistSave(this.save);
+    Audio.sfx('fanfare');
+    this.enterTown(id);
+  }
+
+  enterTown(id) {
+    const w = this.worldData();
+    w.town = id; w.house = 0;
+    persistSave(this.save);
+    Audio.sfx('click');
+    this.showTown();
+  }
+
+  showTown() {
+    this.hideAll();
+    this.worldData();
+    this.els.town.classList.remove('hidden');
+    this.renderTown();
+  }
+
+  renderTown() {
+    const E = this.els, w = this.worldData(), t = townById(w.town), rec = this.townRec();
+    E.townTitle.textContent = `${t.icon} ${t.name.toUpperCase()}`;
+    E.townEmeralds.textContent = `${this.save.emeralds}`;
+    E.townHint.textContent = w.carry
+      ? 'You are carrying a friend — go into a house to place them'
+      : 'Tap a house to go inside';
+    E.houseGrid.innerHTML = '';
+    rec.houses.forEach((h, i) => {
+      const card = document.createElement('button');
+      card.className = 'townCard' + (i === w.house ? ' here' : '');
+      const icon = document.createElement('div'); icon.className = 'townIcon'; icon.textContent = '🏠';
+      const name = document.createElement('div'); name.className = 'townName'; name.textContent = `House ${i + 1}`;
+      const meta = document.createElement('div'); meta.className = 'townMeta';
+      meta.textContent = `${h.people.length} ${h.people.length === 1 ? 'friend' : 'friends'}`;
+      card.append(icon, name, meta);
+      card.addEventListener('click', () => this.enterHouse(i));
+      E.houseGrid.appendChild(card);
+    });
+    const full = rec.houses.length >= MAX_HOUSES;
+    const cost = housePrice(rec.houses.length);
+    E.btnBuyHouse.classList.toggle('hidden', full);
+    if (!full) {
+      E.btnBuyHouse.innerHTML = `＋ BUY HOUSE · <span class="em"></span> ${cost}`;
+      E.btnBuyHouse.style.opacity = this.save.emeralds >= cost ? '1' : '0.6';
+    }
+  }
+
+  buyHouse() {
+    const rec = this.townRec(), w = this.worldData();
+    if (rec.houses.length >= MAX_HOUSES) return;
+    const cost = housePrice(rec.houses.length);
+    if (this.save.emeralds < cost) { Audio.sfx('gate_bad'); return; }
+    this.save.emeralds -= cost;
+    rec.houses.push(makeHouse(w.town)); // pre-decorated, never an empty box
+    persistSave(this.save);
+    Audio.sfx('buy');
+    this.renderTown();
+  }
+
+  enterHouse(i) {
+    const w = this.worldData();
+    w.house = i;
+    this.panX = 0;
+    persistSave(this.save);
+    Audio.sfx('click');
+    this.showPlayroom();
+  }
+
+  // put the carried friend down in the house you're standing in
+  placeCarry() {
+    const w = this.worldData();
+    if (!w.carry) return;
+    const p = w.carry;
+    const worldW = this.worldW || 1, vx = ((this.panX || 0) + (this.sceneW || worldW) * 0.5) / worldW;
+    p.x = clamp01(vx); p.y = 0.8;
+    this.curHouse().people.push(p);
+    w.carry = null;
+    persistSave(this.save);
+    Audio.sfx('powerup');
+    this.renderPlayroom();
+  }
+
   playmatesData() {
-    if (!Array.isArray(this.save.playmates)) this.save.playmates = [];
+    const house = this.curHouse();
+    if (!Array.isArray(house.people)) house.people = [];
     const owned = new Set(this.save.unlocked);
-    for (const p of this.save.playmates) {
+    for (const p of house.people) {
       if (!owned.has(p.skin)) p.skin = 'steve';
       if (!p.cosmetics) p.cosmetics = { cape: 'none', hat: 'none' };
       for (const cat of ['cape', 'hat']) {
@@ -499,7 +639,7 @@ export class UI {
       p.x = clamp01(typeof p.x === 'number' ? p.x : 0.5);
       p.y = clamp01(typeof p.y === 'number' ? p.y : 0.7);
     }
-    return this.save.playmates;
+    return house.people;
   }
 
   showPlayroom() {
@@ -541,20 +681,26 @@ export class UI {
   }
 
   decorData() {
-    if (!Array.isArray(this.save.decor)) this.save.decor = [];
-    this.save.decor = this.save.decor.filter(d => decorById(d.item));
-    for (const d of this.save.decor) { d.x = clamp01(typeof d.x === 'number' ? d.x : 0.5); d.y = clamp01(typeof d.y === 'number' ? d.y : 0.8); }
-    return this.save.decor;
+    const house = this.curHouse();
+    if (!Array.isArray(house.decor)) house.decor = [];
+    house.decor = house.decor.filter(d => decorById(d.item));
+    for (const d of house.decor) { d.x = clamp01(typeof d.x === 'number' ? d.x : 0.5); d.y = clamp01(typeof d.y === 'number' ? d.y : 0.8); }
+    return house.decor;
   }
 
   roomData() {
-    // validate against real tier ids so older saves (e.g. the old 'yard') migrate
-    const ids = ROOM_TIERS.map(r => r.id), first = ROOM_TIERS[0].id;
-    if (!ids.includes(this.save.roomTier)) this.save.roomTier = first;
+    // room styles are owned globally; each house picks one (or its town's native)
+    const first = ROOM_TIERS[0].id;
     if (!Array.isArray(this.save.roomTiersOwned)) this.save.roomTiersOwned = [first];
-    this.save.roomTiersOwned = this.save.roomTiersOwned.filter(id => ids.includes(id));
+    this.save.roomTiersOwned = this.save.roomTiersOwned.filter(id => ROOM_TIERS.some(r => r.id === id));
     if (!this.save.roomTiersOwned.includes(first)) this.save.roomTiersOwned.unshift(first);
     return this.save;
+  }
+
+  // the materials the current house renders with
+  curStyle() {
+    const w = this.worldData();
+    return styleById(this.curHouse().style, w.town);
   }
 
   // draw a single decoration sprite fitted (bottom-anchored) into a canvas
@@ -598,7 +744,7 @@ export class UI {
     const LW = Math.round(LH * this.worldW / rect.height);
     cv.width = LW; cv.height = LH;
     const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
-    const t = roomTierById(this.save.roomTier);
+    const t = this.curStyle();
     const floorY = Math.round(LH * 0.56);
 
     g.fillStyle = t.wall; g.fillRect(0, 0, LW, floorY);
@@ -637,7 +783,13 @@ export class UI {
   renderPlayroom() {
     const E = this.els, list = this.playmatesData(), decor = this.decorData();
     this.roomData();
+    const w = this.worldData(), t = townById(w.town);
     E.playEmeralds.textContent = `${this.save.emeralds}`;
+    E.playHouseTitle.textContent = `${t.icon} HOUSE ${w.house + 1}`;
+    E.btnPlaceCarry.classList.toggle('hidden', !w.carry);
+    E.playHint.textContent = w.carry
+      ? 'Tap PLACE FRIEND to bring your visitor into this house'
+      : 'Drag friends & decor · tap a friend to dress · drag onto 🧳 to take them along';
     this.drawRoom();
     const layer = E.roomItems;
     layer.innerHTML = '';
@@ -671,6 +823,7 @@ export class UI {
       this.wireDrag(el, p, {
         onTap: () => this.openDress(i), onRemove: () => this.removePlaymate(i),
         redraw: (pose) => this.drawDressedCharacter(cv, skin, p.cosmetics, pose),
+        onCarry: this.worldData().carry ? null : () => this.pickUpPlaymate(i), // one passenger at a time
       });
       layer.appendChild(el);
     });
@@ -679,9 +832,13 @@ export class UI {
   // Drag any room item in WORLD coordinates (accounting for the pan). Playmates
   // (redraw given) ragdoll — arms and legs swing opposite the motion and wobble
   // to rest via damped springs. Decor tilts as a whole. Drop on the bin to remove.
-  wireDrag(el, obj, { onTap, onRemove, redraw } = {}) {
-    const bin = this.els.trashZone;
-    let moved = false, startX = 0, startY = 0, lastX = 0, overBin = false, dragging = false, raf = 0, tilt = 0, vx = 0;
+  wireDrag(el, obj, { onTap, onRemove, redraw, onCarry } = {}) {
+    const bin = this.els.trashZone, sack = this.els.carryZone;
+    let moved = false, startX = 0, startY = 0, lastX = 0, overBin = false, overSack = false, dragging = false, raf = 0, tilt = 0, vx = 0;
+    const inside = (e, node) => {
+      const b = node.getBoundingClientRect();
+      return e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
+    };
     const L = { aL: { a: 0, v: 0 }, aR: { a: 0, v: 0 }, lL: { a: 0, v: 0 }, lR: { a: 0, v: 0 } };
     const putTilt = (a, s) => { el.style.transform = `translate(-50%, -100%) rotate(${a.toFixed(2)}deg) scale(${s})`; };
     // looser damping = more wobble = more ragdolly
@@ -709,16 +866,21 @@ export class UI {
       if (redraw) { vx += (dx - vx) * 0.6; el.style.transform = 'translate(-50%, -100%) scale(1.07)'; }
       else { tilt += (Math.max(-20, Math.min(20, -dx * 1.6)) - tilt) * 0.35; putTilt(tilt, 1.08); }
       if (onRemove) {
-        const b = bin.getBoundingClientRect();
-        const hot = e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
+        const hot = inside(e, bin);
         if (hot !== overBin) { overBin = hot; bin.classList.toggle('hot', hot); }
+      }
+      if (onCarry) {
+        const hot = inside(e, sack);
+        if (hot !== overSack) { overSack = hot; sack.classList.toggle('hot', hot); }
       }
     };
 
     const onUp = () => {
-      dragging = false; el.classList.remove('dragging'); bin.classList.remove('show', 'hot');
+      dragging = false; el.classList.remove('dragging');
+      bin.classList.remove('show', 'hot'); sack.classList.remove('show', 'hot');
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      if (overSack && onCarry) { Audio.sfx('powerup'); onCarry(); return; }
       if (overBin && onRemove) { Audio.sfx('pop'); onRemove(); return; }
       persistSave(this.save);
       if (!moved) { el.style.transform = 'translate(-50%, -100%)'; if (redraw) redraw(null); if (onTap) onTap(); return; }
@@ -735,9 +897,10 @@ export class UI {
 
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); // an item drag must not start a pan
-      moved = false; dragging = true; startX = lastX = e.clientX; startY = e.clientY; overBin = false; vx = 0; tilt = 0;
+      moved = false; dragging = true; startX = lastX = e.clientX; startY = e.clientY; overBin = overSack = false; vx = 0; tilt = 0;
       el.classList.add('dragging');
       if (onRemove) bin.classList.add('show');
+      if (onCarry) sack.classList.add('show');
       if (redraw && !raf) raf = requestAnimationFrame(tick);
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
@@ -770,37 +933,44 @@ export class UI {
   }
 
   removeDecor(i) {
-    this.save.decor.splice(i, 1);
+    this.curHouse().decor.splice(i, 1);
     persistSave(this.save); Audio.sfx('pop');
     this.renderPlayroom();
   }
 
   showRoomPicker() {
     const panel = this.els.dressPanel; panel.innerHTML = ''; Audio.sfx('click'); this.roomData();
+    const native = townById(this.worldData().town).style;
+    const cur = this.curHouse().style;
     const lab = document.createElement('div'); lab.className = 'dressLabel'; lab.textContent = 'ROOM STYLE'; panel.appendChild(lab);
     const row = document.createElement('div'); row.className = 'dressRow';
-    for (const t of ROOM_TIERS) {
-      const owned = this.save.roomTiersOwned.includes(t.id);
+    // the town's own look is free here, then the styles you can buy anywhere
+    const options = [{ ...native, cost: 0, free: true }, ...ROOM_TIERS];
+    for (const t of options) {
+      const owned = t.free || this.save.roomTiersOwned.includes(t.id);
       const cell = document.createElement('button');
-      cell.className = 'dressItem' + (this.save.roomTier === t.id ? ' sel' : '') + (!owned && this.save.emeralds < t.cost ? ' cant' : '');
-      const sw = document.createElement('div'); sw.className = 'roomSwatch'; sw.style.background = t.bg; cell.appendChild(sw);
+      cell.className = 'dressItem' + (cur === t.id ? ' sel' : '') + (!owned && this.save.emeralds < t.cost ? ' cant' : '');
+      const sw = document.createElement('div'); sw.className = 'roomSwatch';
+      sw.style.background = `linear-gradient(${t.wall} 0%, ${t.wall} 54%, ${t.trim} 54%, ${t.floor} 62%, ${t.floorAlt} 100%)`;
+      cell.appendChild(sw);
       const cap = document.createElement('div'); cap.className = 'dItemCost';
-      cap.innerHTML = owned ? (this.save.roomTier === t.id ? '✔ ON' : 'OWNED') : `<span class="em"></span>${t.cost}`;
+      cap.innerHTML = owned ? (cur === t.id ? '✔ ON' : (t.free ? 'TOWN' : 'OWNED')) : `<span class="em"></span>${t.cost}`;
       cell.appendChild(cap);
-      cell.addEventListener('click', () => this.setRoomTier(t.id));
+      cell.addEventListener('click', () => this.setRoomTier(t.id, t.free));
       row.appendChild(cell);
     }
     panel.appendChild(row);
     this._dressClose(panel);
   }
 
-  setRoomTier(id) {
-    const t = roomTierById(id); this.roomData();
-    if (!this.save.roomTiersOwned.includes(id)) {
+  setRoomTier(id, free = false) {
+    this.roomData();
+    if (!free && !this.save.roomTiersOwned.includes(id)) {
+      const t = roomTierById(id);
       if (this.save.emeralds < t.cost) { Audio.sfx('gate_bad'); return; }
       this.save.emeralds -= t.cost; this.save.roomTiersOwned.push(id); Audio.sfx('buy');
     } else Audio.sfx('click');
-    this.save.roomTier = id;
+    this.curHouse().style = id; // styles are owned globally, applied per house
     persistSave(this.save);
     this.renderPlayroom(); this.showRoomPicker();
   }
@@ -812,8 +982,17 @@ export class UI {
     panel.classList.remove('hidden');
   }
 
+  // take a friend out of this house and carry them; place them in any other house
+  pickUpPlaymate(i) {
+    const w = this.worldData();
+    if (w.carry) return; // one passenger at a time
+    w.carry = this.curHouse().people.splice(i, 1)[0];
+    persistSave(this.save);
+    this.renderPlayroom();
+  }
+
   removePlaymate(i) {
-    this.save.playmates.splice(i, 1);
+    this.curHouse().people.splice(i, 1);
     persistSave(this.save);
     Audio.sfx('pop');
     this.els.dressPanel.classList.add('hidden');
@@ -871,7 +1050,7 @@ export class UI {
   }
 
   setPlaymate(i, field, value) {
-    const p = this.save.playmates[i];
+    const p = this.curHouse().people[i];
     if (!p) return;
     if (field === 'skin') p.skin = value;
     else p.cosmetics[field] = value;
@@ -890,7 +1069,7 @@ export class UI {
   }
 
   hideAll() {
-    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home', 'mine', 'playroom']) this.els[k].classList.add('hidden');
+    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home', 'mine', 'playroom', 'world', 'town']) this.els[k].classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
     // clear cached HUD values so the next run repaints from scratch
     this._bossShown = false;
