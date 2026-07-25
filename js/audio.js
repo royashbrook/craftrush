@@ -1,6 +1,6 @@
 // Procedural WebAudio: chiptune sfx + tiny sequenced music loops. No audio files.
 let ctx = null, master = null, musicGain = null;
-let enabled = true;
+let enabled = true, musicOn = true, sfxOn = true;
 let unlocked = false; // becomes true on first user gesture (autoplay policy)
 let currentTrack = null, seqTimer = null, seqStep = 0, nextNoteTime = 0;
 let musicNodes = []; // scheduled music sources, stoppable on track switch
@@ -115,11 +115,20 @@ function seqLoop() {
 
 export const Audio = {
   get enabled() { return enabled; },
+  // master switch (kept for the pause screen); music and effects also toggle apart
   setEnabled(v) {
     enabled = v;
     if (!v) this.stopMusic();
     if (master) master.gain.setTargetAtTime(v ? 0.5 : 0, ctx.currentTime, 0.03);
   },
+  get musicOn() { return musicOn; },
+  setMusic(v) {
+    musicOn = v;
+    if (!v) this.stopMusic();
+    else if (enabled && unlocked && currentTrack) { const t = currentTrack; currentTrack = null; this.music(t); }
+  },
+  get sfxOn() { return sfxOn; },
+  setSfx(v) { sfxOn = v; },
   unlock() {
     if (!enabled) return;
     unlocked = true;
@@ -127,7 +136,7 @@ export const Audio = {
     if (currentTrack && !seqTimer) { const t = currentTrack; currentTrack = null; this.music(t); }
   },
   sfx(name, throttleMs = 0) {
-    if (!enabled || !unlocked) return;
+    if (!enabled || !sfxOn || !unlocked) return;
     ensureCtx();
     if (throttleMs) {
       const last = sfxThrottle.get(name) || 0;
@@ -137,7 +146,8 @@ export const Audio = {
     SFX[name]?.();
   },
   music(track) {
-    if (!enabled || !unlocked) { currentTrack = track; return; } // starts on unlock
+    if (!enabled || !musicOn) { this.stopMusic(); currentTrack = track; return; }
+    if (!unlocked) { currentTrack = track; return; } // starts on unlock
     ensureCtx();
     if (currentTrack === track && seqTimer) return;
     this.stopMusic();

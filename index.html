@@ -56,6 +56,14 @@
   .rowBtn { display: flex; align-items: center; gap: 10px; text-align: left; }
   .rowBtn .icon { flex: 0 0 auto; }
 
+  .backupList { width: 100%; display: flex; flex-direction: column; gap: 4px; max-height: 128px; overflow-y: auto; }
+  .backupRow { display: flex; align-items: center; gap: 8px; background: #302b3a; border: 2px solid #000;
+    padding: 5px 8px; font-family: inherit; cursor: pointer; text-align: left;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1); }
+  .backupRow .bDay { flex: 1 1 auto; font-size: 11px; font-weight: 900; color: #fff; }
+  .backupRow .bMeta { font-size: 10px; color: #b8f0c8; }
+  .backupEmpty { font-size: 11px; color: #8f88a0; text-align: center; padding: 6px; }
+
   .aboutText { font-size: 12px; line-height: 1.55; color: #cfc9d8; text-align: left; }
   .aboutText p { margin-bottom: 8px; }
   .aboutMeta { font-size: 10px; color: #8f88a0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -406,11 +414,11 @@
     <div class="panel">
       <div class="logo" style="font-size:24px">PAUSED</div>
       <button class="mcbtn primary" id="btnResume">▶ RESUME</button>
-      <button class="mcbtn small" id="btnPauseCamera" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_camera"></canvas>CAMERA: FAR</button>
-      <button class="mcbtn small" id="btnPauseShop" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_person"></canvas>SKINS &amp; SHOP</button>
-      <button class="mcbtn small" id="btnPauseAch" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_trophy"></canvas>ACHIEVEMENTS</button>
-      <button class="mcbtn small" id="btnPauseSound" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_sound_on"></canvas>SOUND ON</button>
-      <button class="mcbtn small" id="btnQuit" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_door"></canvas>GIVE UP</button>
+      <button class="mcbtn rowBtn small" id="btnPauseCamera"><canvas class="icon" data-icon="ui_camera"></canvas>CAMERA: FAR</button>
+      <button class="mcbtn rowBtn small" id="btnPauseShop"><canvas class="icon" data-icon="ui_person"></canvas>SKINS &amp; SHOP</button>
+      <button class="mcbtn rowBtn small" id="btnPauseAch"><canvas class="icon" data-icon="ui_trophy"></canvas>ACHIEVEMENTS</button>
+      <button class="mcbtn rowBtn small" id="btnPauseSound"><canvas class="icon" data-icon="ui_sound_on"></canvas>SOUND ON</button>
+      <button class="mcbtn rowBtn small" id="btnQuit"><canvas class="icon" data-icon="ui_door"></canvas>GIVE UP</button>
     </div>
   </div>
 
@@ -430,8 +438,8 @@
         <span class="chip green"><span class="em"></span> <span id="menuEmeralds">0</span></span>
       </div>
       <div class="modeRow">
-        <button class="mcbtn" id="modeShooter" class="mcbtn rowBtn"><canvas class="icon" data-icon="ui_bow"></canvas>BOW BLITZ</button>
-        <button class="mcbtn" id="modeGates" class="mcbtn rowBtn"><canvas class="icon" data-icon="ui_door"></canvas>GATE DASH</button>
+        <button class="mcbtn rowBtn" id="modeShooter"><canvas class="icon" data-icon="ui_bow"></canvas>BOW BLITZ</button>
+        <button class="mcbtn rowBtn" id="modeGates"><canvas class="icon" data-icon="ui_door"></canvas>GATE DASH</button>
       </div>
       <div id="modeDesc"></div>
       <button class="mcbtn primary" id="btnPlay">▶ PLAY</button>
@@ -453,14 +461,16 @@
 
   <div id="settings" class="overlay hidden">
     <div class="panel">
-      <div class="chipRow"><span style="color:#fff">SAVE &amp; DATA</span></div>
-      <div class="setLabel">Your backup code — copy and keep it safe:</div>
-      <textarea id="saveExport" class="saveBox" readonly></textarea>
-      <button class="mcbtn small" id="btnCopySave" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_bag"></canvas>COPY CODE</button>
+      <div class="setLabel">Automatic backups — one per day you play:</div>
+      <div id="backupList" class="backupList"></div>
+      <div class="setLabel">Save a copy you can keep:</div>
+      <button class="mcbtn small rowBtn" id="btnDownloadSave"><canvas class="icon" data-icon="ui_bag"></canvas>SAVE TO A FILE</button>
+      <button class="mcbtn small rowBtn" id="btnCopySave"><canvas class="icon" data-icon="ui_palette"></canvas>COPY CODE</button>
       <div class="setLabel">Paste a code to restore your game:</div>
       <textarea id="saveImport" class="saveBox" placeholder="paste your code here"></textarea>
-      <button class="mcbtn small" id="btnLoadSave" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_back"></canvas>LOAD CODE</button>
-      <button class="mcbtn small" id="btnReset" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_trash"></canvas>RESET EVERYTHING</button>
+      <button class="mcbtn small rowBtn" id="btnLoadSave"><canvas class="icon" data-icon="ui_back"></canvas>LOAD CODE</button>
+      <button class="mcbtn small rowBtn" id="btnReset"><canvas class="icon" data-icon="ui_trash"></canvas>RESET EVERYTHING</button>
+      <textarea id="saveExport" class="saveBox hidden" readonly></textarea>
       <div id="setMsg"></div>
     </div>
   </div>
@@ -496,9 +506,9 @@
     <div class="panel">
       <div class="chipRow"><span style="color:#fff" id="playHouseTitle">HOUSE</span><span class="chip green"><span class="em"></span> <span id="playEmeralds">0</span></span></div>
       <div class="playBtns">
-        <button class="mcbtn small" id="btnAddFriend" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_person"></canvas>FRIEND</button>
-        <button class="mcbtn small" id="btnDecor" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_sofa"></canvas>DECOR</button>
-        <button class="mcbtn small" id="btnRoom" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_palette"></canvas>ROOM</button>
+        <button class="mcbtn rowBtn small" id="btnAddFriend"><canvas class="icon" data-icon="ui_person"></canvas>FRIEND</button>
+        <button class="mcbtn rowBtn small" id="btnDecor"><canvas class="icon" data-icon="ui_sofa"></canvas>DECOR</button>
+        <button class="mcbtn rowBtn small" id="btnRoom"><canvas class="icon" data-icon="ui_palette"></canvas>ROOM</button>
       </div>
       <div id="playHint" class="playHint">Drag friends &amp; decor around · tap a friend to dress them</div>
       <div id="playScene" class="playScene">
@@ -537,7 +547,7 @@
       <div id="resultStats"></div>
       <button class="mcbtn primary" id="btnNext">NEXT LEVEL ▶</button>
       <button class="mcbtn primary" id="btnRetry">↻ TRY AGAIN</button>
-      <button class="mcbtn small" id="btnMenu" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_house"></canvas>MENU</button>
+      <button class="mcbtn rowBtn small" id="btnMenu"><canvas class="icon" data-icon="ui_house"></canvas>MENU</button>
     </div>
   </div>
 
@@ -545,7 +555,8 @@
     <div class="panel">
       <button class="mcbtn small rowBtn" id="btnGoals"><canvas class="icon" data-icon="ui_trophy"></canvas>GOALS</button>
       <button class="mcbtn small rowBtn" id="btnCameraMore"><canvas class="icon" data-icon="ui_camera"></canvas><span id="cameraLabel">CAMERA: FAR</span></button>
-      <button class="mcbtn small rowBtn" id="btnSoundMore"><canvas class="icon" data-icon="ui_sound_on"></canvas><span id="soundLabel">SOUND ON</span></button>
+      <button class="mcbtn small rowBtn" id="btnMusicMore"><canvas class="icon" data-icon="ui_sound_on"></canvas><span id="musicLabel">MUSIC ON</span></button>
+      <button class="mcbtn small rowBtn" id="btnSoundMore"><canvas class="icon" data-icon="ui_sound_on"></canvas><span id="soundLabel">EFFECTS ON</span></button>
       <button class="mcbtn small rowBtn" id="btnSaveMore"><canvas class="icon" data-icon="ui_gear"></canvas>SAVE &amp; DATA</button>
       <button class="mcbtn small rowBtn" id="btnAbout"><canvas class="icon" data-icon="ui_info"></canvas>ABOUT</button>
     </div>

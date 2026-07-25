@@ -619,6 +619,7 @@ export function loadSave() {
     home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 },
     mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' },
     roomTiersOwned: ['cabin'],
+    music: true, sfx: true,   // music and effects toggle independently
     decorOwned: {},   // furniture bought but not currently placed (the bin refills this)
     // world/towns/houses live here; migrateWorld() builds and repairs it on load
     world: null };
@@ -660,6 +661,38 @@ export function importSave(code) {
     localStorage.setItem(SAVE_KEY, JSON.stringify(merged));
     return merged;
   } catch { return null; }
+}
+
+// ---- automatic daily backups ----
+// One snapshot per calendar day, taken when a level is cleared and overwritten by
+// later clears the same day, so the list stays short and each entry is that day's
+// best progress. Kept OUT of the save itself so a reset can't destroy them.
+const BACKUP_KEY = 'craftrush_backups_v1';
+export const MAX_BACKUPS = 7;
+export const dayStamp = (now) => new Date(now).toISOString().slice(0, 10);
+
+export function listBackups() {
+  try {
+    const raw = localStorage.getItem(BACKUP_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.slice().sort((a, b) => (a.day < b.day ? 1 : -1)) : [];
+  } catch { return []; }
+}
+
+// snapshot today's save; replaces today's existing entry, prunes the oldest
+export function writeBackup(save, now = Date.now()) {
+  const day = dayStamp(now);
+  const entry = { day, ts: now, level: save.level, emeralds: save.emeralds, code: exportSave(save) };
+  const kept = listBackups().filter(b => b.day !== day);
+  kept.unshift(entry);
+  const out = kept.slice(0, MAX_BACKUPS);
+  try { localStorage.setItem(BACKUP_KEY, JSON.stringify(out)); } catch { /* private mode */ }
+  return out;
+}
+
+export function restoreBackup(day) {
+  const b = listBackups().find(x => x.day === day);
+  return b ? importSave(b.code) : null;
 }
 
 export function resetSave() {

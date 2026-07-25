@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
 const BLOCK_COLORS = { stone: '#8a8a8a', coal: '#42413f', iron: '#c8a878', gold: '#e8c84a', diamond: '#5ce0e0', emerald: '#2ecc5e' };
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit, hasSprite } from './assets.js';
@@ -53,6 +53,8 @@ export class UI {
       btnGoals: $('btnGoals'), btnCameraMore: $('btnCameraMore'), btnSoundMore: $('btnSoundMore'),
       btnSaveMore: $('btnSaveMore'), btnAbout: $('btnAbout'),
       cameraLabel: $('cameraLabel'), soundLabel: $('soundLabel'),
+      btnMusicMore: $('btnMusicMore'), musicLabel: $('musicLabel'),
+      btnDownloadSave: $('btnDownloadSave'), backupList: $('backupList'),
     };
     this.returnTo = 'menu';   // where BACK from shop/achievements goes
     this.achQueue = [];
@@ -62,6 +64,8 @@ export class UI {
       const em = getSprite('emerald');
       document.documentElement.style.setProperty('--em-icon', `url(${em.frames[0].toDataURL()})`);
     } catch { /* asset missing — chips just show the count */ }
+    Audio.setMusic(this.save.music !== false);
+    Audio.setSfx(this.save.sfx !== false);
     this._wire();
     this.wireShell();
     this.paintIcons();
@@ -112,12 +116,21 @@ export class UI {
       this.openScreen('about');
     });
     E.btnSoundMore.addEventListener('click', () => {
-      this.save.sound = !this.save.sound;
-      Audio.setEnabled(this.save.sound);
-      if (this.save.sound) { Audio.unlock(); Audio.sfx('click'); Audio.music('menu'); }
+      this.save.sfx = !this.save.sfx;
+      Audio.setSfx(this.save.sfx);
+      if (this.save.sfx) { Audio.unlock(); Audio.sfx('click'); }
       persistSave(this.save);
       this.refreshMore();
     });
+    E.btnMusicMore.addEventListener('click', () => {
+      this.save.music = !this.save.music;
+      Audio.unlock();
+      Audio.setMusic(this.save.music);
+      if (this.save.music) Audio.music('menu');
+      persistSave(this.save);
+      this.refreshMore();
+    });
+    E.btnDownloadSave.addEventListener('click', () => { Audio.sfx('click'); this.downloadSave(); });
     E.btnCameraMore.addEventListener('click', () => {
       Audio.sfx('click');
       const keys = Object.keys(CAMERAS);
@@ -174,7 +187,7 @@ export class UI {
 
   refreshPause() {
     this.els.btnPauseCamera.textContent = `CAMERA: ${(CAMERAS[this.save.camera] || CAMERAS.far).label}`;
-    this.els.btnPauseSound.textContent = this.save.sound ? 'SOUND ON' : 'SOUND OFF';
+    this.els.btnPauseSound.textContent = this.save.sound ? 'ALL SOUND ON' : 'ALL SOUND OFF';
   }
 
   back() {
@@ -1068,11 +1081,57 @@ export class UI {
     this.openDress(i); // refresh selection highlights
   }
 
+  // hand the player an actual file instead of asking a kid to copy a wall of text
+  downloadSave() {
+    const code = exportSave(this.save);
+    const name = `craftrush-save-${dayStamp(Date.now())}.txt`;
+    try {
+      const url = URL.createObjectURL(new Blob([code], { type: 'text/plain' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.els.setMsg.textContent = `Saved ${name}`;
+    } catch {
+      this.els.saveExport.classList.remove('hidden'); // fall back to the code
+      this.els.setMsg.textContent = 'Could not save a file — copy the code instead.';
+    }
+  }
+
+  renderBackups() {
+    const list = this.els.backupList;
+    list.innerHTML = '';
+    const backups = listBackups();
+    if (!backups.length) {
+      const d = document.createElement('div');
+      d.className = 'backupEmpty';
+      d.textContent = 'No backups yet — one is kept each day you beat a level.';
+      list.appendChild(d);
+      return;
+    }
+    for (const b of backups) {
+      const row = document.createElement('button');
+      row.className = 'backupRow';
+      const day = document.createElement('span'); day.className = 'bDay'; day.textContent = b.day;
+      const meta = document.createElement('span'); meta.className = 'bMeta';
+      meta.textContent = `LV ${b.level} · ${b.emeralds}`;
+      row.append(day, meta);
+      row.addEventListener('click', () => {
+        if (!confirm(`Go back to your ${b.day} save (level ${b.level})? Your current progress will be replaced.`)) return;
+        if (restoreBackup(b.day)) { this.els.setMsg.textContent = 'Restored! Reloading…'; setTimeout(() => location.reload(), 700); }
+        else this.els.setMsg.textContent = 'That backup could not be read.';
+      });
+      list.appendChild(row);
+    }
+  }
+
   showSettings() {
     this.els.saveExport.value = exportSave(this.save);
     this.els.saveImport.value = '';
     this.els.setMsg.textContent = '';
+    this.renderBackups();
     this.openScreen('settings');
+    this.paintIcons(this.els.settings);
   }
 
   // ---- app shell: fixed top bar + bottom nav, one screen at a time ----
@@ -1187,8 +1246,10 @@ export class UI {
 
   refreshMore() {
     const E = this.els;
-    E.soundLabel.textContent = this.save.sound ? 'SOUND ON' : 'SOUND OFF';
-    E.soundLabel.previousElementSibling.dataset.icon = this.save.sound ? 'ui_sound_on' : 'ui_sound_off';
+    E.soundLabel.textContent = this.save.sfx ? 'EFFECTS ON' : 'EFFECTS OFF';
+    E.soundLabel.previousElementSibling.dataset.icon = this.save.sfx ? 'ui_sound_on' : 'ui_sound_off';
+    E.musicLabel.textContent = this.save.music ? 'MUSIC ON' : 'MUSIC OFF';
+    E.musicLabel.previousElementSibling.dataset.icon = this.save.music ? 'ui_sound_on' : 'ui_sound_off';
     E.cameraLabel.textContent = `CAMERA: ${(CAMERAS[this.save.camera] || CAMERAS.far).label}`;
     this.paintIcons(E.more);
   }
@@ -1563,6 +1624,9 @@ export class UI {
     }
     this.save.bestCrowd = Math.max(this.save.bestCrowd, r.bestCrowd);
     persistSave(this.save);
+    // clearing a level snapshots the day, overwriting any earlier one, so there is
+    // always a recent point to go back to without the list growing
+    if (r.win) writeBackup(this.save);
     this.grantAchievements();
   }
 
