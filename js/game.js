@@ -98,7 +98,6 @@ export class Game {
     this.golemHintShown = false;
     this.expedition = null;
     this.mut = {};
-    this.holdSteer = 0; // -1/0/1 from the on-screen steer buttons
   }
 
   // ---------- run lifecycle ----------
@@ -153,8 +152,7 @@ export class Game {
     this.keys = {};
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
-      if (e.code === 'Space') { e.preventDefault(); this.summonGolem(); }
-      else if (e.code === 'Escape') { e.preventDefault(); this.hooks.onPause && this.hooks.onPause(); }
+      if (e.code === 'Escape') { e.preventDefault(); this.hooks.onPause && this.hooks.onPause(); }
     });
     window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
   }
@@ -173,12 +171,15 @@ export class Game {
       return;
     }
 
-    // keyboard + on-screen-button steer
+    // keyboard steer (pointer/touch steering lives in the input handlers)
     if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.targetX -= dt * 9;
     if (this.keys['ArrowRight'] || this.keys['KeyD']) this.targetX += dt * 9;
-    if (this.holdSteer) this.targetX += this.holdSteer * dt * 9;
     this.targetX = Math.max(-TUNE.laneHalf, Math.min(TUNE.laneHalf, this.targetX));
     this.playerX += (this.targetX - this.playerX) * Math.min(1, dt * TUNE.steerLerp);
+
+    // the golem charges from your hits and then storms out on its own — no button
+    // to hunt for and no key to learn
+    if (this.redstone >= TUNE.redstoneMax) this.summonGolem();
 
     if (this.state === 'run') {
       this.playerZ += this.speed * dt;

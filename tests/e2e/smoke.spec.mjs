@@ -29,8 +29,10 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
   await page.click('#btnPlay');
   await expect(page.locator('#hud')).toBeVisible();
   await expect(page.locator('#btnPause')).toBeVisible();
-  await expect(page.locator('#steerL')).toBeVisible();
-  await expect(page.locator('#steerR')).toBeVisible();
+  // the play area is button-free now; the golem charges and fires itself
+  await expect(page.locator('#golemMeter')).toBeVisible();
+  await expect(page.locator('#steerL')).toHaveCount(0);
+  await expect(page.locator('#golemBtn')).toHaveCount(0);
   await page.waitForTimeout(2500); // let the run play a couple seconds
   expect(errors).toEqual([]);
 });

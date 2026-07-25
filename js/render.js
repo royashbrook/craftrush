@@ -59,9 +59,10 @@ export const RenderMixin = {
         const sh = ((this.t * 2 + gt.z) % 1) * hPx;
         ctx.fillRect(x0, y0 + sh, wPx, Math.max(2, hPx * 0.08));
         ctx.globalAlpha = 1;
-        outlineText(ctx, this.gateLabel(gt), p.sx, y0 + hPx * 0.42, Math.max(11, p.s * 0.8), good ? '#eaf6ff' : '#ffe3dc');
+        // kid-readable: big label, and never smaller than a comfortable minimum
+        outlineText(ctx, this.gateLabel(gt), p.sx, y0 + hPx * 0.46, Math.max(20, p.s * 1.15), good ? '#eaf6ff' : '#ffe3dc');
         if (this.mode === 'shooter' && !good) {
-          outlineText(ctx, 'SHOOT ME!', p.sx, y0 + hPx * 0.8, Math.max(8, p.s * 0.3), '#ffd94d');
+          outlineText(ctx, 'SHOOT ME!', p.sx, y0 + hPx * 0.86, Math.max(11, p.s * 0.38), '#ffd94d');
         }
       });
     }

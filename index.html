@@ -207,25 +207,17 @@
   #powerChips { position: absolute; left: 0; right: 0; top: calc(62px + env(safe-area-inset-top));
     text-align: center; font-weight: 900; font-size: 13px; color: #ffd94d; text-shadow: 2px 2px 0 #000; }
 
-  #golemBtn { position: absolute; left: calc(50% - 37px); bottom: calc(16px + env(safe-area-inset-bottom));
-    width: 74px; height: 74px; border: 3px solid #000; background: #3a3444; pointer-events: auto;
-    cursor: pointer; overflow: hidden; box-shadow: inset 2px 2px 0 rgba(255,255,255,0.2), 0 4px 14px rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center; flex-direction: column; }
-  /* faint hold-to-steer arrows that also hint the touch controls */
-  .steerBtn { position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); width: 74px; height: 74px;
-    border: 2px solid rgba(0,0,0,0.35); background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55);
-    font-size: 34px; font-weight: 900; pointer-events: auto; cursor: pointer; touch-action: none;
-    display: flex; align-items: center; justify-content: center; text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
-    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.12); }
-  #steerL { left: 12px; }
-  #steerR { right: 12px; }
-  .steerBtn:active, .steerBtn.on { background: rgba(255,255,255,0.22); color: #fff; }
-  #golemFill { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; background: #b0332a; }
-  #golemBtn.ready #golemFill { background: #e04a3f; }
-  #golemBtn.ready { animation: pulse 0.7s infinite alternate; }
-  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
-  #golemIcon { position: relative; font-size: 26px; text-shadow: 2px 2px 0 #000; }
-  #golemLabel { position: relative; font-size: 11px; font-weight: 900; color: #fff; text-shadow: 1px 1px 0 #000; }
+  /* golem charge: a slim meter under the progress bar. It fires itself when full,
+     so nothing sits over the play area and there is no key to learn. */
+  #golemMeter { position: absolute; left: 50%; transform: translateX(-50%); width: 62%;
+    top: calc(58px + env(safe-area-inset-top));
+    height: 16px; background: rgba(0,0,0,0.5); border: 2px solid #000; overflow: hidden; }
+  #golemFill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: #b0332a; transition: width 0.12s; }
+  #golemMeter.ready #golemFill { background: #e04a3f; }
+  #golemMeter.ready { animation: pulse 0.7s infinite alternate; }
+  @keyframes pulse { from { filter: brightness(1); } to { filter: brightness(1.55); } }
+  #golemLabel { position: absolute; inset: 0; text-align: center; font-size: 10px; font-weight: 900;
+    line-height: 16px; color: #fff; text-shadow: 1px 1px 0 #000; letter-spacing: 1px; white-space: nowrap; }
 
   #bossBar { position: absolute; left: 12px; right: 12px; top: calc(78px + env(safe-area-inset-top));
     z-index: 6; pointer-events: none; text-align: center; }
@@ -332,9 +324,7 @@
     </div>
     <div id="progressWrap"><div id="hudProgress"></div></div>
     <div id="powerChips"></div>
-    <button id="golemBtn"><div id="golemFill"></div><div id="golemIcon">🗿</div><div id="golemLabel">0%</div></button>
-    <button id="steerL" class="steerBtn">◀</button>
-    <button id="steerR" class="steerBtn">▶</button>
+    <div id="golemMeter"><div id="golemFill"></div><span id="golemLabel"></span></div>
   </div>
 
   <div id="bossBar" class="hidden">

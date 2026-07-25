@@ -10,8 +10,8 @@ export const VERSION = '0.2.0'; // fallback only — tools/build.mjs stamps the 
 export const TUNE = {
   // world/camera
   laneHalf: 3.1,        // how far the crowd center can steer (blocks)
-  trackHalf: 5.4,       // visible path half-width (wider than the steer range so
-                        // the crowd never runs on the very edge)
+  trackHalf: 6.6,       // visible path half-width. Comfortably wider than both the
+                        // steer range and the gate pairs, so the run has room.
   shoulderHalf: 10,     // grass extends this far each side
   camBack: 7.4,         // camera distance behind crowd
   camHeight: 4.6,       // camera height (blocks)
@@ -78,9 +78,13 @@ export const CAMERAS = {
   // crowd should sit in the bottom third with lots of track receding ahead, so
   // you can see hazards coming. FAR (the default) is a steep behind-and-above
   // view; sprites are billboards so they still read face-on at any angle.
-  close:    { label: 'CLOSE',    camBack: 9.0,  camHeight: 9.0,  focal: 4.6, horizonFrac: 0.32 },
-  far:      { label: 'FAR',      camBack: 12.0, camHeight: 18.0, focal: 3.9, horizonFrac: 0.30 },
-  overhead: { label: 'OVERHEAD', camBack: 6.5,  camHeight: 11.5, focal: 3.4, horizonFrac: 0.18 },
+  // With the bottom buttons gone the whole lower screen is playfield, so the crowd
+  // sits lower (~0.80 of the canvas) and the camera is closer: bigger sprites,
+  // bigger gate signs, and MORE track between the crowd and the horizon.
+  // Screen position depends on the camHeight/camBack ratio; sprite size on camBack.
+  close:    { label: 'CLOSE',    camBack: 7.5, camHeight: 11.6, focal: 4.6, horizonFrac: 0.30 },
+  far:      { label: 'FAR',      camBack: 9.5, camHeight: 19.0, focal: 3.9, horizonFrac: 0.28 },
+  overhead: { label: 'OVERHEAD', camBack: 5.5, camHeight: 13.2, focal: 3.4, horizonFrac: 0.18 },
 };
 
 // Tiered crowd: worth grows without limit. Runners merge upward through the

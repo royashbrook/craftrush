@@ -22,7 +22,7 @@ export class UI {
       btnNext: $('btnNext'), btnRetry: $('btnRetry'), btnMenu: $('btnMenu'),
       hudEmeralds: $('hudEmeralds'), hudLevel: $('hudLevel'), hudProgress: $('hudProgress'),
       powerChips: $('powerChips'),
-      golemBtn: $('golemBtn'), golemFill: $('golemFill'), golemLabel: $('golemLabel'),
+      golemMeter: $('golemMeter'), golemFill: $('golemFill'), golemLabel: $('golemLabel'),
       bossBar: $('bossBar'), bossName: $('bossName'), bossFill: $('bossFill'), bossHint: $('bossHint'),
       toast: $('toast'),
       btnPause: $('btnPause'), pause: $('pause'), btnResume: $('btnResume'),
@@ -33,7 +33,6 @@ export class UI {
       achPop: $('achPop'), achPopIcon: $('achPopIcon'), achPopName: $('achPopName'),
       expCard: $('expCard'), expIcon: $('expIcon'), expName: $('expName'),
       expDesc: $('expDesc'), expStreak: $('expStreak'), btnExpedition: $('btnExpedition'),
-      steerL: $('steerL'), steerR: $('steerR'),
       btnHome: $('btnHome'), homeBadge: $('homeBadge'), home: $('home'), homeEmeralds: $('homeEmeralds'),
       homeWelcome: $('homeWelcome'), homeIncome: $('homeIncome'), homeScene: $('homeScene'),
       villagerList: $('villagerList'), btnHomeBack: $('btnHomeBack'),
@@ -129,20 +128,6 @@ export class UI {
     E.btnNext.addEventListener('click', () => { Audio.sfx('click'); this.startRun(); });
     E.btnRetry.addEventListener('click', () => { Audio.sfx('click'); this.startRun(); });
     E.btnMenu.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
-    E.golemBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); this.game.summonGolem(); });
-
-    // hold-to-steer buttons (also a visible hint that you can steer)
-    const steer = (btn, dir) => {
-      const on = (e) => { e.preventDefault(); this.game.holdSteer = dir; btn.classList.add('on'); };
-      const off = () => { if (this.game.holdSteer === dir) this.game.holdSteer = 0; btn.classList.remove('on'); };
-      btn.addEventListener('pointerdown', on);
-      btn.addEventListener('pointerup', off);
-      btn.addEventListener('pointerleave', off);
-      btn.addEventListener('pointercancel', off);
-    };
-    steer(E.steerL, -1);
-    steer(E.steerR, 1);
-
     // pause menu
     E.btnPause.addEventListener('click', () => { Audio.sfx('click'); this.openPause(); });
     E.btnResume.addEventListener('click', () => { Audio.sfx('click'); this.closePause(); });
@@ -1380,10 +1365,10 @@ export class UI {
     if (this._prog !== prog) { this._prog = prog; E.hudProgress.style.width = prog; }
     const pct = s.redstone / s.redstoneMax;
     const fill = `${(pct * 100).toFixed(0)}%`;
-    if (this._fill !== fill) { this._fill = fill; E.golemFill.style.height = fill; }
+    if (this._fill !== fill) { this._fill = fill; E.golemFill.style.width = fill; }
     const ready = pct >= 1;
-    if (this._ready !== ready) { this._ready = ready; E.golemBtn.classList.toggle('ready', ready); }
-    const glabel = ready ? 'GO!' : `${Math.floor(pct * 100)}%`;
+    if (this._ready !== ready) { this._ready = ready; E.golemMeter.classList.toggle('ready', ready); }
+    const glabel = ready ? '🗿 GOLEM INCOMING!' : `🗿 GOLEM ${Math.floor(pct * 100)}%`;
     if (this._glabel !== glabel) { this._glabel = glabel; E.golemLabel.textContent = glabel; }
     // powerups
     const chips = [];

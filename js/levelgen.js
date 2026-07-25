@@ -30,8 +30,9 @@ export const LevelMixin = {
         };
         const a = mk(true);
         const right = rng() < 0.5;
-        ev.push({ z, type: 'gate', x: right ? 1.9 : -1.9, halfW: 1.9, ...a });
-        ev.push({ z, type: 'gate', x: right ? -1.9 : 1.9, halfW: 1.9, ...(goodGood ? mk(true) : mk(false)) });
+        // wider gate pair: a bigger target and, more importantly, a bigger sign
+        ev.push({ z, type: 'gate', x: right ? 2.4 : -2.4, halfW: 2.4, ...a });
+        ev.push({ z, type: 'gate', x: right ? -2.4 : 2.4, halfW: 2.4, ...(goodGood ? mk(true) : mk(false)) });
       } else if (roll < 0.52) {
         // ---- enemy cluster ----
         const n = Math.min(10, irnd(2, 3 + Math.ceil(L * 0.8)));
