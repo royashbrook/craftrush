@@ -15,9 +15,9 @@ export class UI {
     this.els = {
       menu: $('menu'), shop: $('shop'), result: $('result'), hud: $('hud'),
       menuLevel: $('menuLevel'), menuEmeralds: $('menuEmeralds'),
-      btnPlay: $('btnPlay'), btnShop: $('btnShop'), btnSound: $('btnSound'), btnCamera: $('btnCamera'),
+      btnPlay: $('btnPlay'),
       modeShooter: $('modeShooter'), modeGates: $('modeGates'), modeDesc: $('modeDesc'),
-      shopGrid: $('shopGrid'), btnShopBack: $('btnShopBack'), shopEmeralds: $('shopEmeralds'),
+      shopGrid: $('shopGrid'), shopEmeralds: $('shopEmeralds'),
       resultTitle: $('resultTitle'), resultStats: $('resultStats'),
       btnNext: $('btnNext'), btnRetry: $('btnRetry'), btnMenu: $('btnMenu'),
       hudEmeralds: $('hudEmeralds'), hudLevel: $('hudLevel'), hudProgress: $('hudProgress'),
@@ -27,29 +27,32 @@ export class UI {
       toast: $('toast'),
       btnPause: $('btnPause'), pause: $('pause'), btnResume: $('btnResume'),
       btnPauseCamera: $('btnPauseCamera'), btnPauseShop: $('btnPauseShop'),
-      btnPauseAch: $('btnPauseAch'), btnPauseSound: $('btnPauseSound'), btnQuit: $('btnQuit'),
-      btnAch: $('btnAch'), achScreen: $('achievements'), achGrid: $('achGrid'),
-      achCount: $('achCount'), btnAchBack: $('btnAchBack'),
+      btnPauseAch: $('btnPauseAch'), btnPauseSound: $('btnPauseSound'), btnQuit: $('btnQuit'), achScreen: $('achievements'), achGrid: $('achGrid'),
+      achCount: $('achCount'),
       achPop: $('achPop'), achPopIcon: $('achPopIcon'), achPopName: $('achPopName'),
       expCard: $('expCard'), expIcon: $('expIcon'), expName: $('expName'),
-      expDesc: $('expDesc'), expStreak: $('expStreak'), btnExpedition: $('btnExpedition'),
-      btnHome: $('btnHome'), homeBadge: $('homeBadge'), home: $('home'), homeEmeralds: $('homeEmeralds'),
+      expDesc: $('expDesc'), expStreak: $('expStreak'), btnExpedition: $('btnExpedition'), homeBadge: $('homeBadge'), home: $('home'), homeEmeralds: $('homeEmeralds'),
       homeWelcome: $('homeWelcome'), homeIncome: $('homeIncome'), homeScene: $('homeScene'),
-      villagerList: $('villagerList'), btnHomeBack: $('btnHomeBack'),
-      btnPlayroom: $('btnPlayroom'), playroom: $('playroom'), btnAddFriend: $('btnAddFriend'),
+      villagerList: $('villagerList'), playroom: $('playroom'), btnAddFriend: $('btnAddFriend'),
       btnDecor: $('btnDecor'), btnRoom: $('btnRoom'), playEmeralds: $('playEmeralds'),
-      playScene: $('playScene'), dressPanel: $('dressPanel'), btnPlayroomBack: $('btnPlayroomBack'), playHint: $('playHint'),
+      playScene: $('playScene'), dressPanel: $('dressPanel'), playHint: $('playHint'),
       roomWorld: $('roomWorld'), roomBg: $('roomBg'), roomItems: $('roomItems'), trashZone: $('trashZone'),
       carryZone: $('carryZone'), btnPlaceCarry: $('btnPlaceCarry'), playHouseTitle: $('playHouseTitle'),
-      world: $('world'), worldEmeralds: $('worldEmeralds'), townGrid: $('townGrid'), btnWorldBack: $('btnWorldBack'),
+      world: $('world'), worldEmeralds: $('worldEmeralds'), townGrid: $('townGrid'),
       town: $('town'), townTitle: $('townTitle'), townEmeralds: $('townEmeralds'), townHint: $('townHint'),
-      houseGrid: $('houseGrid'), btnBuyHouse: $('btnBuyHouse'), btnTownBack: $('btnTownBack'),
-      btnMine: $('btnMine'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
+      houseGrid: $('houseGrid'), btnBuyHouse: $('btnBuyHouse'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
       mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'), digFace: $('digFace'),
-      btnPickUp: $('btnPickUp'), btnMineBack: $('btnMineBack'),
-      btnData: $('btnData'), settings: $('settings'), saveExport: $('saveExport'),
+      btnPickUp: $('btnPickUp'), settings: $('settings'), saveExport: $('saveExport'),
       saveImport: $('saveImport'), btnCopySave: $('btnCopySave'), btnLoadSave: $('btnLoadSave'),
-      btnReset: $('btnReset'), setMsg: $('setMsg'), btnSettingsBack: $('btnSettingsBack'),
+      btnReset: $('btnReset'), setMsg: $('setMsg'),
+      // app shell
+      appbar: $('appbar'), appTitle: $('appTitle'), navBack: $('navBack'), navMore: $('navMore'),
+      barWallet: $('barWallet'), barEmeralds: $('barEmeralds'), navbar: $('navbar'),
+      navDotHome: $('navDotHome'), navDotMine: $('navDotMine'),
+      more: $('more'), about: $('about'), aboutVersion: $('aboutVersion'),
+      btnGoals: $('btnGoals'), btnCameraMore: $('btnCameraMore'), btnSoundMore: $('btnSoundMore'),
+      btnSaveMore: $('btnSaveMore'), btnAbout: $('btnAbout'),
+      cameraLabel: $('cameraLabel'), soundLabel: $('soundLabel'),
     };
     this.returnTo = 'menu';   // where BACK from shop/achievements goes
     this.achQueue = [];
@@ -60,6 +63,8 @@ export class UI {
       document.documentElement.style.setProperty('--em-icon', `url(${em.frames[0].toDataURL()})`);
     } catch { /* asset missing — chips just show the count */ }
     this._wire();
+    this.wireShell();
+    this.paintIcons();
     // back-fill achievements a returning player already earned — silently, no popups
     checkAchievements(this.save);
     persistSave(this.save);
@@ -70,26 +75,13 @@ export class UI {
   _wire() {
     const E = this.els;
     E.btnPlay.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.startRun(); });
-    E.btnShop.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showShop('menu'); });
-    E.btnShopBack.addEventListener('click', () => { Audio.sfx('click'); this.back(); });
     E.btnExpedition.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.startExpedition(); });
-    E.btnAch.addEventListener('click', () => { Audio.sfx('click'); this.showAchievements('menu'); });
-    E.btnHome.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showHome(); });
-    E.btnHomeBack.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
-    E.btnPlayroom.addEventListener('click', () => { Audio.sfx('click'); this.showWorld(); });
-    E.btnWorldBack.addEventListener('click', () => { Audio.sfx('click'); this.showHome(); });
-    E.btnTownBack.addEventListener('click', () => { Audio.sfx('click'); this.showWorld(); });
     E.btnBuyHouse.addEventListener('click', () => this.buyHouse());
     E.btnPlaceCarry.addEventListener('click', () => this.placeCarry());
-    E.btnPlayroomBack.addEventListener('click', () => { Audio.sfx('click'); persistSave(this.save); this.showTown(); });
     E.btnAddFriend.addEventListener('click', () => this.addFriend());
     E.btnDecor.addEventListener('click', () => this.showDecorCatalog());
     E.btnRoom.addEventListener('click', () => this.showRoomPicker());
-    E.btnMine.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.showMine(); });
-    E.btnMineBack.addEventListener('click', () => { Audio.sfx('click'); persistSave(this.save); this.showMenu(); });
     E.btnPickUp.addEventListener('click', () => this.upgradePickaxe());
-    E.btnData.addEventListener('click', () => { Audio.sfx('click'); this.showSettings(); });
-    E.btnSettingsBack.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
     E.btnCopySave.addEventListener('click', () => {
       E.saveExport.select();
       try { navigator.clipboard.writeText(E.saveExport.value); } catch { document.execCommand('copy'); }
@@ -106,28 +98,35 @@ export class UI {
         location.reload();
       }
     });
-    E.btnAchBack.addEventListener('click', () => { Audio.sfx('click'); this.back(); });
-    E.btnSound.addEventListener('click', () => {
-      this.save.sound = !this.save.sound;
-      Audio.setEnabled(this.save.sound);
-      if (this.save.sound) { Audio.unlock(); Audio.sfx('click'); Audio.music('menu'); }
-      persistSave(this.save);
-      this.refreshMenu();
-    });
-    E.btnCamera.addEventListener('click', () => {
-      Audio.sfx('click');
-      const keys = Object.keys(CAMERAS);
-      const i = keys.indexOf(this.save.camera);
-      this.save.camera = keys[(i + 1) % keys.length];
-      persistSave(this.save);
-      this.game.applyCamera();
-      this.refreshMenu();
-    });
     E.modeShooter.addEventListener('click', () => this.setMode('shooter'));
     E.modeGates.addEventListener('click', () => this.setMode('gates'));
     E.btnNext.addEventListener('click', () => { Audio.sfx('click'); this.startRun(); });
     E.btnRetry.addEventListener('click', () => { Audio.sfx('click'); this.startRun(); });
     E.btnMenu.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
+    // "More": the meta screens that do not deserve a tab of their own
+    E.btnGoals.addEventListener('click', () => { Audio.sfx('click'); this.showAchievements('more'); });
+    E.btnSaveMore.addEventListener('click', () => { Audio.sfx('click'); this.showSettings(); });
+    E.btnAbout.addEventListener('click', () => {
+      Audio.sfx('click');
+      E.aboutVersion.textContent = VERSION;
+      this.openScreen('about');
+    });
+    E.btnSoundMore.addEventListener('click', () => {
+      this.save.sound = !this.save.sound;
+      Audio.setEnabled(this.save.sound);
+      if (this.save.sound) { Audio.unlock(); Audio.sfx('click'); Audio.music('menu'); }
+      persistSave(this.save);
+      this.refreshMore();
+    });
+    E.btnCameraMore.addEventListener('click', () => {
+      Audio.sfx('click');
+      const keys = Object.keys(CAMERAS);
+      this.save.camera = keys[(keys.indexOf(this.save.camera) + 1) % keys.length];
+      persistSave(this.save);
+      this.game.applyCamera();
+      this.refreshMore();
+    });
+
     // pause menu
     E.btnPause.addEventListener('click', () => { Audio.sfx('click'); this.openPause(); });
     E.btnResume.addEventListener('click', () => { Audio.sfx('click'); this.closePause(); });
@@ -174,8 +173,8 @@ export class UI {
   }
 
   refreshPause() {
-    this.els.btnPauseCamera.textContent = `📷 CAMERA: ${(CAMERAS[this.save.camera] || CAMERAS.far).label}`;
-    this.els.btnPauseSound.textContent = this.save.sound ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+    this.els.btnPauseCamera.textContent = `CAMERA: ${(CAMERAS[this.save.camera] || CAMERAS.far).label}`;
+    this.els.btnPauseSound.textContent = this.save.sound ? 'SOUND ON' : 'SOUND OFF';
   }
 
   back() {
@@ -193,6 +192,7 @@ export class UI {
   startRun() {
     this.hideAll();
     this.els.hud.classList.remove('hidden');
+    this.setPlaying(true);
     this.game.startRun();
     this.toast(null);
   }
@@ -200,6 +200,7 @@ export class UI {
   startExpedition() {
     this.hideAll();
     this.els.hud.classList.remove('hidden');
+    this.setPlaying(true);
     this.game.startRun(dailyExpedition());
     this.toast(null);
   }
@@ -219,10 +220,9 @@ export class UI {
   }
 
   showHome() {
-    this.hideAll();
     const h = this.homeData();
     if (!h.lastCollect) { h.lastCollect = Date.now(); persistSave(this.save); } // seed the clock on first visit
-    this.els.home.classList.remove('hidden');
+    this.openScreen('home');
     this.renderHome();
   }
 
@@ -329,11 +329,10 @@ export class UI {
   makeBlock(depth) { return { depth, kind: blockKind(depth), maxHp: blockHp(depth), hp: blockHp(depth) }; }
 
   showMine() {
-    this.hideAll();
     const m = this.mineData();
     if (!m.energyTs) { m.energyTs = Date.now(); persistSave(this.save); } // seed the recharge clock
     this.buildDigFace();
-    this.els.mine.classList.remove('hidden');
+    this.openScreen('mine');
     this.renderMine();
   }
 
@@ -359,10 +358,10 @@ export class UI {
     E.mineEmeralds.textContent = `${this.save.emeralds}`;
     const cur = mineEnergy(m, now), cap = MINE.energyCap;
     E.energyBar.style.width = `${(cur / cap) * 100}%`;
-    E.energyText.textContent = `⚡ ${cur} / ${cap}`;
+    E.energyText.textContent = `ENERGY ${cur} / ${cap}`;
     E.digFace.classList.toggle('spent', cur <= 0);
     const pick = PICKAXES.find(p => p.id === m.pickaxe) || PICKAXES[0];
-    E.mineStats.textContent = `Depth ${m.depth}  ·  ${pick.name} Pickaxe (⛏ ${pick.dmg})`;
+    E.mineStats.textContent = `Depth ${m.depth}  ·  ${pick.name} Pickaxe  ·  power ${pick.dmg}`;
     for (let i = 0; i < this.digCells.length; i++) {
       const cell = this.digCells[i], blk = this.digGrid[i];
       cell.style.background = BLOCK_COLORS[blk.kind] || '#8a8a8a';
@@ -371,10 +370,10 @@ export class UI {
     }
     const next = nextPickaxe(m.pickaxe);
     if (next) {
-      E.btnPickUp.innerHTML = `⬆ ${next.name} Pickaxe (⛏ ${next.dmg}) · <span class="em"></span> ${next.cost}`;
+      E.btnPickUp.innerHTML = `UPGRADE: ${next.name} Pickaxe (power ${next.dmg}) · <span class="em"></span> ${next.cost}`;
       E.btnPickUp.style.opacity = this.save.emeralds >= next.cost ? '1' : '0.6';
     } else {
-      E.btnPickUp.innerHTML = '⛏ Netherite Pickaxe — maxed!';
+      E.btnPickUp.innerHTML = 'Netherite Pickaxe — fully upgraded';
       E.btnPickUp.style.opacity = '0.6';
     }
   }
@@ -394,7 +393,7 @@ export class UI {
       this.save.emeralds += pay;
       cell.classList.remove('pop'); void cell.offsetWidth; cell.classList.add('pop');
       const pop = document.createElement('span'); pop.className = 'pay';
-      pop.textContent = (crit ? '💎 +' : '+') + pay;
+      pop.textContent = (crit ? 'GEM +' : '+') + pay;
       cell.appendChild(pop); setTimeout(() => pop.remove(), 700);
       Audio.sfx(crit ? 'chest' : 'emerald');
       this.digGrid[i] = this.makeBlock(m.depth);
@@ -489,9 +488,8 @@ export class UI {
   }
 
   showWorld() {
-    this.hideAll();
     this.worldData();
-    this.els.world.classList.remove('hidden');
+    this.openScreen('world');
     this.renderWorld();
   }
 
@@ -504,7 +502,8 @@ export class UI {
       const affordable = this.save.emeralds >= t.cost;
       const card = document.createElement('button');
       card.className = 'townCard' + (rec.unlocked ? (t.id === w.town ? ' here' : '') : (affordable ? ' locked' : ' locked cant'));
-      const icon = document.createElement('div'); icon.className = 'townIcon'; icon.textContent = rec.unlocked ? t.icon : '🔒';
+      const icon = document.createElement('canvas'); icon.className = 'townIcon';
+      this.drawTownIcon(icon, t, rec.unlocked);
       const name = document.createElement('div'); name.className = 'townName'; name.textContent = t.name;
       const meta = document.createElement('div');
       if (rec.unlocked) {
@@ -541,15 +540,14 @@ export class UI {
   }
 
   showTown() {
-    this.hideAll();
     this.worldData();
-    this.els.town.classList.remove('hidden');
+    this.openScreen('town');
     this.renderTown();
   }
 
   renderTown() {
     const E = this.els, w = this.worldData(), t = townById(w.town), rec = this.townRec();
-    E.townTitle.textContent = `${t.icon} ${t.name.toUpperCase()}`;
+    E.townTitle.textContent = t.name.toUpperCase();
     E.townEmeralds.textContent = `${this.save.emeralds}`;
     E.townHint.textContent = w.carry
       ? 'You are carrying a friend — go into a house to place them'
@@ -558,7 +556,8 @@ export class UI {
     rec.houses.forEach((h, i) => {
       const card = document.createElement('button');
       card.className = 'townCard' + (i === w.house ? ' here' : '');
-      const icon = document.createElement('div'); icon.className = 'townIcon'; icon.textContent = '🏠';
+      const icon = document.createElement('canvas'); icon.className = 'townIcon';
+      this.drawTownIcon(icon, t, true);
       const name = document.createElement('div'); name.className = 'townName'; name.textContent = `House ${i + 1}`;
       const meta = document.createElement('div'); meta.className = 'townMeta';
       meta.textContent = `${h.people.length} ${h.people.length === 1 ? 'friend' : 'friends'}`;
@@ -628,10 +627,9 @@ export class UI {
   }
 
   showPlayroom() {
-    this.hideAll();
     this.playmatesData();
     this.els.dressPanel.classList.add('hidden');
-    this.els.playroom.classList.remove('hidden');
+    this.openScreen('playroom');
     this.panX = this.panX || 0;
     this.wirePan();
     this.renderPlayroom();
@@ -770,11 +768,11 @@ export class UI {
     this.roomData();
     const w = this.worldData(), t = townById(w.town);
     E.playEmeralds.textContent = `${this.save.emeralds}`;
-    E.playHouseTitle.textContent = `${t.icon} HOUSE ${w.house + 1}`;
+    E.playHouseTitle.textContent = `HOUSE ${w.house + 1}`;
     E.btnPlaceCarry.classList.toggle('hidden', !w.carry);
     E.playHint.textContent = w.carry
       ? 'Tap PLACE FRIEND to bring your visitor into this house'
-      : 'Drag friends & decor · tap a friend to dress · drag onto 🧳 to take them along';
+      : 'Drag friends & decor · tap a friend to dress · drop one on the bag to take them along';
     this.drawRoom();
     const layer = E.roomItems;
     layer.innerHTML = '';
@@ -912,7 +910,7 @@ export class UI {
       cell.className = 'dressItem' + (have > 0 ? ' sel' : (this.save.emeralds < d.cost ? ' cant' : ''));
       const cv = document.createElement('canvas'); cv.width = 40; cv.height = 40; this.drawSprite(cv, d.sprite); cell.appendChild(cv);
       const cost = document.createElement('div'); cost.className = 'dItemCost';
-      cost.innerHTML = have > 0 ? `✔ ${have}` : `<span class="em"></span>${d.cost}`;
+      cost.innerHTML = have > 0 ? `x${have}` : `<span class="em"></span>${d.cost}`;
       cell.appendChild(cost);
       cell.addEventListener('click', () => this.placeDecor(d.id));
       row.appendChild(cell);
@@ -964,7 +962,7 @@ export class UI {
       sw.style.background = `linear-gradient(${t.wall} 0%, ${t.wall} 54%, ${t.trim} 54%, ${t.floor} 62%, ${t.floorAlt} 100%)`;
       cell.appendChild(sw);
       const cap = document.createElement('div'); cap.className = 'dItemCost';
-      cap.innerHTML = owned ? (cur === t.id ? '✔ ON' : (t.free ? 'TOWN' : 'OWNED')) : `<span class="em"></span>${t.cost}`;
+      cap.innerHTML = owned ? (cur === t.id ? 'ON' : (t.free ? 'TOWN' : 'OWNED')) : `<span class="em"></span>${t.cost}`;
       cell.appendChild(cap);
       cell.addEventListener('click', () => this.setRoomTier(t.id, t.free));
       row.appendChild(cell);
@@ -986,7 +984,7 @@ export class UI {
   }
 
   _dressClose(panel) {
-    const close = document.createElement('button'); close.className = 'mcbtn small dressClose'; close.textContent = '✔ DONE';
+    const close = document.createElement('button'); close.className = 'mcbtn small dressClose'; close.textContent = 'DONE';
     close.addEventListener('click', () => { Audio.sfx('click'); panel.classList.add('hidden'); });
     panel.appendChild(close);
     panel.classList.remove('hidden');
@@ -1053,7 +1051,7 @@ export class UI {
     }
 
     const close = document.createElement('button');
-    close.className = 'mcbtn small dressClose'; close.textContent = '✔ DONE';
+    close.className = 'mcbtn small dressClose'; close.textContent = 'DONE';
     close.addEventListener('click', () => { Audio.sfx('click'); panel.classList.add('hidden'); });
     panel.appendChild(close);
     panel.classList.remove('hidden');
@@ -1071,15 +1069,138 @@ export class UI {
   }
 
   showSettings() {
-    this.hideAll();
     this.els.saveExport.value = exportSave(this.save);
     this.els.saveImport.value = '';
     this.els.setMsg.textContent = '';
-    this.els.settings.classList.remove('hidden');
+    this.openScreen('settings');
+  }
+
+  // ---- app shell: fixed top bar + bottom nav, one screen at a time ----
+  // Each screen declares which tab owns it and what sits above it, so BACK (and a
+  // swipe from the left edge) works everywhere without per-screen back buttons.
+  static SCREENS = {
+    menu:      { tab: 'play',  title: 'CraftRush' },
+    shop:      { tab: 'shop',  title: 'Skins & Shop' },
+    home:      { tab: 'home',  title: 'Your Village' },
+    world:     { tab: 'world', title: 'World' },
+    town:      { tab: 'world', title: 'Town', parent: 'world' },
+    playroom:  { tab: 'world', title: 'House', parent: 'town' },
+    mine:      { tab: 'mine',  title: 'The Mine' },
+    more:      { title: 'More', parent: 'menu' },
+    about:     { title: 'About', parent: 'more' },
+    achScreen: { title: 'Goals', parent: 'more' },
+    settings:  { title: 'Save & Data', parent: 'more' },
+    result:    { title: 'Results', bare: true },
+  };
+
+  // paint every <canvas class="icon" data-icon="..."> from the sprite pack
+  paintIcons(root = document) {
+    for (const cv of root.querySelectorAll('canvas.icon[data-icon]')) {
+      const name = cv.dataset.icon;
+      if (!hasSprite(name)) continue;
+      const spr = getSprite(name);
+      const S = 2; // 2 device px per art px keeps it crisp
+      cv.width = spr.w * S; cv.height = spr.h * S;
+      const g = cv.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.drawImage(spr.frames[0], 0, 0, cv.width, cv.height);
+    }
+  }
+
+  // each town's card shows a house in that town's own materials, so the map reads
+  // as eight different places without eight more sprites
+  drawTownIcon(cv, town, unlocked) {
+    const S = 2;
+    const name = unlocked ? 'ui_house' : 'ui_lock';
+    if (!hasSprite(name)) return;
+    const st = town.style;
+    const pal = unlocked ? { r: st.trim, R: st.trim, w: st.wall, W: st.wallAlt } : null;
+    const spr = getSprite(name, pal, unlocked ? `town_${town.id}` : 'town_locked');
+    cv.width = spr.w * S; cv.height = spr.h * S;
+    const g = cv.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(spr.frames[0], 0, 0, cv.width, cv.height);
+  }
+
+  wireShell() {
+    const E = this.els;
+    E.navBack.addEventListener('click', () => { Audio.sfx('click'); this.goBack(); });
+    E.navMore.addEventListener('click', () => { Audio.sfx('click'); this.openScreen('more'); this.refreshMore(); });
+    for (const tab of document.querySelectorAll('.navTab')) {
+      tab.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.openTab(tab.dataset.tab); });
+    }
+    // swipe in from the left edge to go back, the way a phone app behaves
+    let sx = 0, sy = 0, tracking = false;
+    const stage = document.getElementById('stage');
+    stage.addEventListener('pointerdown', (e) => {
+      tracking = e.clientX - stage.getBoundingClientRect().left < 28 && !this.inRun();
+      sx = e.clientX; sy = e.clientY;
+    });
+    stage.addEventListener('pointerup', (e) => {
+      if (!tracking) return;
+      tracking = false;
+      if (e.clientX - sx > 55 && Math.abs(e.clientY - sy) < 45) this.goBack();
+    });
+  }
+
+  inRun() { return this.game && (this.game.state === 'run' || this.game.state === 'boss'); }
+
+  // a run hides the bars and takes the whole screen
+  setPlaying(on) {
+    this.screen = on ? 'hud' : this.screen;
+    document.getElementById('stage').classList.toggle('playing', !!on);
+  }
+
+  openTab(tab) {
+    // tapping a tab always returns to that tab's root screen
+    const root = Object.entries(UI.SCREENS).find(([, s]) => s.tab === tab && !s.parent);
+    if (root) this.openScreen(root[0]);
+  }
+
+  // show one screen and sync the bars to it
+  openScreen(name) {
+    const def = UI.SCREENS[name] || {};
+    this.screen = name;
+    this.hideAll();
+    this.els[name].classList.remove('hidden');
+    const E = this.els;
+    E.appTitle.textContent = this.screenTitle(name, def);
+    E.navBack.classList.toggle('hidden', !def.parent);
+    E.barWallet.classList.toggle('hidden', !!def.bare);
+    E.navMore.classList.toggle('hidden', !!def.bare);
+    E.barEmeralds.textContent = `${this.save.emeralds}`;
+    for (const t of document.querySelectorAll('.navTab')) t.classList.toggle('sel', !!def.tab && t.dataset.tab === def.tab);
+    this.refreshBadges();
+  }
+
+  // a couple of screens name themselves after where you actually are
+  screenTitle(name, def) {
+    if (name === 'town') return townById(this.worldData().town).name;
+    if (name === 'playroom') return `House ${this.worldData().house + 1}`;
+    return def.title || 'CraftRush';
+  }
+
+  goBack() {
+    const def = UI.SCREENS[this.screen] || {};
+    if (def.parent) this.openScreen(def.parent);
+  }
+
+  refreshMore() {
+    const E = this.els;
+    E.soundLabel.textContent = this.save.sound ? 'SOUND ON' : 'SOUND OFF';
+    E.soundLabel.previousElementSibling.dataset.icon = this.save.sound ? 'ui_sound_on' : 'ui_sound_off';
+    E.cameraLabel.textContent = `CAMERA: ${(CAMERAS[this.save.camera] || CAMERAS.far).label}`;
+    this.paintIcons(E.more);
+  }
+
+  refreshBadges() {
+    const E = this.els;
+    if (E.navDotHome) E.navDotHome.classList.toggle('hidden', this.homePending() <= 0);
+    if (E.navDotMine) E.navDotMine.classList.toggle('hidden', mineEnergy(this.mineData(), Date.now()) < MINE.energyCap);
   }
 
   hideAll() {
-    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home', 'mine', 'playroom', 'world', 'town']) this.els[k].classList.add('hidden');
+    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home', 'mine', 'playroom', 'world', 'town', 'more', 'about']) this.els[k].classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
     // clear cached HUD values so the next run repaints from scratch
     this._bossShown = false;
@@ -1088,10 +1209,10 @@ export class UI {
 
   showMenu() {
     this.game.paused = false;
-    this.hideAll();
+    this.setPlaying(false);
     this.game.state = 'menu';
     this.refreshMenu();
-    this.els.menu.classList.remove('hidden');
+    this.openScreen('menu');
     if (this.save.sound) Audio.music('menu');
   }
 
@@ -1100,13 +1221,10 @@ export class UI {
     const biome = BIOMES[(this.save.level - 1) % BIOMES.length];
     E.menuLevel.textContent = `LV ${this.save.level} · ${biome.name.toUpperCase()}`;
     E.menuEmeralds.textContent = `${this.save.emeralds}`;
-    E.btnSound.textContent = this.save.sound ? '🔊 ON' : '🔇 OFF';
-    E.btnCamera.textContent = `📷 ${(CAMERAS[this.save.camera] || CAMERAS.far).label}`;
     E.modeShooter.classList.toggle('sel', this.save.mode === 'shooter');
     E.modeGates.classList.toggle('sel', this.save.mode === 'gates');
     E.modeDesc.textContent = MODES[this.save.mode].desc;
-    E.homeBadge.classList.toggle('hidden', this.homePending() <= 0); // idle emeralds waiting
-    E.mineBadge.classList.toggle('hidden', mineEnergy(this.mineData(), Date.now()) < MINE.energyCap); // fully charged
+    this.refreshBadges(); // the "come back" dots live on the nav bar now
     this.refreshExpedition();
   }
 
@@ -1116,7 +1234,7 @@ export class UI {
     const st = expeditionStatus(this.save);
     E.expName.textContent = exp.name;
     E.expDesc.textContent = exp.desc + ' (new expedition every week)';
-    E.expStreak.textContent = st.streak > 0 ? `🔥 ${st.streak}` : '';
+    E.expStreak.textContent = st.streak > 0 ? `${st.streak} DAY STREAK` : '';
     E.btnExpedition.textContent = st.doneToday ? '↻ REPLAY EXPEDITION' : '▶ START EXPEDITION';
     const g = E.expIcon.getContext('2d');
     g.imageSmoothingEnabled = false;
@@ -1127,8 +1245,7 @@ export class UI {
   // ---------- shop ----------
   showShop(from = 'menu') {
     this.returnTo = from;
-    this.hideAll();
-    this.els.shop.classList.remove('hidden');
+    this.openScreen('shop');
     this.els.shopEmeralds.textContent = `${this.save.emeralds}`;
     this.buildShop();
   }
@@ -1148,7 +1265,7 @@ export class UI {
     card.appendChild(nm);
     const tag = document.createElement('div');
     tag.className = 'skinTag';
-    tag.innerHTML = selected ? '✔ PICKED' : owned ? 'OWNED' : `<span class="em"></span> ${cost}`;
+    tag.innerHTML = selected ? 'PICKED' : owned ? 'OWNED' : `<span class="em"></span> ${cost}`;
     card.appendChild(tag);
     card.addEventListener('click', onClick);
     grid.appendChild(card);
@@ -1167,7 +1284,7 @@ export class UI {
     const grid = this.els.shopGrid;
     grid.innerHTML = '';
 
-    this._section(grid, '🧑 SKINS');
+    this._section(grid, 'SKINS');
     for (const skin of SKINS) {
       this._card(grid, {
         name: skin.name,
@@ -1179,7 +1296,7 @@ export class UI {
       });
     }
 
-    const CAT_LABELS = { cape: '🦸 CAPES', hat: '🎩 HATS', trail: '✨ ARROW TRAILS', pet: '🐾 PETS' };
+    const CAT_LABELS = { cape: 'CAPES', hat: 'HATS', trail: 'ARROW TRAILS', pet: 'PETS' };
     for (const [cat, label] of Object.entries(CAT_LABELS)) {
       this._section(grid, label);
       for (const def of COSMETICS[cat]) {
@@ -1284,8 +1401,7 @@ export class UI {
   // ---------- achievements ----------
   showAchievements(from = 'menu') {
     this.returnTo = from;
-    this.hideAll();
-    this.els.achScreen.classList.remove('hidden');
+    this.openScreen('achScreen');
     this.buildAchievements();
   }
 
@@ -1311,7 +1427,7 @@ export class UI {
       row.appendChild(txt);
       const mark = document.createElement('div');
       mark.className = 'achMark';
-      mark.textContent = got ? '✅' : '🔒';
+      mark.textContent = got ? 'DONE' : 'LOCKED';
       row.appendChild(mark);
       grid.appendChild(row);
     }
@@ -1368,15 +1484,15 @@ export class UI {
     if (this._fill !== fill) { this._fill = fill; E.golemFill.style.width = fill; }
     const ready = pct >= 1;
     if (this._ready !== ready) { this._ready = ready; E.golemMeter.classList.toggle('ready', ready); }
-    const glabel = ready ? '🗿 GOLEM INCOMING!' : `🗿 GOLEM ${Math.floor(pct * 100)}%`;
+    const glabel = ready ? 'GOLEM INCOMING!' : `GOLEM ${Math.floor(pct * 100)}%`;
     if (this._glabel !== glabel) { this._glabel = glabel; E.golemLabel.textContent = glabel; }
     // powerups
     const chips = [];
     if (s.power.triple > 0) chips.push(`3× ${Math.ceil(s.power.triple)}s`);
-    if (s.power.rapid > 0) chips.push(`⚡ ${Math.ceil(s.power.rapid)}s`);
-    if (s.power.power > 0) chips.push(`💥 ${Math.ceil(s.power.power)}s`);
-    if (s.power.sword > 0) chips.push(`⚔ ${Math.ceil(s.power.sword)}s`);
-    if (s.power.axe > 0) chips.push(`🪓 ${Math.ceil(s.power.axe)}s`);
+    if (s.power.rapid > 0) chips.push(`RAPID ${Math.ceil(s.power.rapid)}s`);
+    if (s.power.power > 0) chips.push(`POWER ${Math.ceil(s.power.power)}s`);
+    if (s.power.sword > 0) chips.push(`SWORD ${Math.ceil(s.power.sword)}s`);
+    if (s.power.axe > 0) chips.push(`AXE ${Math.ceil(s.power.axe)}s`);
     const cstr = chips.join('  ');
     if (this._chips !== cstr) { this._chips = cstr; E.powerChips.textContent = cstr; }
     // boss
@@ -1412,20 +1528,20 @@ export class UI {
     // strip the expedition multiplier on a replay (already cleared today)
     const earned = (isExp && !expFirst) ? Math.round(r.emeralds / (r.emeraldMul || 1)) : r.emeralds;
 
-    E.resultTitle.textContent = r.win ? (isExp ? '🗺 EXPEDITION DONE!' : '⭐ VICTORY! ⭐') : 'CROWD WIPED OUT';
+    E.resultTitle.textContent = r.win ? (isExp ? 'EXPEDITION DONE!' : 'VICTORY!') : 'CROWD WIPED OUT';
     E.resultTitle.className = r.win ? 'win' : 'lose';
     E.resultStats.innerHTML = '';
     const rows = [
-      ...(isExp ? [['🗺 ' + r.expedition.name, r.win ? 'CLEARED!' : 'failed']] : []),
+      ...(isExp ? [[r.expedition.name, r.win ? 'CLEARED!' : 'failed']] : []),
       ['<span class="em"></span> Emeralds earned', `+${earned}`],
-      ...(r.win && !isExp ? [['🏆 Victory bonus', `+${r.bonus}`]] : []),
-      ...(expFirst && r.emeraldMul > 1 ? [['✨ Expedition bonus', `${r.emeraldMul}× emeralds`]] : []),
-      ...(streakBonus > 0 ? [[`🔥 Day ${streak} streak`, `+${streakBonus}`]] : []),
-      ...(r.rods > 0 ? [['🔥 Blaze rods', `+${r.rods}`]] : []),
+      ...(r.win && !isExp ? [['Victory bonus', `+${r.bonus}`]] : []),
+      ...(expFirst && r.emeraldMul > 1 ? [['Expedition bonus', `${r.emeraldMul}× emeralds`]] : []),
+      ...(streakBonus > 0 ? [[`Day ${streak} streak`, `+${streakBonus}`]] : []),
+      ...(r.rods > 0 ? [['Blaze rods', `+${r.rods}`]] : []),
       ...(isExp && !expFirst && r.win ? [['↻ Replay', 'base reward only']] : []),
-      ['👥 Biggest crowd', `${r.bestCrowd}`],
-      ...(r.mode === 'shooter' ? [['🏹 Mobs blasted', `${r.kills}`]] : []),
-      ...(isExp ? [] : [['🗺 ' + r.biome, r.win ? 'CLEARED!' : 'try again!']]),
+      ['Biggest crowd', `${r.bestCrowd}`],
+      ...(r.mode === 'shooter' ? [[' Mobs blasted', `${r.kills}`]] : []),
+      ...(isExp ? [] : [[' ' + r.biome, r.win ? 'CLEARED!' : 'try again!']]),
     ];
     for (const [k, v] of rows) {
       const d = document.createElement('div');
@@ -1455,7 +1571,7 @@ export class UI {
     const T = this.els.toast;
     clearTimeout(this._toastTimer);
     if (!kind) { T.classList.add('hidden'); return; }
-    T.textContent = kind === 'steer' ? '👆 DRAG ANYWHERE TO STEER!' : '🗿 GOLEM READY — TAP THE BUTTON!';
+    T.textContent = kind === 'steer' ? 'DRAG ANYWHERE TO STEER!' : 'GOLEM CHARGED — HERE IT COMES!';
     T.classList.remove('hidden');
     if (kind === 'steer') persistSave(this.save);
     this._toastTimer = setTimeout(() => T.classList.add('hidden'), 3500);

@@ -18,12 +18,56 @@
     box-shadow: 0 0 60px rgba(0,0,0,0.9); overflow: hidden; }
   #gameCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 
-  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column;
+  /* ---- mobile app shell: a fixed top bar and bottom nav, content between ---- */
+  #stage { --bar-top: calc(46px + env(safe-area-inset-top)); --bar-bottom: calc(58px + env(safe-area-inset-bottom)); }
+  #stage.playing { --bar-top: 0px; --bar-bottom: 0px; }   /* a run gets the whole screen */
+  #stage.playing #appbar, #stage.playing #navbar { display: none; }
+
+  #appbar { position: absolute; top: 0; left: 0; right: 0; height: var(--bar-top); z-index: 20;
+    display: flex; align-items: center; gap: 8px;
+    padding: env(safe-area-inset-top) calc(8px + env(safe-area-inset-right)) 0 calc(8px + env(safe-area-inset-left));
+    background: #17141d; border-bottom: 3px solid #000;
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.07), 0 2px 8px rgba(0,0,0,0.5); }
+  #appTitle { flex: 1 1 auto; min-width: 0; font-weight: 900; font-size: 15px; letter-spacing: 1px;
+    color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .barBtn { flex: 0 0 auto; width: 34px; height: 34px; background: #3a3444; border: 2px solid #000; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.16), inset -2px -2px 0 rgba(0,0,0,0.4); }
+  .barBtn:active { transform: translateY(1px); }
+  .barBtn.hidden { visibility: hidden; display: flex; }   /* keep the title from shifting */
+  #barWallet { font-size: 13px; padding: 4px 8px; }
+
+  #navbar { position: absolute; bottom: 0; left: 0; right: 0; height: var(--bar-bottom); z-index: 20;
+    display: flex; align-items: stretch;
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background: #17141d; border-top: 3px solid #000; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
+  .navTab { position: relative; flex: 1 1 0; background: none; border: 0; cursor: pointer; padding: 4px 0 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    font-family: inherit; font-size: 9px; font-weight: 900; letter-spacing: 0.5px;
+    color: #7d7590; text-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+  .navTab .icon { opacity: 0.55; }
+  .navTab.sel { color: #7dff5a; background: rgba(125,255,90,0.08); box-shadow: inset 0 3px 0 #7dff5a; }
+  .navTab.sel .icon { opacity: 1; }
+  .navDot { position: absolute; top: 4px; right: 50%; margin-right: -16px; width: 9px; height: 9px;
+    border-radius: 50%; background: #ffd94d; border: 2px solid #000; }
+
+  .icon { width: 24px; height: 24px; image-rendering: pixelated; display: block; }
+  .barBtn .icon { width: 22px; height: 22px; }
+  .rowBtn { display: flex; align-items: center; gap: 10px; text-align: left; }
+  .rowBtn .icon { flex: 0 0 auto; }
+
+  .aboutText { font-size: 12px; line-height: 1.55; color: #cfc9d8; text-align: left; }
+  .aboutText p { margin-bottom: 8px; }
+  .aboutMeta { font-size: 10px; color: #8f88a0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .aboutMeta a { color: #cfc9d8; }
+  .aboutMeta a.mmSponsor { color: #ffd94d; }
+
+  .overlay { position: absolute; top: var(--bar-top); bottom: var(--bar-bottom); left: 0; right: 0;
+    display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: clamp(6px, 1.6vh, 14px); z-index: 10; overflow: hidden;
     background: rgba(10, 8, 14, 0.55);
-    /* reserve the notch / Dynamic Island area so the logo is never obscured */
-    padding: calc(clamp(8px, 2vh, 20px) + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right))
-             calc(clamp(8px, 2vh, 20px) + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left)); }
+    padding: clamp(8px, 2vh, 16px) calc(12px + env(safe-area-inset-right))
+             clamp(8px, 2vh, 16px) calc(12px + env(safe-area-inset-left)); }
   .hidden { display: none !important; }
 
   .panel { background: rgba(22, 19, 28, 0.94); border: 3px solid #000;
@@ -61,7 +105,7 @@
   .townCard.here { background: #2a7fd4; }
   .townCard.locked { opacity: 0.85; background: #2e2a36; }
   .townCard.cant { opacity: 0.55; }
-  .townIcon { font-size: 20px; line-height: 1.1; }
+  .townIcon { width: 26px; height: 26px; image-rendering: pixelated; display: block; }
   .townName { font-weight: 900; color: #fff; font-size: 12px; text-shadow: 1px 1px 0 #000; text-align: center; }
   .townMeta { font-size: 10px; color: #b8f0c8; font-weight: 900; }
   .townMeta.cost { color: #ffd94d; }
@@ -316,6 +360,21 @@
 <div id="stage">
   <canvas id="gameCanvas"></canvas>
 
+  <header id="appbar">
+    <button id="navBack" class="barBtn"><canvas class="icon" data-icon="ui_back"></canvas></button>
+    <span id="appTitle">CraftRush</span>
+    <span class="chip green" id="barWallet"><span class="em"></span> <span id="barEmeralds">0</span></span>
+    <button id="navMore" class="barBtn"><canvas class="icon" data-icon="ui_gear"></canvas></button>
+  </header>
+
+  <nav id="navbar">
+    <button class="navTab" data-tab="play"><canvas class="icon" data-icon="ui_play"></canvas><span>Play</span></button>
+    <button class="navTab" data-tab="shop"><canvas class="icon" data-icon="ui_person"></canvas><span>Skins</span></button>
+    <button class="navTab" data-tab="home"><canvas class="icon" data-icon="ui_house"></canvas><span>Village</span><i class="navDot hidden" id="navDotHome"></i></button>
+    <button class="navTab" data-tab="world"><canvas class="icon" data-icon="ui_world"></canvas><span>World</span></button>
+    <button class="navTab" data-tab="mine"><canvas class="icon" data-icon="ui_pickaxe"></canvas><span>Mine</span><i class="navDot hidden" id="navDotMine"></i></button>
+  </nav>
+
   <div id="hud" class="hidden">
     <div id="hudTop">
       <span class="chip green"><span class="em"></span> <span id="hudEmeralds">0</span></span>
@@ -347,19 +406,18 @@
     <div class="panel">
       <div class="logo" style="font-size:24px">PAUSED</div>
       <button class="mcbtn primary" id="btnResume">▶ RESUME</button>
-      <button class="mcbtn small" id="btnPauseCamera">📷 CAMERA: FAR</button>
-      <button class="mcbtn small" id="btnPauseShop">🧑 SKINS &amp; SHOP</button>
-      <button class="mcbtn small" id="btnPauseAch">🏆 ACHIEVEMENTS</button>
-      <button class="mcbtn small" id="btnPauseSound">🔊 SOUND ON</button>
-      <button class="mcbtn small" id="btnQuit">🏳 GIVE UP</button>
+      <button class="mcbtn small" id="btnPauseCamera" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_camera"></canvas>CAMERA: FAR</button>
+      <button class="mcbtn small" id="btnPauseShop" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_person"></canvas>SKINS &amp; SHOP</button>
+      <button class="mcbtn small" id="btnPauseAch" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_trophy"></canvas>ACHIEVEMENTS</button>
+      <button class="mcbtn small" id="btnPauseSound" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_sound_on"></canvas>SOUND ON</button>
+      <button class="mcbtn small" id="btnQuit" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_door"></canvas>GIVE UP</button>
     </div>
   </div>
 
   <div id="achievements" class="overlay hidden">
     <div class="panel">
-      <div class="chipRow"><span style="color:#fff">🏆 ACHIEVEMENTS</span><span class="chip green" id="achCount">0/0</span></div>
+      <div class="chipRow"><span style="color:#fff">ACHIEVEMENTS</span><span class="chip green" id="achCount">0/0</span></div>
       <div id="achGrid"></div>
-      <button class="mcbtn small" id="btnAchBack">◀ BACK</button>
     </div>
   </div>
 
@@ -372,14 +430,14 @@
         <span class="chip green"><span class="em"></span> <span id="menuEmeralds">0</span></span>
       </div>
       <div class="modeRow">
-        <button class="mcbtn" id="modeShooter">🏹 BOW BLITZ</button>
-        <button class="mcbtn" id="modeGates">🚪 GATE DASH</button>
+        <button class="mcbtn" id="modeShooter" class="mcbtn rowBtn"><canvas class="icon" data-icon="ui_bow"></canvas>BOW BLITZ</button>
+        <button class="mcbtn" id="modeGates" class="mcbtn rowBtn"><canvas class="icon" data-icon="ui_door"></canvas>GATE DASH</button>
       </div>
       <div id="modeDesc"></div>
       <button class="mcbtn primary" id="btnPlay">▶ PLAY</button>
 
       <div id="expCard">
-        <div id="expHead">🗺 TODAY'S EXPEDITION<span id="expStreak"></span></div>
+        <div id="expHead">TODAY'S EXPEDITION<span id="expStreak"></span></div>
         <div id="expBody">
           <canvas id="expIcon" width="40" height="40"></canvas>
           <div class="expText"><div id="expName">—</div><div id="expDesc">—</div></div>
@@ -387,17 +445,6 @@
         <button class="mcbtn small" id="btnExpedition">▶ START EXPEDITION</button>
       </div>
 
-      <div class="btnGrid3">
-        <button class="mcbtn" id="btnShop">🧑 SHOP</button>
-        <button class="mcbtn" id="btnHome">🏠 HOME<span id="homeBadge" class="homeBadge hidden"></span></button>
-        <button class="mcbtn" id="btnMine">⛏️ MINE<span id="mineBadge" class="homeBadge hidden"></span></button>
-      </div>
-      <div class="btnGrid">
-        <button class="mcbtn small" id="btnAch">🏆 GOALS</button>
-        <button class="mcbtn small" id="btnCamera">📷 FAR</button>
-        <button class="mcbtn small" id="btnSound">🔊 ON</button>
-        <button class="mcbtn small" id="btnData">⚙ SAVE</button>
-      </div>
       <p class="makerMark">
         made with <svg aria-hidden="true" viewBox="0 0 24 24" class="mmHeart"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span class="mmSr">love</span> by <a href="https://royashbrook.com" target="_blank" rel="noreferrer">roy</a> + <a href="https://royashbrook.com/agents/" target="_blank" rel="noreferrer">ai</a> <span aria-hidden="true">·</span> <a href="https://github.com/sponsors/royashbrook" target="_blank" rel="noreferrer" class="mmSponsor">sponsor me</a>
       </p>
@@ -406,37 +453,33 @@
 
   <div id="settings" class="overlay hidden">
     <div class="panel">
-      <div class="chipRow"><span style="color:#fff">⚙ SAVE &amp; DATA</span></div>
+      <div class="chipRow"><span style="color:#fff">SAVE &amp; DATA</span></div>
       <div class="setLabel">Your backup code — copy and keep it safe:</div>
       <textarea id="saveExport" class="saveBox" readonly></textarea>
-      <button class="mcbtn small" id="btnCopySave">📋 COPY CODE</button>
+      <button class="mcbtn small" id="btnCopySave" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_bag"></canvas>COPY CODE</button>
       <div class="setLabel">Paste a code to restore your game:</div>
       <textarea id="saveImport" class="saveBox" placeholder="paste your code here"></textarea>
-      <button class="mcbtn small" id="btnLoadSave">⬇ LOAD CODE</button>
-      <button class="mcbtn small" id="btnReset">🗑 RESET EVERYTHING</button>
+      <button class="mcbtn small" id="btnLoadSave" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_back"></canvas>LOAD CODE</button>
+      <button class="mcbtn small" id="btnReset" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_trash"></canvas>RESET EVERYTHING</button>
       <div id="setMsg"></div>
-      <button class="mcbtn small" id="btnSettingsBack">◀ BACK</button>
     </div>
   </div>
 
   <div id="home" class="overlay hidden">
     <div class="panel">
-      <div class="chipRow"><span style="color:#fff">🏠 YOUR HOME</span><span class="chip green"><span class="em"></span> <span id="homeEmeralds">0</span></span></div>
+      <div class="chipRow"><span style="color:#fff">YOUR VILLAGE</span><span class="chip green"><span class="em"></span> <span id="homeEmeralds">0</span></span></div>
       <div id="homeWelcome" class="homeWelcome hidden"></div>
       <div id="homeIncome" class="homeIncome"></div>
       <div id="homeScene" class="homeScene"></div>
-      <button class="mcbtn small" id="btnPlayroom">🗺️ WORLD</button>
       <div id="villagerList" class="villagerList"></div>
-      <button class="mcbtn small" id="btnHomeBack">◀ BACK</button>
     </div>
   </div>
 
   <div id="world" class="overlay hidden">
     <div class="panel">
-      <div class="chipRow"><span style="color:#fff">🗺️ WORLD</span><span class="chip green"><span class="em"></span> <span id="worldEmeralds">0</span></span></div>
+      <div class="chipRow"><span style="color:#fff">WORLD MAP</span><span class="chip green"><span class="em"></span> <span id="worldEmeralds">0</span></span></div>
       <div class="playHint">Unlock towns around the world · tap one to visit</div>
       <div id="townGrid" class="townGrid"></div>
-      <button class="mcbtn small" id="btnWorldBack">◀ BACK</button>
     </div>
   </div>
 
@@ -446,17 +489,16 @@
       <div class="playHint" id="townHint">Tap a house to go inside</div>
       <div id="houseGrid" class="townGrid"></div>
       <button class="mcbtn small" id="btnBuyHouse">＋ BUY HOUSE</button>
-      <button class="mcbtn small" id="btnTownBack">◀ WORLD</button>
     </div>
   </div>
 
   <div id="playroom" class="overlay hidden">
     <div class="panel">
-      <div class="chipRow"><span style="color:#fff" id="playHouseTitle">🏠 HOUSE</span><span class="chip green"><span class="em"></span> <span id="playEmeralds">0</span></span></div>
+      <div class="chipRow"><span style="color:#fff" id="playHouseTitle">HOUSE</span><span class="chip green"><span class="em"></span> <span id="playEmeralds">0</span></span></div>
       <div class="playBtns">
-        <button class="mcbtn small" id="btnAddFriend">🙂 FRIEND</button>
-        <button class="mcbtn small" id="btnDecor">🛋️ DECOR</button>
-        <button class="mcbtn small" id="btnRoom">🎨 ROOM</button>
+        <button class="mcbtn small" id="btnAddFriend" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_person"></canvas>FRIEND</button>
+        <button class="mcbtn small" id="btnDecor" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_sofa"></canvas>DECOR</button>
+        <button class="mcbtn small" id="btnRoom" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_palette"></canvas>ROOM</button>
       </div>
       <div id="playHint" class="playHint">Drag friends &amp; decor around · tap a friend to dress them</div>
       <div id="playScene" class="playScene">
@@ -464,23 +506,21 @@
           <canvas id="roomBg" class="roomBg"></canvas>
           <div id="roomItems" class="roomItems"></div>
         </div>
-        <div id="trashZone" class="trashZone">🗑️</div>
-        <div id="carryZone" class="trashZone carryZone">🧳</div>
-        <button id="btnPlaceCarry" class="placeCarry hidden">🧳 PLACE FRIEND</button>
+        <div id="trashZone" class="trashZone"><canvas class="icon" data-icon="ui_trash"></canvas></div>
+        <div id="carryZone" class="trashZone carryZone"><canvas class="icon" data-icon="ui_bag"></canvas></div>
+        <button id="btnPlaceCarry" class="placeCarry hidden rowBtn"><canvas class="icon" data-icon="ui_bag"></canvas>PLACE FRIEND</button>
       </div>
       <div id="dressPanel" class="dressPanel hidden"></div>
-      <button class="mcbtn small" id="btnPlayroomBack">◀ TOWN</button>
     </div>
   </div>
 
   <div id="mine" class="overlay hidden">
     <div class="panel">
-      <div class="chipRow"><span style="color:#fff">⛏️ THE MINE</span><span class="chip green"><span class="em"></span> <span id="mineEmeralds">0</span></span></div>
+      <div class="chipRow"><span style="color:#fff">THE MINE</span><span class="chip green"><span class="em"></span> <span id="mineEmeralds">0</span></span></div>
       <div id="mineStats" class="mineStats"></div>
       <div class="energyWrap"><div id="energyBar" class="energyBar"></div><span id="energyText" class="energyText"></span></div>
       <div id="digFace" class="digFace"></div>
       <button class="mcbtn small" id="btnPickUp"></button>
-      <button class="mcbtn small" id="btnMineBack">◀ BACK</button>
     </div>
   </div>
 
@@ -488,7 +528,6 @@
     <div class="panel">
       <div class="chipRow"><span style="color:#fff">PICK YOUR HERO</span><span class="chip green"><span class="em"></span> <span id="shopEmeralds">0</span></span></div>
       <div id="shopGrid"></div>
-      <button class="mcbtn small" id="btnShopBack">◀ BACK</button>
     </div>
   </div>
 
@@ -498,7 +537,33 @@
       <div id="resultStats"></div>
       <button class="mcbtn primary" id="btnNext">NEXT LEVEL ▶</button>
       <button class="mcbtn primary" id="btnRetry">↻ TRY AGAIN</button>
-      <button class="mcbtn small" id="btnMenu">🏠 MENU</button>
+      <button class="mcbtn small" id="btnMenu" class="mcbtn small rowBtn"><canvas class="icon" data-icon="ui_house"></canvas>MENU</button>
+    </div>
+  </div>
+
+  <div id="more" class="overlay hidden">
+    <div class="panel">
+      <button class="mcbtn small rowBtn" id="btnGoals"><canvas class="icon" data-icon="ui_trophy"></canvas>GOALS</button>
+      <button class="mcbtn small rowBtn" id="btnCameraMore"><canvas class="icon" data-icon="ui_camera"></canvas><span id="cameraLabel">CAMERA: FAR</span></button>
+      <button class="mcbtn small rowBtn" id="btnSoundMore"><canvas class="icon" data-icon="ui_sound_on"></canvas><span id="soundLabel">SOUND ON</span></button>
+      <button class="mcbtn small rowBtn" id="btnSaveMore"><canvas class="icon" data-icon="ui_gear"></canvas>SAVE &amp; DATA</button>
+      <button class="mcbtn small rowBtn" id="btnAbout"><canvas class="icon" data-icon="ui_info"></canvas>ABOUT</button>
+    </div>
+  </div>
+
+  <div id="about" class="overlay hidden">
+    <div class="panel">
+      <div class="logo">CraftRush</div>
+      <div class="aboutText">
+        <p>A blocky runner made for kids: steer your crowd, pick the good gates, blast mobs, and beat the boss at the end of every biome.</p>
+        <p>Every sprite and sound in this game is generated from code, original pixel art in the style of the blocky game we all love. No downloaded assets, and it all works offline once loaded.</p>
+        <p>Build a village that earns while you are away, dig the mine, and decorate houses around the world.</p>
+      </div>
+      <div class="aboutMeta">
+        <span>version <span id="aboutVersion">0.0.0</span></span>
+        <span>made with <svg aria-hidden="true" viewBox="0 0 24 24" class="mmHeart"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> by <a href="https://royashbrook.com" target="_blank" rel="noreferrer">roy</a> + <a href="https://royashbrook.com/agents/" target="_blank" rel="noreferrer">ai</a></span>
+        <a href="https://github.com/sponsors/royashbrook" target="_blank" rel="noreferrer" class="mmSponsor">sponsor me</a>
+      </div>
     </div>
   </div>
 
