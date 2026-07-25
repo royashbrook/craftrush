@@ -15,8 +15,8 @@ export class UI {
     this.els = {
       menu: $('menu'), shop: $('shop'), result: $('result'), hud: $('hud'),
       menuLevel: $('menuLevel'), menuEmeralds: $('menuEmeralds'),
-      btnPlay: $('btnPlay'),
-      modeShooter: $('modeShooter'), modeGates: $('modeGates'), modeDesc: $('modeDesc'),
+      btnPlayShooter: $('btnPlayShooter'), btnPlayGates: $('btnPlayGates'),
+      cardShooter: $('cardShooter'), cardGates: $('cardGates'),
       shopGrid: $('shopGrid'), shopEmeralds: $('shopEmeralds'),
       resultTitle: $('resultTitle'), resultStats: $('resultStats'),
       btnNext: $('btnNext'), btnRetry: $('btnRetry'), btnMenu: $('btnMenu'),
@@ -46,7 +46,8 @@ export class UI {
       saveImport: $('saveImport'), btnCopySave: $('btnCopySave'), btnLoadSave: $('btnLoadSave'),
       btnReset: $('btnReset'), setMsg: $('setMsg'),
       // app shell
-      appbar: $('appbar'), appTitle: $('appTitle'), navBack: $('navBack'), navMore: $('navMore'),
+      appbar: $('appbar'), appTitle: $('appTitle'), navMore: $('navMore'),
+      tabPlayIcon: $('tabPlayIcon'), tabPlayLabel: $('tabPlayLabel'),
       barWallet: $('barWallet'), barEmeralds: $('barEmeralds'), navbar: $('navbar'),
       navDotHome: $('navDotHome'), navDotMine: $('navDotMine'),
       more: $('more'), about: $('about'), aboutVersion: $('aboutVersion'),
@@ -78,7 +79,8 @@ export class UI {
 
   _wire() {
     const E = this.els;
-    E.btnPlay.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.startRun(); });
+    E.btnPlayShooter.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.setMode('shooter'); this.startRun(); });
+    E.btnPlayGates.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.setMode('gates'); this.startRun(); });
     E.btnExpedition.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.startExpedition(); });
     E.btnBuyHouse.addEventListener('click', () => this.buyHouse());
     E.btnPlaceCarry.addEventListener('click', () => this.placeCarry());
@@ -102,8 +104,6 @@ export class UI {
         location.reload();
       }
     });
-    E.modeShooter.addEventListener('click', () => this.setMode('shooter'));
-    E.modeGates.addEventListener('click', () => this.setMode('gates'));
     E.btnNext.addEventListener('click', () => { Audio.sfx('click'); this.startRun(); });
     E.btnRetry.addEventListener('click', () => { Audio.sfx('click'); this.startRun(); });
     E.btnMenu.addEventListener('click', () => { Audio.sfx('click'); this.showMenu(); });
@@ -1183,7 +1183,6 @@ export class UI {
 
   wireShell() {
     const E = this.els;
-    E.navBack.addEventListener('click', () => { Audio.sfx('click'); this.goBack(); });
     E.navMore.addEventListener('click', () => { Audio.sfx('click'); this.openScreen('more'); this.refreshMore(); });
     for (const tab of document.querySelectorAll('.navTab')) {
       tab.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.openTab(tab.dataset.tab); });
@@ -1210,11 +1209,17 @@ export class UI {
     document.getElementById('stage').classList.toggle('playing', !!on);
   }
 
+  // Tapping a tab goes to that tab's root screen THROUGH its show method — those
+  // build the screen's contents, so routing straight to openScreen left them blank.
   openTab(tab) {
-    // tapping a tab always returns to that tab's root screen
-    const root = Object.entries(UI.SCREENS).find(([, s]) => s.tab === tab && !s.parent);
-    if (root) this.openScreen(root[0]);
+    if (tab === 'play') { if (this.canGoBack()) { this.goBack(); return; } this.showMenu(); return; }
+    if (tab === 'shop') return this.showShop('menu');
+    if (tab === 'home') return this.showHome();
+    if (tab === 'world') return this.showWorld();
+    if (tab === 'mine') return this.showMine();
   }
+
+  canGoBack() { return !!(UI.SCREENS[this.screen] || {}).parent; }
 
   // show one screen and sync the bars to it
   openScreen(name) {
@@ -1224,11 +1229,16 @@ export class UI {
     this.els[name].classList.remove('hidden');
     const E = this.els;
     E.appTitle.textContent = this.screenTitle(name, def);
-    E.navBack.classList.toggle('hidden', !def.parent);
     E.barWallet.classList.toggle('hidden', !!def.bare);
     E.navMore.classList.toggle('hidden', !!def.bare);
     E.barEmeralds.textContent = `${this.save.emeralds}`;
     for (const t of document.querySelectorAll('.navTab')) t.classList.toggle('sel', !!def.tab && t.dataset.tab === def.tab);
+    // the first tab doubles as BACK once you're deeper than a tab root, so there's
+    // one obvious way out and nothing to hunt for in the corner
+    const back = !!def.parent;
+    E.tabPlayIcon.dataset.icon = back ? 'ui_back' : 'ui_play';
+    E.tabPlayLabel.textContent = back ? 'Back' : 'Play';
+    this.paintIcons(E.navbar);
     this.refreshBadges();
   }
 
@@ -1282,9 +1292,8 @@ export class UI {
     const biome = BIOMES[(this.save.level - 1) % BIOMES.length];
     E.menuLevel.textContent = `LV ${this.save.level} · ${biome.name.toUpperCase()}`;
     E.menuEmeralds.textContent = `${this.save.emeralds}`;
-    E.modeShooter.classList.toggle('sel', this.save.mode === 'shooter');
-    E.modeGates.classList.toggle('sel', this.save.mode === 'gates');
-    E.modeDesc.textContent = MODES[this.save.mode].desc;
+    E.cardShooter.classList.toggle('sel', this.save.mode === 'shooter');
+    E.cardGates.classList.toggle('sel', this.save.mode === 'gates');
     this.refreshBadges(); // the "come back" dots live on the nav bar now
     this.refreshExpedition();
   }

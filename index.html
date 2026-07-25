@@ -56,6 +56,16 @@
   .rowBtn { display: flex; align-items: center; gap: 10px; text-align: left; }
   .rowBtn .icon { flex: 0 0 auto; }
 
+  /* one card per game mode: what it is, then a single START */
+  .gameCard { width: 100%; border: 2px solid #000; background: rgba(58,52,68,0.75); padding: 8px;
+    display: flex; flex-direction: column; gap: 6px;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.35); }
+  .gameHead { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 14px;
+    color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.6); letter-spacing: 1px; }
+  .gameDesc { font-size: 11px; color: #cfc9d8; line-height: 1.4; }
+  #cardShooter { border-color: #2a7fd4; }
+  #cardGates { border-color: #b58a1a; }
+
   .backupList { width: 100%; display: flex; flex-direction: column; gap: 4px; max-height: 128px; overflow-y: auto; }
   .backupRow { display: flex; align-items: center; gap: 8px; background: #302b3a; border: 2px solid #000;
     padding: 5px 8px; font-family: inherit; cursor: pointer; text-align: left;
@@ -64,11 +74,12 @@
   .backupRow .bMeta { font-size: 10px; color: #b8f0c8; }
   .backupEmpty { font-size: 11px; color: #8f88a0; text-align: center; padding: 6px; }
 
+  #about .panel { gap: 8px; }
+  .noAds { font-weight: 900; font-size: 13px; letter-spacing: 2px; color: #7dff5a;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.7); text-align: center; }
   .aboutText { font-size: 12px; line-height: 1.55; color: #cfc9d8; text-align: left; }
-  .aboutText p { margin-bottom: 8px; }
-  .aboutMeta { font-size: 10px; color: #8f88a0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .aboutMeta a { color: #cfc9d8; }
-  .aboutMeta a.mmSponsor { color: #ffd94d; }
+  .aboutText p + p { margin-top: 8px; }
+  .aboutMeta { font-size: 10px; color: #8f88a0; text-align: center; }
 
   .overlay { position: absolute; top: var(--bar-top); bottom: var(--bar-bottom); left: 0; right: 0;
     display: flex; flex-direction: column;
@@ -369,15 +380,14 @@
   <canvas id="gameCanvas"></canvas>
 
   <header id="appbar">
-    <button id="navBack" class="barBtn"><canvas class="icon" data-icon="ui_back"></canvas></button>
     <span id="appTitle">CraftRush</span>
     <span class="chip green" id="barWallet"><span class="em"></span> <span id="barEmeralds">0</span></span>
     <button id="navMore" class="barBtn"><canvas class="icon" data-icon="ui_gear"></canvas></button>
   </header>
 
   <nav id="navbar">
-    <button class="navTab" data-tab="play"><canvas class="icon" data-icon="ui_play"></canvas><span>Play</span></button>
-    <button class="navTab" data-tab="shop"><canvas class="icon" data-icon="ui_person"></canvas><span>Skins</span></button>
+    <button class="navTab" data-tab="play"><canvas class="icon" id="tabPlayIcon" data-icon="ui_play"></canvas><span id="tabPlayLabel">Play</span></button>
+    <button class="navTab" data-tab="shop"><canvas class="icon" data-icon="ui_person"></canvas><span>Shop</span></button>
     <button class="navTab" data-tab="home"><canvas class="icon" data-icon="ui_house"></canvas><span>Village</span><i class="navDot hidden" id="navDotHome"></i></button>
     <button class="navTab" data-tab="world"><canvas class="icon" data-icon="ui_world"></canvas><span>World</span></button>
     <button class="navTab" data-tab="mine"><canvas class="icon" data-icon="ui_pickaxe"></canvas><span>Mine</span><i class="navDot hidden" id="navDotMine"></i></button>
@@ -437,12 +447,17 @@
         <span class="chip" id="menuLevel">LEVEL 1</span>
         <span class="chip green"><span class="em"></span> <span id="menuEmeralds">0</span></span>
       </div>
-      <div class="modeRow">
-        <button class="mcbtn rowBtn" id="modeShooter"><canvas class="icon" data-icon="ui_bow"></canvas>BOW BLITZ</button>
-        <button class="mcbtn rowBtn" id="modeGates"><canvas class="icon" data-icon="ui_door"></canvas>GATE DASH</button>
+      <div class="gameCard" id="cardShooter">
+        <div class="gameHead"><canvas class="icon" data-icon="ui_bow"></canvas>BOW BLITZ</div>
+        <div class="gameDesc">Your crowd auto-fires arrows. Blast mobs, shoot gates to boost them.</div>
+        <button class="mcbtn small primary" id="btnPlayShooter">START</button>
       </div>
-      <div id="modeDesc"></div>
-      <button class="mcbtn primary" id="btnPlay">▶ PLAY</button>
+
+      <div class="gameCard" id="cardGates">
+        <div class="gameHead"><canvas class="icon" data-icon="ui_door"></canvas>GATE DASH</div>
+        <div class="gameDesc">No shooting. Pure gates, dodging, and the golem. Grow a giant crowd.</div>
+        <button class="mcbtn small primary" id="btnPlayGates">START</button>
+      </div>
 
       <div id="expCard">
         <div id="expHead">TODAY'S EXPEDITION<span id="expStreak"></span></div>
@@ -450,12 +465,8 @@
           <canvas id="expIcon" width="40" height="40"></canvas>
           <div class="expText"><div id="expName">—</div><div id="expDesc">—</div></div>
         </div>
-        <button class="mcbtn small" id="btnExpedition">▶ START EXPEDITION</button>
+        <button class="mcbtn small" id="btnExpedition">START EXPEDITION</button>
       </div>
-
-      <p class="makerMark">
-        made with <svg aria-hidden="true" viewBox="0 0 24 24" class="mmHeart"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span class="mmSr">love</span> by <a href="https://royashbrook.com" target="_blank" rel="noreferrer">roy</a> + <a href="https://royashbrook.com/agents/" target="_blank" rel="noreferrer">ai</a> <span aria-hidden="true">·</span> <a href="https://github.com/sponsors/royashbrook" target="_blank" rel="noreferrer" class="mmSponsor">sponsor me</a>
-      </p>
     </div>
   </div>
 
@@ -565,16 +576,16 @@
   <div id="about" class="overlay hidden">
     <div class="panel">
       <div class="logo">CraftRush</div>
+      <div class="noAds">NO ADS. JUST FUN.</div>
       <div class="aboutText">
-        <p>A blocky runner made for kids: steer your crowd, pick the good gates, blast mobs, and beat the boss at the end of every biome.</p>
-        <p>Every sprite and sound in this game is generated from code, original pixel art in the style of the blocky game we all love. No downloaded assets, and it all works offline once loaded.</p>
-        <p>Build a village that earns while you are away, dig the mine, and decorate houses around the world.</p>
+        <p>My kids loved playing these crowd runner games, but every one of them is packed with ads. So I made this one instead. No ads, nothing to buy, no timers pushing you to pay.</p>
+        <p>Then I added some mini games to spend the emeralds on: a village that earns while you are away, a mine to dig, and houses around the world to fill with friends and decorate.</p>
+        <p>Every sprite and sound is generated from code, original pixel art in the style of the blocky game we all love. It all works offline once loaded.</p>
       </div>
-      <div class="aboutMeta">
-        <span>version <span id="aboutVersion">0.0.0</span></span>
-        <span>made with <svg aria-hidden="true" viewBox="0 0 24 24" class="mmHeart"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> by <a href="https://royashbrook.com" target="_blank" rel="noreferrer">roy</a> + <a href="https://royashbrook.com/agents/" target="_blank" rel="noreferrer">ai</a></span>
-        <a href="https://github.com/sponsors/royashbrook" target="_blank" rel="noreferrer" class="mmSponsor">sponsor me</a>
-      </div>
+      <p class="makerMark">
+        made with <svg aria-hidden="true" viewBox="0 0 24 24" class="mmHeart"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span class="mmSr">love</span> by <a href="https://royashbrook.com" target="_blank" rel="noreferrer">roy</a> + <a href="https://royashbrook.com/agents/" target="_blank" rel="noreferrer">ai</a> <span aria-hidden="true">·</span> <a href="https://github.com/sponsors/royashbrook" target="_blank" rel="noreferrer" class="mmSponsor">sponsor me</a>
+      </p>
+      <div class="aboutMeta"><span>version <span id="aboutVersion">0.0.0</span></span></div>
     </div>
   </div>
 
