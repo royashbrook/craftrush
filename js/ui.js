@@ -907,33 +907,58 @@ export class UI {
     });
   }
 
+  // furniture you own but haven't placed; putting something in the bin comes back here
+  decorOwnedData() {
+    if (!this.save.decorOwned || typeof this.save.decorOwned !== 'object') this.save.decorOwned = {};
+    return this.save.decorOwned;
+  }
+
   showDecorCatalog() {
     const panel = this.els.dressPanel; panel.innerHTML = ''; Audio.sfx('click');
-    const lab = document.createElement('div'); lab.className = 'dressLabel'; lab.textContent = 'BUY DECOR · drag it around after'; panel.appendChild(lab);
+    const stock = this.decorOwnedData();
+    const lab = document.createElement('div'); lab.className = 'dressLabel';
+    lab.textContent = 'DECOR · tap to place · bin sends it back here';
+    panel.appendChild(lab);
     const row = document.createElement('div'); row.className = 'dressRow';
     for (const d of DECOR) {
+      const have = stock[d.id] || 0;
       const cell = document.createElement('button');
-      cell.className = 'dressItem' + (this.save.emeralds < d.cost ? ' cant' : '');
+      // owning one means placing is free; otherwise you buy one
+      cell.className = 'dressItem' + (have > 0 ? ' sel' : (this.save.emeralds < d.cost ? ' cant' : ''));
       const cv = document.createElement('canvas'); cv.width = 40; cv.height = 40; this.drawSprite(cv, d.sprite); cell.appendChild(cv);
-      const cost = document.createElement('div'); cost.className = 'dItemCost'; cost.innerHTML = `<span class="em"></span>${d.cost}`; cell.appendChild(cost);
-      cell.addEventListener('click', () => this.buyDecor(d.id));
+      const cost = document.createElement('div'); cost.className = 'dItemCost';
+      cost.innerHTML = have > 0 ? `✔ ${have}` : `<span class="em"></span>${d.cost}`;
+      cell.appendChild(cost);
+      cell.addEventListener('click', () => this.placeDecor(d.id));
       row.appendChild(cell);
     }
     panel.appendChild(row);
     this._dressClose(panel);
   }
 
-  buyDecor(id) {
+  // place one from your inventory; only buy when you have none left
+  placeDecor(id) {
     const def = decorById(id); if (!def) return;
-    if (this.save.emeralds < def.cost) { Audio.sfx('gate_bad'); return; }
-    this.save.emeralds -= def.cost;
-    this.decorData().push({ item: id, x: 0.3 + Math.random() * 0.4, y: 0.6 + Math.random() * 0.22 });
-    persistSave(this.save); Audio.sfx('buy');
+    const stock = this.decorOwnedData();
+    if (stock[id] > 0) { stock[id]--; Audio.sfx('click'); }
+    else {
+      if (this.save.emeralds < def.cost) { Audio.sfx('gate_bad'); return; }
+      this.save.emeralds -= def.cost; Audio.sfx('buy');
+    }
+    // drop it where you're looking, in world coords
+    const w = this.worldW || 1, vx = ((this.panX || 0) + (this.sceneW || w) * (0.35 + Math.random() * 0.3)) / w;
+    this.decorData().push({ item: id, x: clamp01(vx), y: 0.78 + Math.random() * 0.18 });
+    persistSave(this.save);
     this.renderPlayroom(); this.showDecorCatalog();
   }
 
+  // the bin puts furniture BACK in your inventory — nothing you paid for is ever lost
   removeDecor(i) {
-    this.curHouse().decor.splice(i, 1);
+    const gone = this.curHouse().decor.splice(i, 1)[0];
+    if (gone) {
+      const stock = this.decorOwnedData();
+      stock[gone.item] = (stock[gone.item] || 0) + 1;
+    }
     persistSave(this.save); Audio.sfx('pop');
     this.renderPlayroom();
   }

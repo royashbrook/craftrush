@@ -114,6 +114,29 @@ function drawTiled(ctx, img, offsetX, y, W, scaleY = 1) {
   for (let x = -ox; x < W; x += w) ctx.drawImage(img, x, y - h, w, h);
 }
 
+// How fast the distant terrain slides compared to the ground (0 = fixed backdrop,
+// 1 = same plane). Low enough to read as far away, high enough to feel alive.
+const OUTER_PARALLAX = 0.35;
+
+const mixHex = (a, b, f) => {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = (sh) => Math.round((((pa >> sh) & 255) * (1 - f)) + (((pb >> sh) & 255) * f));
+  return `#${(((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)) >>> 0).toString(16).slice(1)}`;
+};
+
+// The far terrain is the biome's ground hazed toward its fog — same world, seen
+// from far enough away that the air washes it out. Cached per biome.
+const outerCache = new Map();
+function outerPalette(biome) {
+  let p = outerCache.get(biome.id);
+  if (!p) {
+    const g = biome.ground;
+    p = { a: mixHex(g.a, biome.fog, 0.34), b: mixHex(g.b, biome.fog, 0.42), c: mixHex(g.c, biome.fog, 0.27) };
+    outerCache.set(biome.id, p);
+  }
+  return p;
+}
+
 export function renderWorld(ctx, cam, biome, t) {
   const { W, H, horizon } = cam;
   if (!(W > 0 && H > 0)) return; // canvas not sized yet (e.g. hidden tab) — skip
@@ -141,6 +164,7 @@ export function renderWorld(ctx, cam, biome, t) {
   ctx.fillRect(0, horizon + 4, W, Math.max(0, cam.groundY(8) - horizon - 4));
 
   const g = biome.ground;
+  const op = outerPalette(biome);
   const zNear = Math.floor(cam.z + 0.7);
   const zFar = Math.floor(cam.z + TUNE.viewDist);
   for (let zi = zFar; zi >= zNear; zi--) {
@@ -155,17 +179,40 @@ export function renderWorld(ctx, cam, biome, t) {
     const cellPx = s;
     const xToS = (wx) => W / 2 + (wx - cam.x) * s + cam.offX;
 
+    // Distant terrain fills everything past the shoulder so the track never sits
+    // in a void. It scrolls at a fraction of the ground's rate, so steering reads
+    // as parallax depth instead of the world edge sliding around. The band must
+    // start exactly where the detailed blocks stop (which follow the camera),
+    // otherwise steering opens a fog gap between them.
+    const xiMin = Math.floor(cam.x - TUNE.shoulderHalf);
+    const xiMax = Math.ceil(cam.x + TUNE.shoulderHalf);
+    const sxL = xToS(xiMin), sxR = xToS(xiMax);
+    const drawOuter = (x0, x1) => {
+      if (x1 <= x0) return;
+      const cw = Math.max(7, s * 3.2);            // coarse cells read as far away
+      const scroll = cam.x * s * OUTER_PARALLAX;  // slower than the ground's cam.x * s
+      const zs = Math.floor(zi * 0.4);            // and advances slower going forward
+      let x = Math.floor((x0 + scroll) / cw) * cw - scroll;
+      for (; x < x1; x += cw) {
+        const idx = Math.round((x + scroll) / cw);
+        const n = hash2(idx, zs);
+        ctx.fillStyle = n > 0.78 ? op.c : (((idx + zs) & 1) ? op.b : op.a);
+        const dx = Math.max(x, x0), dw = Math.min(x + cw, x1) - dx;
+        if (dw > 0) ctx.fillRect(dx, y0, dw + 0.6, hh + 0.6);
+      }
+    };
+    drawOuter(0, sxL);
+    drawOuter(sxR, W);
+
     if (cellPx < 3.2) {
-      // LOD: single banded row
+      // LOD: single banded row, only across the playfield (outer band drawn above)
       ctx.fillStyle = (zi & 1) ? g.b : g.a;
-      ctx.fillRect(0, y0, W, hh + 1);
+      ctx.fillRect(sxL, y0, sxR - sxL, hh + 1);
       const pl = xToS(-TUNE.trackHalf), pr = xToS(TUNE.trackHalf);
       ctx.fillStyle = (zi & 1) ? g.pathB : g.pathA;
       ctx.fillRect(pl, y0, pr - pl, hh + 1);
       continue;
     }
-    const xiMin = Math.floor(cam.x - TUNE.shoulderHalf);
-    const xiMax = Math.ceil(cam.x + TUNE.shoulderHalf);
     for (let xi = xiMin; xi < xiMax; xi++) {
       const sxa = xToS(xi), sxb = xToS(xi + 1);
       if (sxb < 0 || sxa > W) continue;

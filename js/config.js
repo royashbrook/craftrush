@@ -10,7 +10,8 @@ export const VERSION = '0.2.0'; // fallback only — tools/build.mjs stamps the 
 export const TUNE = {
   // world/camera
   laneHalf: 3.1,        // how far the crowd center can steer (blocks)
-  trackHalf: 4.2,       // visible path half-width
+  trackHalf: 5.4,       // visible path half-width (wider than the steer range so
+                        // the crowd never runs on the very edge)
   shoulderHalf: 10,     // grass extends this far each side
   camBack: 7.4,         // camera distance behind crowd
   camHeight: 4.6,       // camera height (blocks)
@@ -614,6 +615,7 @@ export function loadSave() {
     home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 },
     mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' },
     roomTiersOwned: ['cabin'],
+    decorOwned: {},   // furniture bought but not currently placed (the bin refills this)
     // world/towns/houses live here; migrateWorld() builds and repairs it on load
     world: null };
   let save = def;

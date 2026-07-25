@@ -49,6 +49,11 @@ test('a legacy flat playroom is carried into the first house on load', () => {
   assert.deepEqual(s.roomTiersOwned, [ROOM_TIERS[0].id]);
 });
 
+test('a fresh save has an empty decor inventory (the bin refills it)', () => {
+  withStorage(null);
+  assert.deepEqual(loadSave().decorOwned, {});
+});
+
 test('decor and room lookups resolve valid ids and fall back safely', () => {
   assert.equal(decorById('bed').cost, 250);
   assert.equal(decorById('nonsense'), undefined);
