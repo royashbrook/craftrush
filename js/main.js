@@ -42,10 +42,11 @@ async function boot() {
     const phone = vw / vh <= 0.68;
     stage.classList.toggle('fullscreen', phone);
     if (phone) {
-      stage.style.left = '0px';
-      stage.style.top = (vv ? vv.offsetTop : 0) + 'px';
-      stage.style.width = vw + 'px';
-      stage.style.height = vh + 'px';
+      // CSS (100dvh) owns the size here. Pinning to the visual viewport was wrong in
+      // an installed PWA: it reports the area INSIDE the safe areas, so the stage
+      // stopped short of the physical bottom and left a band under the nav.
+      stage.style.left = ''; stage.style.top = '';
+      stage.style.width = ''; stage.style.height = '';
     } else {
       stage.style.left = ''; stage.style.top = '';
       stage.style.width = Math.round(vh * 0.58) + 'px';
