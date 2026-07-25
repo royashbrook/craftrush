@@ -32,14 +32,25 @@ async function boot() {
 
   const stage = document.getElementById('stage');
   function fit() {
-    const aw = window.innerWidth, ah = window.innerHeight;
-    // Phone portrait fills the screen via CSS (100dvh), so the bars sit on the real
-    // top and bottom edges even as Safari's URL bar slides in and out. Measuring
-    // innerHeight in JS can't track that and left the nav floating above the bottom.
-    const phone = aw / ah <= 0.68;
+    const vv = window.visualViewport;
+    // The VISUAL viewport is the part actually on screen: it already excludes
+    // browser chrome (Safari's toolbar) and tracks it sliding in and out. Pinning
+    // the stage to it is what puts the bottom nav on the real bottom edge; CSS
+    // units and innerHeight both left a chrome-sized black gap underneath.
+    const vw = vv ? vv.width : window.innerWidth;
+    const vh = vv ? vv.height : window.innerHeight;
+    const phone = vw / vh <= 0.68;
     stage.classList.toggle('fullscreen', phone);
-    if (phone) { stage.style.width = ''; stage.style.height = ''; }
-    else { stage.style.width = Math.round(ah * 0.58) + 'px'; stage.style.height = ah + 'px'; }
+    if (phone) {
+      stage.style.left = '0px';
+      stage.style.top = (vv ? vv.offsetTop : 0) + 'px';
+      stage.style.width = vw + 'px';
+      stage.style.height = vh + 'px';
+    } else {
+      stage.style.left = ''; stage.style.top = '';
+      stage.style.width = Math.round(vh * 0.58) + 'px';
+      stage.style.height = vh + 'px';
+    }
     const r = stage.getBoundingClientRect();
     const resH = Math.min(1000, Math.round(RES_W * (r.height / Math.max(1, r.width))));
     game.resize(RES_W, resH);
@@ -48,7 +59,10 @@ async function boot() {
   window.addEventListener('resize', fit);
   window.addEventListener('orientationchange', fit);
   // the visual viewport changes as mobile browser chrome collapses; keep up with it
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', fit);
+    window.visualViewport.addEventListener('scroll', fit); // offsetTop shifts as chrome moves
+  }
 
   // audio needs a user gesture
   const unlock = () => { Audio.unlock(); if (game.state === 'menu' && save.sound) Audio.music('menu'); };
