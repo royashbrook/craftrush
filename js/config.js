@@ -312,9 +312,17 @@ export const COSMETICS = {
   hat: [
     { id: 'none', name: 'No Hat', cost: 0 },
     { id: 'hat_pumpkin', name: 'Pumpkin', cost: 120, sprite: 'hat_pumpkin' },
+    { id: 'hat_party', name: 'Party Hat', cost: 160, sprite: 'hat_party' },
+    { id: 'hat_flower', name: 'Flower Crown', cost: 220, sprite: 'hat_flower' },
+    { id: 'hat_cat', name: 'Cat Ears', cost: 260, sprite: 'hat_cat' },
     { id: 'hat_slime', name: 'Slime Blob', cost: 300, sprite: 'hat_slime' },
+    { id: 'hat_cowboy', name: 'Cowboy Hat', cost: 380, sprite: 'hat_cowboy' },
+    { id: 'hat_chef', name: 'Chef Toque', cost: 440, sprite: 'hat_chef' },
     { id: 'hat_crown', name: 'Crown', cost: 550, sprite: 'hat_crown' },
+    { id: 'hat_propeller', name: 'Propeller Beanie', cost: 700, sprite: 'hat_propeller' },
+    { id: 'hat_top', name: 'Top Hat', cost: 850, sprite: 'hat_top' },
     { id: 'hat_tnt', name: 'TNT Cap', cost: 900, sprite: 'hat_tnt' },
+    { id: 'hat_wizard', name: 'Wizard Hat', cost: 1200, sprite: 'hat_wizard' },
     { id: 'hat_santa', name: 'Santa', cost: 1500, sprite: 'hat_santa' },
   ],
   trail: [

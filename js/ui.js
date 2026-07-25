@@ -40,7 +40,7 @@ export class UI {
       btnPlayroom: $('btnPlayroom'), playroom: $('playroom'), btnAddFriend: $('btnAddFriend'),
       btnDecor: $('btnDecor'), btnRoom: $('btnRoom'), playEmeralds: $('playEmeralds'),
       playScene: $('playScene'), dressPanel: $('dressPanel'), btnPlayroomBack: $('btnPlayroomBack'), playHint: $('playHint'),
-      roomBg: $('roomBg'), roomItems: $('roomItems'), trashZone: $('trashZone'),
+      roomWorld: $('roomWorld'), roomBg: $('roomBg'), roomItems: $('roomItems'), trashZone: $('trashZone'),
       btnMine: $('btnMine'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
       mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'), digFace: $('digFace'),
       btnPickUp: $('btnPickUp'), btnMineBack: $('btnMineBack'),
@@ -428,27 +428,59 @@ export class UI {
   ownedCos(cat) { return COSMETICS[cat].filter(c => c.id === 'none' || this.save.cosmeticsOwned.includes(c.id)); }
   skinById(id) { return SKINS.find(s => s.id === id) || SKINS[0]; }
 
-  // compose a front-facing dressed character (skin + cape behind + hat) at any size
-  drawDressedCharacter(cv, skinObj, cos = {}) {
+  // draw a limb sprite hanging from a joint (jx,jy), rotated by `angle` radians
+  drawLimb(g, name, palette, key, jx, jy, hPx, angle) {
+    const spr = getSprite(name, palette, key);
+    const src = spr.frames[0];
+    const wPx = spr.w * (hPx / spr.h);
+    g.save(); g.translate(jx, jy); g.rotate(angle);
+    g.drawImage(src, -wPx / 2, 0, wPx, hPx); // top edge at the joint, hangs down
+    g.restore();
+  }
+
+  // Compose a front-facing character from separate limbs so it can ragdoll.
+  // pose = { aL, aR, lL, lR } are arm/leg swing angles in radians (default rest).
+  drawDressedCharacter(cv, skinObj, cos = {}, pose = null) {
     const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
     g.clearRect(0, 0, cv.width, cv.height);
-    const S = cv.height / 88, cx = cv.width / 2;
+    const S = cv.height / 80, cx = cv.width / 2, pal = skinObj.palette, key = skinObj.id;
+    const P = pose || { aL: 0, aR: 0, lL: 0, lR: 0 };
+    const shoulderY = 30 * S, hipY = 50 * S, headCY = 16 * S;
+    const shoulderDX = 9 * S, hipDX = 4.5 * S;
+    const armLen = 22 * S, legLen = 26 * S, headH = 24 * S, torsoH = 24 * S;
+
+    // cape: a wide cloak behind the torso (peeks out both sides so it actually reads)
     if (cos.cape && cos.cape !== 'none') {
       const def = COSMETICS.cape.find(c => c.id === cos.cape);
       if (def) {
         const cape = getSprite('cape', def.rainbow ? { c: '#ff5545', C: '#3fa9ff' } : def.colors, `pm_cape_${cos.cape}`);
-        blit(g, cape, 0, cx, 48 * S, 20 * S); // a mantle at the shoulders (front view)
+        const w = 30 * S, h = 34 * S;
+        g.save(); g.translate(cx, shoulderY - 4 * S); g.rotate((P.lL + P.lR) * 0.15);
+        g.drawImage(cape.frames[0], -w / 2, 0, w, h); g.restore();
       }
     }
-    const body = getSprite(skinObj.body || 'runner_body_front', skinObj.palette, `pm_body_${skinObj.id}`);
-    blit(g, body, 0, cx, 86 * S, 46 * S);
+    // legs (behind the torso)
+    this.drawLimb(g, 'pm_leg', pal, `${key}_leg`, cx - hipDX, hipY, legLen, P.lL);
+    this.drawLimb(g, 'pm_leg', pal, `${key}_leg`, cx + hipDX, hipY, legLen, P.lR);
+    // torso
+    const torso = getSprite('pm_torso', pal, `${key}_torso`);
+    const tw = torso.w * (torsoH / torso.h);
+    g.drawImage(torso.frames[0], cx - tw / 2, hipY - torsoH, tw, torsoH);
+    // arms (in front of the torso)
+    this.drawLimb(g, 'pm_arm', pal, `${key}_arm`, cx - shoulderDX, shoulderY, armLen, P.aL);
+    this.drawLimb(g, 'pm_arm', pal, `${key}_arm`, cx + shoulderDX, shoulderY, armLen, P.aR);
+    // head
     const head = getSprite(skinObj.head);
-    blit(g, head, 0, cx, 22 * S, 36 * S);
+    const hw = head.w * (headH / head.h);
+    const headTop = headCY - headH / 2;
+    g.drawImage(head.frames[0], cx - hw / 2, headTop, hw, headH);
+    // hat on the head
     if (cos.hat && cos.hat !== 'none') {
       const def = COSMETICS.hat.find(h => h.id === cos.hat);
       if (def && hasSprite(def.sprite)) {
         const hat = getSprite(def.sprite);
-        blit(g, hat, 0, cx, 8 * S, (hat.h / hat.w) * 30 * S);
+        const hatW = hw * 1.05, hatH = hat.h * (hatW / hat.w);
+        g.drawImage(hat.frames[0], cx - hatW / 2, headTop - hatH + 3 * S, hatW, hatH);
       }
     }
   }
@@ -475,14 +507,34 @@ export class UI {
     this.playmatesData();
     this.els.dressPanel.classList.add('hidden');
     this.els.playroom.classList.remove('hidden');
+    this.panX = this.panX || 0;
+    this.wirePan();
     this.renderPlayroom();
+  }
+
+  // drag the empty background to pan through the wide house (Toca-Boca style)
+  wirePan() {
+    if (this._panWired) return;
+    this._panWired = true;
+    const scene = this.els.playScene;
+    let last = 0, active = false;
+    const move = (e) => { if (!active) return; this.setPan(this.panX - (e.clientX - last)); last = e.clientX; };
+    const up = () => { active = false; window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    scene.addEventListener('pointerdown', (e) => {
+      // playmates/decor stop propagation, so a pointerdown that reaches here is background
+      active = true; last = e.clientX;
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
   }
 
   addFriend() {
     const owned = this.ownedSkins();
     const list = this.playmatesData();
     const skin = owned[list.length % owned.length].id; // cycle through owned skins
-    list.push({ skin, cosmetics: { cape: 'none', hat: 'none' }, x: 0.3 + Math.random() * 0.4, y: 0.55 + Math.random() * 0.3 });
+    // drop the new friend where you're currently looking, in world coords
+    const w = this.worldW || 1, vx = ((this.panX || 0) + (this.sceneW || w) * (0.35 + Math.random() * 0.3)) / w;
+    list.push({ skin, cosmetics: { cape: 'none', hat: 'none' }, x: clamp01(vx), y: 0.72 + Math.random() * 0.2 });
     persistSave(this.save);
     Audio.sfx('powerup');
     this.renderPlayroom();
@@ -516,11 +568,34 @@ export class UI {
     blit(g, spr, 0, cv.width / 2, cv.height - 2, h);
   }
 
-  // paint the house interior: patterned wall, floor with depth, baseboard, window + door
+  // The house is wider than the viewport — you drag the background to pan through it.
+  WORLD_SCALE = 2.4;
+
+  layoutWorld() {
+    const rect = this.els.playScene.getBoundingClientRect();
+    if (rect.width < 20 || rect.height < 20) return null; // not laid out yet
+    this.worldW = Math.round(rect.width * this.WORLD_SCALE);
+    this.sceneW = rect.width;
+    this.els.roomWorld.style.width = `${this.worldW}px`;
+    if (this.panX == null) this.panX = 0;
+    this.setPan(this.panX);
+    return rect;
+  }
+
+  setPan(px) {
+    const max = Math.max(0, (this.worldW || 0) - (this.sceneW || 0));
+    this.panX = Math.max(0, Math.min(max, px));
+    this.els.roomWorld.style.transform = `translateX(${-this.panX}px)`;
+  }
+
+  // paint the whole wide house interior: patterned wall, floor with depth, trim,
+  // and windows + a door spread across the wall so panning reveals them
   drawRoom() {
-    const cv = this.els.roomBg, rect = this.els.playScene.getBoundingClientRect();
-    if (!cv || rect.width < 20 || rect.height < 20) return; // not laid out yet
-    const LW = 128, LH = Math.max(60, Math.min(400, Math.round(LW * rect.height / rect.width)));
+    const rect = this.layoutWorld();
+    if (!rect) { requestAnimationFrame(() => { if (!this.els.mine.classList.contains('hidden')) return; this.drawRoom(); }); return; }
+    const cv = this.els.roomBg;
+    const LH = Math.max(60, Math.min(360, Math.round(128 * rect.height / rect.width)));
+    const LW = Math.round(LH * this.worldW / rect.height);
     cv.width = LW; cv.height = LH;
     const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
     const t = roomTierById(this.save.roomTier);
@@ -539,20 +614,24 @@ export class UI {
     } else {
       for (let y = 0, row = 0; y < floorY; y += 7, row++) {
         g.fillRect(0, y, LW, 1);
-        g.fillRect(row % 2 ? 40 : 88, y, 1, 7); // staggered plank joints
+        for (let x = (row % 2 ? 42 : 0); x < LW; x += 84) g.fillRect(x, y, 1, 7); // staggered joints
       }
     }
 
     g.fillStyle = t.floor; g.fillRect(0, floorY, LW, LH - floorY);
     g.fillStyle = t.floorAlt;
-    for (let y = floorY + 3, step = 3; y < LH; step *= 1.38, y += step) g.fillRect(0, Math.round(y), LW, 1);
-    if (t.pattern === 'tiles') for (let x = 0; x < LW; x += 10) g.fillRect(x, floorY, 1, LH - floorY);
+    for (let y = floorY + 3, step = 3; y < LH; step *= 1.34, y += step) g.fillRect(0, Math.round(y), LW, 1);
+    if (t.pattern === 'tiles') for (let x = 0; x < LW; x += 12) g.fillRect(x, floorY, 1, LH - floorY);
 
     g.fillStyle = t.trim; g.fillRect(0, floorY - 3, LW, 4);
 
-    // keep these modest: they are room furniture, not the whole wall
-    if (hasSprite('room_window')) blit(g, getSprite('room_window'), 0, Math.round(LW * 0.26), Math.round(floorY * 0.40), Math.round(floorY * 0.24));
-    if (hasSprite('room_door')) blit(g, getSprite('room_door'), 0, Math.round(LW * 0.84), floorY + 1, Math.round(floorY * 0.46));
+    // furniture built into the wall, spread across the wide room
+    const winH = Math.round(floorY * 0.30), doorH = Math.round(floorY * 0.5);
+    if (hasSprite('room_window')) {
+      blit(g, getSprite('room_window'), 0, Math.round(LW * 0.12), Math.round(floorY * 0.40), winH);
+      blit(g, getSprite('room_window'), 0, Math.round(LW * 0.55), Math.round(floorY * 0.40), winH);
+    }
+    if (hasSprite('room_door')) blit(g, getSprite('room_door'), 0, Math.round(LW * 0.80), floorY + 1, doorH);
   }
 
   renderPlayroom() {
@@ -584,34 +663,51 @@ export class UI {
       const el = document.createElement('div');
       el.className = 'playmate';
       el.style.left = `${p.x * 100}%`; el.style.top = `${p.y * 100}%`;
-      const cv = document.createElement('canvas'); cv.width = 52; cv.height = 72;
+      const cv = document.createElement('canvas'); cv.width = 52; cv.height = 74;
       cv.style.animationDelay = `${(i % 5) * 0.4}s`;
-      this.drawDressedCharacter(cv, this.skinById(p.skin), p.cosmetics);
+      const skin = this.skinById(p.skin);
+      this.drawDressedCharacter(cv, skin, p.cosmetics);
       el.appendChild(cv);
-      this.wireDrag(el, p, { onTap: () => this.openDress(i), onRemove: () => this.removePlaymate(i) });
+      this.wireDrag(el, p, {
+        onTap: () => this.openDress(i), onRemove: () => this.removePlaymate(i),
+        redraw: (pose) => this.drawDressedCharacter(cv, skin, p.cosmetics, pose),
+      });
       layer.appendChild(el);
     });
   }
 
-  // Drag for any room item ({x,y} fractions). Toca-Boca feel: the sprite swings
-  // from the point you're holding it, then wobbles upright when you let go.
-  // Drop it on the bin to put it away (no permanent X on every item).
-  wireDrag(el, obj, { onTap, onRemove } = {}) {
-    let moved = false, startX = 0, startY = 0, lastX = 0, angle = 0, overBin = false;
+  // Drag any room item in WORLD coordinates (accounting for the pan). Playmates
+  // (redraw given) ragdoll — arms and legs swing opposite the motion and wobble
+  // to rest via damped springs. Decor tilts as a whole. Drop on the bin to remove.
+  wireDrag(el, obj, { onTap, onRemove, redraw } = {}) {
     const bin = this.els.trashZone;
-    const put = (a, s) => { el.style.transform = `translate(-50%, -100%) rotate(${a.toFixed(2)}deg) scale(${s})`; };
+    let moved = false, startX = 0, startY = 0, lastX = 0, overBin = false, dragging = false, raf = 0, tilt = 0, vx = 0;
+    const L = { aL: { a: 0, v: 0 }, aR: { a: 0, v: 0 }, lL: { a: 0, v: 0 }, lR: { a: 0, v: 0 } };
+    const putTilt = (a, s) => { el.style.transform = `translate(-50%, -100%) rotate(${a.toFixed(2)}deg) scale(${s})`; };
+    // looser damping = more wobble = more ragdolly
+    const spring = (limb, target, stiff) => { limb.v += (target - limb.a) * stiff; limb.v *= 0.87; limb.a += limb.v; };
+
+    const tick = () => {
+      vx *= 0.84;
+      const d = Math.max(-1.1, Math.min(1.1, -vx * 0.028));
+      spring(L.aL, d * 1.3, 0.26); spring(L.aR, d * 1.0, 0.26); // arms swing most
+      spring(L.lL, d * 0.65, 0.20); spring(L.lR, d * 0.85, 0.20); // legs less, slight asymmetry
+      redraw({ aL: L.aL.a, aR: L.aR.a, lL: L.lL.a, lR: L.lR.a });
+      const still = ['aL', 'aR', 'lL', 'lR'].every(k => Math.abs(L[k].a) < 0.008 && Math.abs(L[k].v) < 0.008);
+      if (!dragging && Math.abs(vx) < 0.3 && still) { raf = 0; redraw(null); return; }
+      raf = requestAnimationFrame(tick);
+    };
 
     const onMove = (e) => {
       const rect = this.els.playScene.getBoundingClientRect();
-      const nx = clamp01((e.clientX - rect.left) / rect.width);
+      const nx = clamp01((e.clientX - rect.left + (this.panX || 0)) / (this.worldW || rect.width));
       const ny = clamp01((e.clientY - rect.top) / rect.height);
       if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 6) moved = true;
       el.style.left = `${nx * 100}%`; el.style.top = `${ny * 100}%`;
       obj.x = nx; obj.y = ny;
-      // swing opposite the direction of travel, eased toward the target angle
-      const vx = e.clientX - lastX; lastX = e.clientX;
-      angle += (Math.max(-22, Math.min(22, -vx * 1.6)) - angle) * 0.35;
-      put(angle, 1.08);
+      const dx = e.clientX - lastX; lastX = e.clientX;
+      if (redraw) { vx += (dx - vx) * 0.6; el.style.transform = 'translate(-50%, -100%) scale(1.07)'; }
+      else { tilt += (Math.max(-20, Math.min(20, -dx * 1.6)) - tilt) * 0.35; putTilt(tilt, 1.08); }
       if (onRemove) {
         const b = bin.getBoundingClientRect();
         const hot = e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
@@ -620,17 +716,17 @@ export class UI {
     };
 
     const onUp = () => {
-      el.classList.remove('dragging');
-      bin.classList.remove('show', 'hot');
+      dragging = false; el.classList.remove('dragging'); bin.classList.remove('show', 'hot');
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       if (overBin && onRemove) { Audio.sfx('pop'); onRemove(); return; }
       persistSave(this.save);
-      if (!moved) { put(0, 1); el.style.transform = 'translate(-50%, -100%)'; if (onTap) onTap(); return; }
-      let a = angle, v = 0; // damped spring back to upright
+      if (!moved) { el.style.transform = 'translate(-50%, -100%)'; if (redraw) redraw(null); if (onTap) onTap(); return; }
+      if (redraw) { el.style.transform = 'translate(-50%, -100%)'; if (!raf) raf = requestAnimationFrame(tick); return; }
+      let a = tilt, v = 0; // decor: spring the whole-sprite tilt back
       const settle = () => {
         v += -a * 0.26; v *= 0.80; a += v;
-        put(a, 1);
+        putTilt(a, 1);
         if (Math.abs(a) > 0.2 || Math.abs(v) > 0.2) requestAnimationFrame(settle);
         else el.style.transform = 'translate(-50%, -100%)';
       };
@@ -638,10 +734,11 @@ export class UI {
     };
 
     el.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      moved = false; startX = lastX = e.clientX; startY = e.clientY; angle = 0; overBin = false;
+      e.preventDefault(); e.stopPropagation(); // an item drag must not start a pan
+      moved = false; dragging = true; startX = lastX = e.clientX; startY = e.clientY; overBin = false; vx = 0; tilt = 0;
       el.classList.add('dragging');
       if (onRemove) bin.classList.add('show');
+      if (redraw && !raf) raf = requestAnimationFrame(tick);
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     });
