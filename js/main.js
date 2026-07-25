@@ -64,6 +64,21 @@ async function boot() {
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
+    // A new deploy activates immediately (the worker calls skipWaiting + claim),
+    // but THIS page keeps running the JS it booted with, so it would keep showing
+    // the previous build until the app was fully killed. Reload once when a new
+    // worker takes over. Guarded so a first install (no prior controller) and
+    // repeat events can't loop.
+    // Whether a worker was already driving this page must be captured NOW: by the
+    // time controllerchange fires there is always a controller, so checking it
+    // then would reload on a first install too.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading || !hadController) return; // first install: nothing to refresh
+      reloading = true;
+      location.reload();
+    });
   }
 }
 
