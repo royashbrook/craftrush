@@ -1,35 +1,32 @@
 // Cache-first service worker: full offline play after first load.
-const CACHE = 'craftrush-viewport-fix';
+const CACHE = 'craftrush-347a9d07';
 const ASSETS = [
-  // NOTE: precache './' (the dir index), NOT './index.html'. Some static hosts (e.g. Cloudflare
-  // static assets, which serves this under a subpath) 30x-redirect '/index.html' -> '/'. cache.addAll
-  // rejects on a redirected response, and it is all-or-nothing, so that one redirect silently aborts
-  // the ENTIRE precache and the app never works offline. './' serves the same shell at a plain 200.
   './',
   './manifest.webmanifest',
-  './js/main.js',
-  './js/config.js',
-  './js/engine.js',
-  './js/assets.js',
-  './js/audio.js',
-  './js/game.js',
-  './js/crowd.js',
-  './js/levelgen.js',
-  './js/combat.js',
-  './js/boss.js',
-  './js/fx.js',
-  './js/render.js',
-  './js/ui.js',
   './js/achievements.js',
-  './js/sprites/core.js',
-  './js/sprites/hostiles.js',
-  './js/sprites/bosses.js',
-  './js/sprites/scenery.js',
-  './js/sprites/items.js',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-512-maskable.png',
+  './js/assets.js',
+  './js/atlaskey.js',
+  './js/audio.js',
+  './js/boss.js',
+  './js/combat.js',
+  './js/config.js',
+  './js/crowd.js',
+  './js/engine.js',
+  './js/fx.js',
+  './js/game.js',
+  './js/levelgen.js',
+  './js/main.js',
+  './js/minegame.js',
+  './js/render.js',
+  './js/townscene.js',
+  './js/ui.js',
+  './js/variants.js',
   './icons/apple-touch-icon.png',
+  './icons/icon-192.png',
+  './icons/icon-512-maskable.png',
+  './icons/icon-512.png',
+  './assets/atlas.json',
+  './assets/atlas.png',
 ];
 
 self.addEventListener('install', (e) => {

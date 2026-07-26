@@ -4,64 +4,84 @@
 <meta charset="UTF-8">
 <title>Sprite QA</title>
 <style>
-  body { background: #2a2733; color: #fff; font-family: monospace; padding: 12px; }
-  .pack { margin-bottom: 18px; }
-  h2 { color: #7dff5a; font-size: 14px; margin: 8px 0; }
-  .row { display: flex; flex-wrap: wrap; gap: 10px; }
-  .cell { background: #3a3444; border: 1px solid #000; padding: 6px; text-align: center; }
-  .cell canvas { image-rendering: pixelated; background: repeating-conic-gradient(#444 0 25%, #3c3c3c 0 50%) 0 0/12px 12px; display: block; margin: 0 auto 4px; }
-  .cell span { font-size: 10px; color: #cfc9d8; }
+  body { background: #2a2733; color: #fff; font-family: monospace; padding: 12px; margin: 0; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .note { color: #9a92ad; font-size: 12px; margin-bottom: 14px; }
+  .bar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  input { background: #1d1a26; color: #fff; border: 1px solid #4a4359; padding: 5px 8px;
+    font-family: inherit; font-size: 13px; }
+  label { font-size: 12px; color: #cfc9d8; }
+  .grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  .cell { background: #1d1a26; border: 1px solid #4a4359; padding: 6px; text-align: center; }
+  .cell canvas { image-rendering: pixelated; display: block; margin: 0 auto 4px; background: #12101a; }
+  .name { font-size: 10px; color: #cfc9d8; max-width: 160px; word-break: break-all; }
+  .dim { color: #7c7490; }
+  .whole { border: 1px solid #4a4359; background: #12101a; image-rendering: pixelated;
+    margin-bottom: 18px; max-width: 100%; }
 </style>
 </head>
 <body>
-<div id="out"></div>
+<h1>Sprite QA</h1>
+<div class="note">Every region in assets/atlas.png, drawn from the manifest. If something looks
+wrong here then it packed wrong, so check art/sprites.json against the PNG.</div>
+
+<div class="bar">
+  <label>filter <input id="q" placeholder="cape, runner, town..." size="24"></label>
+  <label>scale <input id="s" type="number" value="4" min="1" max="12" size="3"></label>
+  <span id="count" class="dim"></span>
+</div>
+
+<img id="whole" class="whole" alt="the whole atlas">
+<div class="grid" id="grid"></div>
+
 <script type="module">
-const out = document.getElementById('out');
-const packs = [
-  ['../js/sprites/core.js', 'CORE'],
-  ['../js/sprites/hostiles.js', 'HOSTILES'],
-  ['../js/sprites/bosses.js', 'BOSSES'],
-  ['../js/sprites/scenery.js', 'SCENERY'],
-  ['../js/sprites/items.js', 'ITEMS'],
-];
-for (const [path, name] of packs) {
-  const div = document.createElement('div');
-  div.className = 'pack';
-  const h = document.createElement('h2');
-  h.textContent = name;
-  div.appendChild(h);
-  const row = document.createElement('div');
-  row.className = 'row';
-  div.appendChild(row);
-  out.appendChild(div);
-  try {
-    const mod = await import(path + '?t=' + Date.now());
-    const pack = mod[name];
-    for (const [id, s] of Object.entries(pack)) {
-      const scale = s.h > 30 ? 3 : 4;
-      for (let fi = 0; fi < s.frames.length; fi++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        const cv = document.createElement('canvas');
-        cv.width = s.w * scale; cv.height = s.h * scale;
-        const g = cv.getContext('2d');
-        for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
-          const ch = s.frames[fi][y][x];
-          if (ch === '.') continue;
-          g.fillStyle = s.palette[ch] || '#ff00ff';
-          g.fillRect(x * scale, y * scale, scale, scale);
-        }
-        cell.appendChild(cv);
-        const lbl = document.createElement('span');
-        lbl.textContent = id + (s.frames.length > 1 ? ` f${fi}` : '');
-        cell.appendChild(lbl);
-        row.appendChild(cell);
-      }
-    }
-  } catch (e) {
-    h.textContent += ' — LOAD FAILED: ' + e.message;
+const base = new URL('../assets/', location.href);
+const manifest = await (await fetch(new URL('atlas.json', base))).json();
+const img = new Image();
+img.src = new URL(manifest.atlas, base).href;
+await img.decode();
+
+const whole = document.getElementById('whole');
+whole.src = img.src;
+whole.style.width = `${manifest.size[0] * 2}px`;
+
+const grid = document.getElementById('grid');
+const q = document.getElementById('q');
+const s = document.getElementById('s');
+const count = document.getElementById('count');
+
+function draw() {
+  const filter = q.value.trim().toLowerCase();
+  const scale = Math.max(1, Math.min(12, Number(s.value) || 4));
+  grid.innerHTML = '';
+  let n = 0;
+  for (const [key, e] of Object.entries(manifest.sprites)) {
+    if (filter && !key.toLowerCase().includes(filter)) continue;
+    n++;
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const cv = document.createElement('canvas');
+    // frames side by side, so an animation reads at a glance
+    cv.width = e.w * e.frames.length * scale;
+    cv.height = e.h * scale;
+    const g = cv.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    e.frames.forEach(([sx, sy], i) => {
+      g.drawImage(img, sx, sy, e.w, e.h, i * e.w * scale, 0, e.w * scale, e.h * scale);
+    });
+    cell.appendChild(cv);
+    const nm = document.createElement('div');
+    nm.className = 'name';
+    nm.innerHTML = `${key}<br><span class="dim">${e.w}x${e.h} &middot; ${e.frames.length}f &middot; ${e.anchor}</span>`;
+    cell.appendChild(nm);
+    grid.appendChild(cell);
   }
+  count.textContent = `${n} of ${Object.keys(manifest.sprites).length} sprites, atlas ${manifest.size[0]}x${manifest.size[1]}`;
 }
+
+q.addEventListener('input', draw);
+s.addEventListener('input', draw);
+draw();
 </script>
 </body>
 </html>

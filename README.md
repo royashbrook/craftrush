@@ -23,7 +23,7 @@ No dependencies to install. Node 18+ only.
 ```sh
 node --test tests/*.test.mjs      # unit + headless integration tests (25, no deps)
 node tools/build.mjs              # build dist/ with a generated SW precache
-node tools/validate_sprites.mjs js/sprites/*.js   # validate sprite packs
+node tools/pack-atlas.mjs                         # art/ -> assets/atlas.png
 python3 tools/devserver.py 8300   # no-cache dev server for iterating on modules
 ```
 
@@ -102,8 +102,12 @@ systems switch off cleanly.
 
 Everything visual is data:
 
-- `js/sprites/*.js` — pixel matrices (see `docs/SPRITE_SPEC.md`). Swap a pack,
-  reskin the game. Validate with `node tools/validate_sprites.mjs js/sprites/x.js`.
+- `art/*.png` — the art, one file per sprite, frames left to right. Open any of
+  them in an image editor, then run `node tools/pack-atlas.mjs`. `art/sprites.json`
+  carries what a PNG cannot: anchor, frame count, and the base palette the
+  colour variants are derived from.
+- `assets/atlas.png` + `assets/atlas.json` — build output. Nothing edits these
+  by hand.
 - `js/config.js` — biomes (palettes, enemy rosters, bosses, scenery), skins
   (palette swaps + head sprite), enemy behavior stats, tuning.
 - Levels are procedurally generated from the level number (seeded), difficulty

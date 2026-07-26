@@ -8,7 +8,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: 'list',
   webServer: {
-    command: 'python3 tools/devserver.py 8399',
+    command: 'node tools/serve.mjs 8399',
     url: 'http://127.0.0.1:8399/index.html',
     reuseExistingServer: true,
     stdout: 'ignore',

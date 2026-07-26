@@ -31,11 +31,26 @@ createServer(async (req, res) => {
   let rel = decodeURIComponent(url.pathname);
   if (rel.endsWith('/')) rel += 'index.html';
 
-  // the service worker is the single biggest source of "I edited it and nothing
-  // changed" in this project, so dev simply does not get one
-  if (rel === '/sw.js') {
-    res.writeHead(404, { 'Cache-Control': 'no-store' });
-    return res.end('// no service worker in dev');
+  // The service worker is the single biggest source of "I edited it and nothing
+  // changed" in this project. Dev gets a worker that immediately deletes itself
+  // and every cache, rather than a 404: registering a missing script logs a
+  // console error the page cannot catch, and this way opening the dev server
+  // also cleans up a stale worker left behind by a production build.
+  if (rel.endsWith('/sw.js')) {
+    res.writeHead(200, {
+      'Content-Type': TYPES['.js'],
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    });
+    return res.end([
+      '// dev service worker: exists only to get out of the way',
+      'self.addEventListener("install", () => self.skipWaiting());',
+      'self.addEventListener("activate", (e) => {',
+      '  e.waitUntil((async () => {',
+      '    for (const k of await caches.keys()) await caches.delete(k);',
+      '    await self.registration.unregister();',
+      '  })());',
+      '});',
+    ].join('\n'));
   }
 
   const path = join(ROOT, normalize(rel).replace(/^(\.\.[/\\])+/, ''));

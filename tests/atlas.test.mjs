@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { contentKey, paletteKey } from '../js/atlaskey.js';
 import { enumerateVariants } from '../js/variants.js';
 import { SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS } from '../js/config.js';
-import { CORE } from '../js/sprites/core.js';
+import { readFileSync } from 'node:fs';
+
+const ART = JSON.parse(readFileSync(new URL('../art/sprites.json', import.meta.url), 'utf8'));
 
 const cfg = { SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS };
 
@@ -30,7 +32,7 @@ test('different colours never collide', () => {
 });
 
 test('every variant the game can ask for is enumerable, and named once', () => {
-  const ids = Object.keys(CORE);
+  const ids = Object.keys(ART);
   const vs = enumerateVariants(cfg, ids);
   const keys = new Set(vs.map((v) => v.key));
   assert.equal(keys.size, vs.length, 'no duplicate keys');

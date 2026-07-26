@@ -114,11 +114,11 @@ test('the menu still fits once the whole quest is finished', async ({ page }) =>
   await expect(page.locator('#btnQuestReplay')).toBeVisible();
 });
 
-test('the browser draws from the atlas, not the fallback packs', async ({ page }) => {
+test('the browser actually loaded the art', async ({ page }) => {
   await page.goto('/index.html');
   await expect(page.locator('#btnPlayShooter')).toBeVisible();
-  // assets.js silently falls back to the matrix packs if the atlas is missing or
-  // broken, which would look fine and quietly undo the whole art pipeline
-  const source = await page.evaluate(() => import('/js/assets.js').then((m) => m.assetSource()));
-  expect(source).toBe('atlas');
+  // a missing atlas degrades to magenta placeholders rather than crashing, so
+  // without this the suite would pass on a build that shipped no art at all
+  const ready = await page.evaluate(() => import('/js/assets.js').then((m) => m.assetsReady()));
+  expect(ready).toBe(true);
 });

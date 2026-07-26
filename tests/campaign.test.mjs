@@ -130,11 +130,12 @@ test('campaign loot cannot be bought, only brought home', async () => {
 
 test('every chapter has a real place to happen, built out of real art', async () => {
   const { BIOMES } = await import('../js/config.js');
-  const { SCENERY } = await import('../js/sprites/scenery.js');
+  const { readFileSync } = await import('node:fs');
+  const ART = JSON.parse(readFileSync(new URL('../art/sprites.json', import.meta.url), 'utf8'));
   const places = new Set(BIOMES.map((b) => b.id));
   for (const c of CAMPAIGN) assert.ok(places.has(c.biome), `${c.id} runs in ${c.biome}, which exists`);
   for (const b of BIOMES) {
-    for (const s of b.scenery) assert.ok(SCENERY[s], `${b.id} scenery ${s} is drawn somewhere`);
-    assert.ok(SCENERY[b.obstacle], `${b.id} obstacle ${b.obstacle} is drawn somewhere`);
+    for (const s of b.scenery) assert.ok(ART[s], `${b.id} scenery ${s} has an art file`);
+    assert.ok(ART[b.obstacle], `${b.id} obstacle ${b.obstacle} has an art file`);
   }
 });

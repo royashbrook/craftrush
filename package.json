@@ -8,8 +8,8 @@
     "test": "node --test tests/*.test.mjs",
     "test:e2e": "playwright test",
     "build": "node tools/build.mjs",
-    "sprites": "node tools/validate_sprites.mjs js/sprites/*.js",
-    "dev": "python3 tools/devserver.py 8300"
+    "art": "node tools/pack-atlas.mjs",
+    "dev": "node tools/serve.mjs 8300"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0"
