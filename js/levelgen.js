@@ -4,6 +4,7 @@ import { mulberry32 } from './engine.js';
 
 export const LevelMixin = {
   genLevel(diff) {
+    if (this.chapter && this.chapter.credits) return this.genCredits();
     const rng = mulberry32(1000 + this.level * 7919);
     const L = this.level;
     this.length = 420 + Math.min(L, 12) * 35;
@@ -82,6 +83,36 @@ export const LevelMixin = {
       sinceGate++;
     }
     ev.sort((p, q) => p.z - q.z);
+    this.events = ev;
+  },
+
+  // The walk home. Nothing can hurt you here: only kind gates, emeralds to sweep
+  // up, and the names of everyone the run was built out of, floating past.
+  genCredits() {
+    this.creditSigns = [];
+    this.length = 900;
+    const ev = [];
+    const lines = [
+      ['CRAFT RUSH', 'you finished it'],
+      ['THE DRAGON', 'fell'],
+      ['THE WITHER', 'fell too'],
+      ['YOUR VILLAGE', 'still waiting at home'],
+      ['NO ADS', 'not one, not ever'],
+      ['MADE FOR', 'my kids'],
+      ['THANKS FOR', 'playing'],
+    ];
+    lines.forEach((L, i) => this.creditSigns.push({ z: 90 + i * 110, text: L[0], sub: L[1] }));
+
+    for (let z = 60; z < this.length - 40; z += 46) {
+      // every gate is a good one, so the crowd only ever grows on the way home
+      const right = (z / 46) % 2 < 1;
+      ev.push({ z, type: 'gate', x: right ? 2.4 : -2.4, halfW: 2.4, op: 'add', val: 6 });
+      ev.push({ z, type: 'gate', x: right ? -2.4 : 2.4, halfW: 2.4, op: 'mul', val: 2 });
+      for (let i = 0; i < 7; i++) {
+        ev.push({ z: z + 12 + i * 1.6, type: 'pickup', kind: 'emerald', x: Math.sin(i / 6 * Math.PI) * 1.8 - 0.9 });
+      }
+    }
+    ev.sort((a, b) => a.z - b.z);
     this.events = ev;
   },
 

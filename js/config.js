@@ -295,6 +295,17 @@ export const BIOMES = [
     enemies: ['blaze', 'zombified_piglin', 'skeleton', 'blaze'],
     obstacle: 'nether_brick_pillar', boss: 'boss_wither',
   },
+  {
+    // Damp stone corridors under the world. Lit low, so the silverfish-green mossy
+    // brick and the end-portal room read as somewhere you were not meant to be.
+    id: 'stronghold', name: 'The Stronghold', structure: true,
+    sky: ['#0a0d12', '#1c222c'], sun: null, clouds: false,
+    hillFar: '#242b36', hillNear: '#1a1f28', fog: '#1c222c',
+    ground: { a: '#5d6068', b: '#54575f', c: '#4b4e56', pathA: '#6b6e64', pathB: '#5f6259', edge: '#3c3f46' },
+    scenery: ['deepslate_pillar', 'deepslate_pillar', 'end_pillar', 'basalt_pillar'],
+    enemies: ['skeleton', 'zombie', 'spider', 'creeper'],
+    obstacle: 'deepslate_pillar', boss: 'boss_ravager',
+  },
 ];
 
 // Skins are palette swaps over core.runner_back + a head sprite for the shop.
@@ -672,6 +683,111 @@ export function mineEnergy(mine, now) {
   return Math.max(0, Math.min(MINE.energyCap, (mine.energy ?? MINE.energyCap) + gained));
 }
 
+// ---------------------------------------------------------------------------
+// The campaign: a fixed chain of chapters you unlock in order, each gated by
+// something you have to go and earn first. Resources bank between runs, so a
+// chapter is a goal you work toward rather than a level that just arrives.
+// ---------------------------------------------------------------------------
+export const RESOURCES = {
+  obsidian:     { label: 'Obsidian' },
+  blazeRods:    { label: 'Blaze Rods' },
+  enderEyes:    { label: 'Ender Eyes' },
+  elytra:       { label: 'Elytra' },
+  trims:        { label: 'Armor Trims' },
+  witherSkulls: { label: 'Wither Skulls' },
+};
+
+export const CAMPAIGN = [
+  { id: 'mine_obsidian', icon: 'ui_pickaxe', name: 'Obsidian Hunt', biome: 'plains',
+    blurb: 'Mine obsidian on the run. You need ten to frame a portal.',
+    repeatable: true, grants: { obsidian: 4 } },
+  { id: 'portal', icon: 'ui_door', name: 'The Nether Portal', biome: 'nether', requires: { obsidian: 10 },
+    blurb: 'Light the frame and step through.', consumes: { obsidian: 10 } },
+  { id: 'fortress', icon: 'ui_bow', name: 'Nether Fortress', biome: 'nether_fortress', structure: true,
+    blurb: 'Blazes guard the halls. Bring back their rods.',
+    repeatable: true, grants: { blazeRods: 2 } },
+  { id: 'stronghold', icon: 'ui_world', name: 'The Stronghold', biome: 'stronghold', structure: true,
+    requires: { blazeRods: 6 },
+    blurb: 'Rods become eyes, and eyes find the portal room.',
+    consumes: { blazeRods: 6 }, grants: { enderEyes: 12 } },
+  { id: 'dragon', icon: 'ui_trophy', name: 'The Ender Dragon', biome: 'end', boss: 'boss_dragon',
+    requires: { enderEyes: 12 }, phases: 3, crystals: true,
+    blurb: 'Break the crystals that heal her, then bring her down.' },
+  { id: 'endcity', icon: 'ui_world', name: 'End City', biome: 'end', structure: true,
+    blurb: 'Out past the island: a ship, and wings worth taking.',
+    grants: { elytra: 1 } },
+  { id: 'bastion', icon: 'ui_house', name: 'Bastion Remnant', biome: 'nether_fortress', structure: true,
+    requires: { elytra: 1 },
+    blurb: 'Back to the Nether for blackstone and armor trims.',
+    grants: { trims: 2, witherSkulls: 1 } },
+  { id: 'skulls', icon: 'ui_bow', name: 'Skull Hunt', biome: 'nether_fortress',
+    blurb: 'Wither skeletons, and the skulls you need to summon.',
+    repeatable: true, grants: { witherSkulls: 1 } },
+  { id: 'wither', icon: 'ui_trophy', name: 'The Wither', biome: 'nether', boss: 'boss_wither',
+    requires: { witherSkulls: 3 }, phases: 3,
+    consumes: { witherSkulls: 3 },
+    blurb: 'Three skulls, three heads, three phases.' },
+  { id: 'credits', icon: 'ui_person', name: 'The Long Walk Home', biome: 'plains', credits: true,
+    blurb: 'Everything you built, on the way home.' },
+];
+export const chapterById = (id) => CAMPAIGN.find((c) => c.id === id);
+export const chapterIndex = (id) => CAMPAIGN.findIndex((c) => c.id === id);
+
+// what the save owes a chapter before it will open
+export function chapterMissing(save, id) {
+  const c = chapterById(id);
+  if (!c || !c.requires) return null;
+  const inv = (save && save.inventory) || {};
+  const missing = {};
+  let any = false;
+  for (const [k, n] of Object.entries(c.requires)) {
+    const have = inv[k] || 0;
+    if (have < n) { missing[k] = n - have; any = true; }
+  }
+  return any ? missing : null;
+}
+
+// a chapter opens once the one before it is done and its cost is covered
+export function chapterUnlocked(save, id) {
+  const i = chapterIndex(id);
+  if (i < 0) return false;
+  const done = (save && save.campaign && save.campaign.done) || [];
+  if (i > 0 && !done.includes(CAMPAIGN[i - 1].id)) return false;
+  return !chapterMissing(save, id);
+}
+
+// The chapter you are working on. If the next milestone is short of materials, you
+// are sent back to the gathering chapter that supplies them, so a gate reads as
+// "go get more" rather than a dead end with nothing to play.
+export function currentChapter(save) {
+  const done = (save && save.campaign && save.campaign.done) || [];
+  const next = CAMPAIGN.find((c) => !done.includes(c.id));
+  if (!next) return null;
+  const missing = chapterMissing(save, next.id);
+  if (!missing) return next;
+  const needed = Object.keys(missing);
+  const source = CAMPAIGN.find((c) => c.repeatable && done.includes(c.id)
+    && Object.keys(c.grants || {}).some((k) => needed.includes(k)));
+  return source || next;
+}
+
+// finishing a chapter spends what it costs and pays what it promises
+export function completeChapter(save, id) {
+  const c = chapterById(id);
+  if (!c) return null;
+  save.campaign = save.campaign || { done: [] };
+  if (!Array.isArray(save.campaign.done)) save.campaign.done = [];
+  save.inventory = save.inventory || {};
+  for (const [k, n] of Object.entries(c.consumes || {})) {
+    save.inventory[k] = Math.max(0, (save.inventory[k] || 0) - n);
+  }
+  for (const [k, n] of Object.entries(c.grants || {})) {
+    save.inventory[k] = (save.inventory[k] || 0) + n;
+  }
+  if (!save.campaign.done.includes(id)) save.campaign.done.push(id);
+  return save.campaign;
+}
+
 // Daily Expeditions: one date-seeded themed run per day, identical for everyone
 // with no server. `mut` holds the run modifiers the engine reads.
 export const EXPEDITIONS = [
@@ -753,7 +869,8 @@ export function loadSave() {
     stats: { runs: 0, wins: 0, kills: 0, golems: 0, gigas: 0, totalEmeralds: 0, bossWins: {}, expeditions: 0 },
     achievements: [],
     expedition: { lastDay: null, streak: 0 },
-    inventory: { blazeRods: 0, obsidian: 0 },
+    inventory: { blazeRods: 0, obsidian: 0, enderEyes: 0, elytra: 0, trims: 0, witherSkulls: 0 },
+    campaign: { done: [] },
     home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 },
     mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' },
     roomTiersOwned: ['cabin'],

@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, HOME, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, mineEnergy, pickaxeDmg, nextPickaxe, tileById, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, SPEEDS, speedById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, townPop, townHasRoom, worldIncomeRate, pendingIdleWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, HOME, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, mineEnergy, pickaxeDmg, nextPickaxe, tileById, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, SPEEDS, speedById, CAMPAIGN, currentChapter, chapterMissing, completeChapter, RESOURCES, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, townPop, townHasRoom, worldIncomeRate, pendingIdleWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit, hasSprite } from './assets.js';
 import { TownScene } from './townscene.js';
@@ -16,6 +16,8 @@ export class UI {
     this.els = {
       menu: $('menu'), shop: $('shop'), result: $('result'), hud: $('hud'),
       menuLevel: $('menuLevel'),
+      questCard: $('questCard'), questStep: $('questStep'), questIcon: $('questIcon'),
+      questName: $('questName'), questDesc: $('questDesc'), questNeed: $('questNeed'),
       btnPlayShooter: $('btnPlayShooter'), btnPlayGates: $('btnPlayGates'),
       cardShooter: $('cardShooter'), cardGates: $('cardGates'),
       shopGrid: $('shopGrid'), shopEmeralds: $('shopEmeralds'),
@@ -1495,7 +1497,36 @@ export class UI {
     E.cardShooter.classList.toggle('sel', this.save.mode === 'shooter');
     E.cardGates.classList.toggle('sel', this.save.mode === 'gates');
     this.refreshBadges(); // the "come back" dots live on the nav bar now
+    this.refreshQuest();
     this.refreshExpedition();
+  }
+
+  // The quest card names the chapter the next START will actually play, so the
+  // campaign is something you can see yourself walking through.
+  refreshQuest() {
+    const E = this.els;
+    const ch = currentChapter(this.save);
+    if (!ch) {                                    // the whole chain is behind you
+      E.questCard.classList.add('hidden');
+      return;
+    }
+    E.questCard.classList.remove('hidden');
+    const done = (this.save.campaign && this.save.campaign.done) || [];
+    E.questStep.textContent = `${done.length} OF ${CAMPAIGN.length}`;
+    E.questName.textContent = ch.name.toUpperCase();
+    E.questDesc.textContent = ch.blurb;
+
+    // if you are back on a gathering run, say plainly what it is buying you
+    const next = CAMPAIGN.find((c) => !done.includes(c.id));
+    const missing = next && next.id !== ch.id ? chapterMissing(this.save, next.id) : null;
+    E.questNeed.textContent = missing
+      ? `Need ${Object.entries(missing).map(([k, n]) => `${n} more ${RESOURCES[k].label}`).join(', ')} for ${next.name}.`
+      : '';
+
+    const g = E.questIcon.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.clearRect(0, 0, 40, 40);
+    this.drawIcon(g, ch.icon, 40, 34);
   }
 
   refreshExpedition() {
@@ -1835,6 +1866,10 @@ export class UI {
     persistSave(this.save);
     // clearing a level snapshots the day, overwriting any earlier one, so there is
     // always a recent point to go back to without the list growing
+    if (r.win && r.chapter) {
+      completeChapter(this.save, r.chapter.id);
+      persistSave(this.save);
+    }
     if (r.win) writeBackup(this.save);
     this.grantAchievements();
   }

@@ -21,17 +21,87 @@ export const BossMixin = {
       const dps = w / TUNE.volleyInterval;
       hp = Math.ceil(bt.hp * diff * 0.3 + dps * 8);
     }
+    const ch = this.chapter || null;
+    const phases = (ch && ch.phases) || 1;
     this.boss = {
       id: this.biome.boss, type: bt, name: bt.name,
       hp, maxHp: hp,
       x: 0, z: this.length + TUNE.bossSpawnZ, targetZ: this.length + TUNE.bossHoldZ,
       t: 0, flash: 0, attackT: 3.2, attackIdx: 0, lunge: 0, entering: true,
+      // a long fight in stages: each phase hits harder and comes faster
+      phases, phase: 1, shielded: 0,
     };
+    // crystals hold the boss up: while any survive she claws health back, so they
+    // have to come down before the fight can actually be won
+    this.crystals = [];
+    if (ch && ch.crystals) {
+      const n = 4;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        this.crystals.push({
+          x: Math.cos(a) * (TUNE.laneHalf - 0.4),
+          z: this.boss.targetZ + 2 + Math.sin(a) * 3,
+          hp: Math.max(3, Math.ceil(this.worth() * 0.25)), t: a, dead: false,
+        });
+      }
+      this.floaty('BREAK THE CRYSTALS!', this.playerX, this.playerZ + 5, '#c76bff', 2.2);
+    }
     this.state = 'boss';
     Audio.music('boss');
     Audio.sfx('boss_roar');
     if (this.mode === 'gates') {
       this.floaty('CHARGE!', this.playerX, this.playerZ + 4, '#ffd94d', 2);
+    }
+  },
+
+  // crystals feed the boss until they are gone
+  updateCrystals(dt) {
+    if (!this.crystals || !this.crystals.length) return;
+    const b = this.boss;
+    let alive = 0;
+    for (const c of this.crystals) {
+      if (c.dead) continue;
+      alive++;
+      c.t += dt;
+      // arrows can take them down like anything else
+      for (const a of this.arrows) {
+        if (a.dead) continue;
+        if (Math.abs(a.x - c.x) < 0.8 && Math.abs(a.z - c.z) < 0.9) {
+          a.dead = true; c.hp -= a.dmg;
+          if (c.hp <= 0) {
+            c.dead = true;
+            this.burst(c.x, 1.6, c.z, ['#c76bff', '#ffffff', '#8b3fd6'], 20, 8);
+            this.ring(c.x, c.z, 2.4);
+            this.cam.shake = Math.min(1, this.cam.shake + 0.3);
+            Audio.sfx('bigboom');
+            this.floaty('CRYSTAL DOWN!', c.x, c.z, '#c76bff', 1.6);
+          }
+        }
+      }
+    }
+    if (alive > 0 && b && !b.entering) {
+      // healing is what makes ignoring them a losing plan
+      b.hp = Math.min(b.maxHp, b.hp + b.maxHp * 0.035 * alive * dt);
+      b.healing = true;
+    } else if (b) {
+      b.healing = false;
+    }
+  },
+
+  // stepping down a phase: a brief shield, a roar, and a harder rhythm after
+  checkBossPhase() {
+    const b = this.boss;
+    if (!b || b.phases <= 1) return;
+    const step = b.maxHp / b.phases;
+    const should = Math.min(b.phases, Math.max(1, Math.ceil((b.maxHp - b.hp + 1) / step)));
+    if (should > b.phase) {
+      b.phase = should;
+      b.shielded = 0.9;
+      b.attackT = 0.5;
+      this.cam.shake = 1;
+      this.burst(b.x, 2.4, b.z, ['#ff5545', '#ffd94d', '#ffffff'], 26, 9);
+      this.floaty(`PHASE ${b.phase}!`, b.x, b.z, '#ff8d7a', 2);
+      Audio.sfx('boss_roar');
     }
   },
 
@@ -75,6 +145,11 @@ export const BossMixin = {
       if (b.z <= b.targetZ) { b.z = b.targetZ; b.entering = false; }
       return;
     }
+    this.updateCrystals(dt);
+    this.checkBossPhase();
+    // a phase change buys the boss a moment of shield, so damage in that window
+    // does not simply skip the next stage
+    if (b.shielded > 0) { b.shielded -= dt; }
     if (this.mode === 'gates') {
       // crowd charge: the army spends worth to slam the boss, scaled so the
       // fight lasts about the same whether you bring 40 troops or 4000

@@ -287,6 +287,58 @@ export const RenderMixin = {
     }
   },
 
+  // Credit lines stand in the world like signs, so you run through the thanks
+  // instead of watching them scroll over a dead screen.
+  renderCredits(q) {
+    if (!this.creditSigns || !this.creditSigns.length) return;
+    for (const c of this.creditSigns) {
+      // one sign at a time: further ones stack up illegibly against the horizon
+      const ahead = c.z - this.playerZ;
+      if (ahead > 100 || ahead < -4) continue;
+      const p = this.cam.project(0, 3.4, c.z);
+      if (!p) continue;
+      q.add(c.z, (ctx) => {
+        const fadeIn = Math.min(1, (100 - ahead) / 25);                   // ease in out of the distance
+        const fadeOut = Math.min(1, Math.max(0, (ahead + 4) / 10));       // and out as you pass through
+        ctx.globalAlpha = Math.min(fadeIn, fadeOut);
+        outlineText(ctx, c.text, p.sx, p.sy, Math.min(64, Math.max(16, p.s * 0.9)), '#ffd94d');
+        outlineText(ctx, c.sub, p.sx, p.sy + Math.max(14, p.s * 0.62), Math.min(30, Math.max(11, p.s * 0.42)), '#eaf6ff');
+        ctx.globalAlpha = 1;
+      });
+    }
+  },
+
+  renderCrystals(q) {
+    if (!this.crystals || !this.crystals.length) return;
+    for (const c of this.crystals) {
+      if (c.dead) continue;
+      const p = this.cam.project(c.x, 2.2 + Math.sin(c.t * 2) * 0.25, c.z);
+      if (!p) continue;
+      q.add(c.z, (ctx) => {
+        const s = p.s * 0.5;
+        ctx.save();
+        ctx.translate(p.sx, p.sy);
+        ctx.rotate(c.t * 0.8);
+        ctx.fillStyle = '#c76bff';
+        ctx.fillRect(-s * 0.3, -s * 0.3, s * 0.6, s * 0.6);
+        ctx.fillStyle = '#f0d8ff';
+        ctx.fillRect(-s * 0.14, -s * 0.14, s * 0.28, s * 0.28);
+        ctx.restore();
+        // a thread back to the boss, so the healing link is legible
+        if (this.boss && !this.boss.entering) {
+          const bp = this.cam.project(this.boss.x, 2.4, this.boss.z);
+          if (bp) {
+            ctx.globalAlpha = 0.4 + Math.sin(this.t * 6 + c.t) * 0.2;
+            ctx.strokeStyle = '#c76bff';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(p.sx, p.sy); ctx.lineTo(bp.sx, bp.sy); ctx.stroke();
+            ctx.globalAlpha = 1; ctx.lineWidth = 1;
+          }
+        }
+      });
+    }
+  },
+
   renderCrowdLabel(ctx) {
     if (this.state !== 'run' && this.state !== 'boss') return;
     const p = this.cam.project(this.playerX, 2.3, this.playerZ);

@@ -284,6 +284,20 @@
   #expDesc { font-size: 11px; color: #d8cfa8; line-height: 1.4; }
   #btnExpedition { background: #b58a1a; }
 
+  #questCard { width: 100%; border: 2px solid #7ee0ff; background: rgba(10,30,40,0.55);
+    box-shadow: inset 1px 1px 0 rgba(126,224,255,0.25); padding: 8px; display: flex;
+    flex-direction: column; gap: 7px; }
+  #questHead { display: flex; justify-content: space-between; align-items: center;
+    font-weight: 900; font-size: 12px; letter-spacing: 1px; color: #7ee0ff; text-shadow: 1px 1px 0 #000; }
+  #questStep { color: #9fb0bb; }
+  #questBody { display: flex; align-items: center; gap: 9px; text-align: left; }
+  #questIcon { width: 40px; height: 40px; image-rendering: pixelated; flex: 0 0 auto;
+    background: rgba(0,0,0,0.35); border: 1px solid #000; }
+  #questName { font-weight: 900; color: #fff; font-size: 14px; text-shadow: 1px 1px 0 #000; }
+  #questDesc { font-size: 11px; color: #bcd6df; line-height: 1.4; }
+  #questNeed { font-size: 11px; color: #ffd94d; text-align: left; }
+  #questNeed:empty { display: none; }
+
   .modeRow { display: flex; width: 100%; gap: 0; }
   .modeRow .mcbtn { font-size: 13px; padding: 10px 4px; }
   .modeRow .mcbtn.sel { background: #2a7fd4; }
@@ -291,7 +305,7 @@
   /* short screens: shave the extras so the whole menu always fits without scroll */
   @media (max-height: 680px) {
     #modeDesc { display: none; }
-    #expDesc { display: none; }
+    #expDesc, #questDesc { display: none; }
     #expBody { gap: 7px; }
     .mcbtn { padding: 9px 14px; font-size: 15px; }
   }
@@ -496,6 +510,15 @@
     <div class="logo">CraftRush</div>
     <div class="panel">
       <div class="levelChip" id="menuLevel">LEVEL 1</div>
+      <div id="questCard">
+        <div id="questHead">YOUR QUEST<span id="questStep"></span></div>
+        <div id="questBody">
+          <canvas id="questIcon" width="40" height="40"></canvas>
+          <div class="expText"><div id="questName">—</div><div id="questDesc">—</div></div>
+        </div>
+        <div id="questNeed"></div>
+      </div>
+
       <div class="gameCard" id="cardShooter">
         <div class="gameHead"><canvas class="icon" data-icon="ui_bow"></canvas>BOW BLITZ</div>
         <div class="gameDesc">Your crowd auto-fires arrows. Blast mobs, shoot gates to boost them.</div>

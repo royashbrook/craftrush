@@ -1,6 +1,6 @@
 // Craft Rush core game: crowd sim, dual-mode (shooter / gates), procedural
 // levels, enemies, bosses, effects. World units: blocks; +z is down-track.
-import { TUNE, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS, winBonus, speedById } from './config.js';
+import { TUNE, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS, winBonus, speedById, currentChapter, chapterUnlocked } from './config.js';
 import { Camera, renderWorld, DrawQueue } from './engine.js';
 import { Audio } from './audio.js';
 import { CrowdMixin } from './crowd.js';
@@ -95,8 +95,11 @@ export class Game {
     this.events = [];
     this.eventIdx = 0;
     this.length = 0;
+    this.creditSigns = [];
     this.golemHintShown = false;
     this.expedition = null;
+    this.chapter = null;
+    this.crystals = [];
     this.mut = {};
   }
 
@@ -105,10 +108,14 @@ export class Game {
   startRun(expedition = null) {
     this.resetRunState();
     this.expedition = expedition;
+    // a plain run plays the chapter you are up to, if its cost is covered
+    const ch = expedition ? null : currentChapter(this.save);
+    this.chapter = (ch && chapterUnlocked(this.save, ch.id)) ? ch : null;
     this.mut = expedition ? (expedition.mut || {}) : {};
     this.level = expedition ? expedition.level : this.save.level;
     this.mode = expedition && expedition.mode ? expedition.mode : this.save.mode;
     this.biome = (expedition && expedition.biome && BIOMES.find(b => b.id === expedition.biome))
+      || (this.chapter && BIOMES.find(b => b.id === this.chapter.biome))
       || BIOMES[(this.level - 1) % BIOMES.length];
     this.applySkin();
     this.paused = false;
@@ -186,7 +193,10 @@ export class Game {
 
     if (this.state === 'run') {
       this.playerZ += this.speed * dt;
-      if (this.playerZ >= this.length) this.startBoss();
+      if (this.playerZ >= this.length) {
+        if (this.chapter && this.chapter.credits) this.endRun(true);   // no fight waits at the end of the credits
+        else this.startBoss();
+      }
       this.spawnPending();
     } else {
       this.updateBoss(dt);
@@ -270,6 +280,7 @@ export class Game {
       kills: this.kills, bestCrowd: this.bestCrowd,
       biome: this.biome.name, mode: this.mode, structure: !!this.biome.structure,
       expedition: this.expedition ? { id: this.expedition.id, name: this.expedition.name } : null,
+      chapter: this.chapter ? { id: this.chapter.id, name: this.chapter.name } : null,
     });
   }
 
@@ -310,6 +321,8 @@ export class Game {
     this.renderSummons(q);
     if (this.boss) this.renderBoss(q);
     this.renderPet(q);
+    this.renderCrystals(q);
+    this.renderCredits(q);
     this.renderCrowd(q);
     this.renderArrows(q);
     this.renderEshots(q);

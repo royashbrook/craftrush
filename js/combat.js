@@ -182,6 +182,8 @@ export const CombatMixin = {
     const b = this.boss;
     if (b && !b.entering && !this.bossDead && Math.abs(b.z - a.z) < 2.0 && Math.abs(a.x - b.x) < 2.6) {
       a.dead = true;
+      // a phase change shields her briefly, so a burst cannot skip a whole stage
+      if (b.shielded > 0) { b.flash = 0.08; Audio.sfx('hit', 70); return; }
       b.hp -= a.dmg; b.flash = 0.08;
       this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerHit);
       Audio.sfx('hit', 70);
