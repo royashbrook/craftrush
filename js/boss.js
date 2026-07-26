@@ -55,6 +55,17 @@ export const BossMixin = {
   },
 
   // crystals feed the boss until they are gone
+  crystalDown(c) {
+    c.dead = true;
+    this.burst(c.x, 1.6, c.z, ['#c76bff', '#ffffff', '#8b3fd6'], 20, 8);
+    this.ring(c.x, c.z, 2.4);
+    this.cam.shake = Math.min(1, this.cam.shake + 0.3);
+    Audio.sfx('bigboom');
+    this.floaty('CRYSTAL DOWN!', c.x, c.z, '#c76bff', 1.6);
+  },
+
+  liveCrystal() { return (this.crystals || []).find((c) => !c.dead) || null; },
+
   updateCrystals(dt) {
     if (!this.crystals || !this.crystals.length) return;
     const b = this.boss;
@@ -68,23 +79,19 @@ export const BossMixin = {
         if (a.dead) continue;
         if (Math.abs(a.x - c.x) < 0.8 && Math.abs(a.z - c.z) < 0.9) {
           a.dead = true; c.hp -= a.dmg;
-          if (c.hp <= 0) {
-            c.dead = true;
-            this.burst(c.x, 1.6, c.z, ['#c76bff', '#ffffff', '#8b3fd6'], 20, 8);
-            this.ring(c.x, c.z, 2.4);
-            this.cam.shake = Math.min(1, this.cam.shake + 0.3);
-            Audio.sfx('bigboom');
-            this.floaty('CRYSTAL DOWN!', c.x, c.z, '#c76bff', 1.6);
-          }
+          if (c.hp <= 0) this.crystalDown(c);
         }
       }
     }
     if (alive > 0 && b && !b.entering) {
-      // healing is what makes ignoring them a losing plan
+      // while even one crystal stands she is not really there to be hit: the
+      // fight is the crystals first, and the healing punishes stalling
       b.hp = Math.min(b.maxHp, b.hp + b.maxHp * 0.035 * alive * dt);
       b.healing = true;
+      b.guarded = true;
     } else if (b) {
       b.healing = false;
+      b.guarded = false;
     }
   },
 
@@ -154,14 +161,27 @@ export const BossMixin = {
       // crowd charge: the army spends worth to slam the boss, scaled so the
       // fight lasts about the same whether you bring 40 troops or 4000
       this.chargeT = (this.chargeT || 0) - dt;
-      if (this.chargeT <= 0 && this.worth() > 0) {
+      // a phase shield soaks the charge outright; crystals redirect it
+      if (this.chargeT <= 0 && b.shielded > 0) {
+        this.chargeT = 0.3;
+        b.flash = 0.07;
+        Audio.sfx('hit', 30);
+      } else if (this.chargeT <= 0 && this.worth() > 0) {
         this.chargeT = 0.09;
         const spend = Math.max(1, Math.ceil(this.worth() / TUNE.chargeSpendDivisor));
         this.setWorth(this.worth() - spend);
-        b.hp -= spend * 3; b.flash = 0.07;
-        this.burst(b.x + (Math.random() - 0.5) * 1.6, 1.2, b.z - 0.8, [this.skin.palette.t, '#ffd94d'], 6);
-        Audio.sfx('hit', 40);
-        if (b.hp <= 0) { this.bossDefeated(); return; }
+        const crystal = b.guarded ? this.liveCrystal() : null;
+        if (crystal) {
+          crystal.hp -= spend * 3;
+          this.burst(crystal.x + (Math.random() - 0.5) * 1.2, 1.4, crystal.z, ['#c76bff', '#ffffff'], 6);
+          Audio.sfx('hit', 60);
+          if (crystal.hp <= 0) this.crystalDown(crystal);
+        } else {
+          b.hp -= spend * 3; b.flash = 0.07;
+          this.burst(b.x + (Math.random() - 0.5) * 1.6, 1.2, b.z - 0.8, [this.skin.palette.t, '#ffd94d'], 6);
+          Audio.sfx('hit', 40);
+          if (b.hp <= 0) { this.bossDefeated(); return; }
+        }
         if (this.worth() <= 0) { this.endRun(false); return; }
       }
     } else {

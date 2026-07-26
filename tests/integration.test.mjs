@@ -109,3 +109,38 @@ test('a giant-heavy army collects emeralds it runs over (integration)', () => {
   assert.ok(g.runEmeralds - before >= placed, 'all placed emeralds collected');
   assert.equal(leftBehind, 0, 'nothing run over is left behind');
 });
+
+// The dragon's crystals are the whole point of her fight: while one stands she
+// must not be damageable in EITHER mode. Gate Dash has no arrows, so the crowd
+// charge has to break them or she could never be beaten at all.
+for (const mode of ['shooter', 'gates']) {
+  test(`the dragon takes nothing while a crystal stands (${mode})`, () => {
+    const g = makeGame({
+      mode,
+      campaign: { done: ['mine_obsidian', 'portal', 'fortress', 'stronghold'] },
+      inventory: { enderEyes: 12 },
+    });
+    g.startRun();
+    assert.equal(g.chapter && g.chapter.id, 'dragon', 'this is her fight');
+    g.playerZ = g.length;
+    g.setWorth(20000);
+    g.update(1 / 60);
+    assert.equal(g.state, 'boss');
+    assert.ok(g.crystals.length >= 4, 'the crystals are up');
+
+    const b = g.boss, hp0 = b.hp;
+    for (let i = 0; i < 180; i++) g.update(1 / 60);
+    assert.ok(b.hp >= hp0, `she healed or held, never dropped (${hp0} -> ${b.hp})`);
+
+    if (mode === 'gates') {
+      assert.ok(g.crystals.some((c) => c.dead), 'the crowd can actually break them');
+    }
+
+    // with them all down she is finally there to be hit
+    for (const c of g.crystals) if (!c.dead) g.crystalDown(c);
+    g.update(1 / 60);
+    const hp1 = b.hp;
+    for (let i = 0; i < 180; i++) g.update(1 / 60);
+    assert.ok(b.hp < hp1, 'now she takes real damage');
+  });
+}
