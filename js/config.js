@@ -191,18 +191,7 @@ export const COSMETICS = THEME.cosmetics;
 // you're away. Each additional villager of a type costs base * costRate^owned
 // (the classic idle curve). Art reuses existing character skins — no new sprites.
 export const HOME = { costRate: 1.15, idleCapMs: 8 * 3600 * 1000, townCap: 8 };
-// Every villager shares the villager head + robe body; the profession reads from
-// the robe colours (like Minecraft profession robes). s = hands (shared skin).
-const VSKIN = '#a8763f';
-const villager = (id, name, base, income, r, R, a) =>
-  ({ id, name, base, income, head: 'head_villager', body: 'villager_body', palette: { s: VSKIN, r, R, a } });
-export const VILLAGERS = [
-  villager('farmer',    'Farmer',    50,    5,    '#8a6a2f', '#6a4f22', '#c9a94a'), // straw brown
-  villager('miner',     'Miner',     250,   24,   '#3a3f47', '#282c32', '#6a7078'), // toolsmith apron
-  villager('fisher',    'Fisher',    1000,  85,   '#4a6a8a', '#35506a', '#7aa0c0'), // blue
-  villager('trader',    'Trader',    4000,  300,  '#7a4a8a', '#5a3468', '#a06ab0'), // cleric purple
-  villager('librarian', 'Librarian', 15000, 1000, '#dcd6c0', '#b0a890', '#f4f0e4'), // white robe
-];
+export const VILLAGERS = THEME.village.villagers;
 
 // cost of the NEXT villager of `id` given how many are already owned
 export function villagerCost(id, owned) {
@@ -251,31 +240,11 @@ export function pendingIdle(villagers, lastCollect, now) {
 
 // Playroom decorations: buyable placeable furniture (an emerald sink) and room
 // backdrops. Each buy drops one draggable instance into the playroom.
-export const DECOR = [
-  { id: 'chest',          name: 'Chest',      sprite: 'chest',          cost: 40 },
-  { id: 'torch',          name: 'Torch',      sprite: 'torch',          cost: 30 },
-  { id: 'potted_plant',   name: 'Plant',      sprite: 'potted_plant',   cost: 60 },
-  { id: 'crafting_table', name: 'Crafting',   sprite: 'crafting_table', cost: 90 },
-  { id: 'cake',           name: 'Cake',       sprite: 'cake',           cost: 120 },
-  { id: 'room_rug',       name: 'Rug',        sprite: 'room_rug',       cost: 140 },
-  { id: 'room_lamp',      name: 'Lamp',       sprite: 'room_lamp',      cost: 160 },
-  { id: 'painting',       name: 'Painting',   sprite: 'painting',       cost: 180 },
-  { id: 'room_shelf',     name: 'Shelf',      sprite: 'room_shelf',     cost: 200 },
-  { id: 'bed',            name: 'Bed',        sprite: 'bed',            cost: 250 },
-];
+export const DECOR = THEME.village.decor;
 export const decorById = (id) => DECOR.find(d => d.id === id);
 // Room styles are real house interiors: a patterned wall, a floor with depth, and
 // baseboard trim, drawn to a pixel canvas. The first is free; the rest you keep.
-export const ROOM_TIERS = [
-  { id: 'cabin',  name: 'Cozy Cabin',    cost: 0,    pattern: 'planks',
-    wall: '#c08b4e', wallAlt: '#a9773f', trim: '#6f4a28', floor: '#8f5f36', floorAlt: '#7c4f2c' },
-  { id: 'oak',    name: 'Oak Hall',      cost: 600,  pattern: 'planks',
-    wall: '#d6a969', wallAlt: '#bb8f52', trim: '#7a5730', floor: '#a06e3e', floorAlt: '#8b5e34' },
-  { id: 'stone',  name: 'Stone Keep',    cost: 2000, pattern: 'bricks',
-    wall: '#9d9d9d', wallAlt: '#868686', trim: '#5f5f5f', floor: '#7a7a7a', floorAlt: '#6b6b6b' },
-  { id: 'quartz', name: 'Quartz Palace', cost: 6000, pattern: 'tiles',
-    wall: '#efeade', wallAlt: '#dbd4c3', trim: '#b6ad99', floor: '#dcd5c4', floorAlt: '#cac2af' },
-];
+export const ROOM_TIERS = THEME.village.roomTiers;
 export const roomTierById = (id) => ROOM_TIERS.find(r => r.id === id) || ROOM_TIERS[0];
 
 // ---------------------------------------------------------------------------
@@ -299,32 +268,7 @@ const PRESET_PARTY = [
   { item: 'potted_plant', x: 0.92, y: 0.94 },
 ];
 
-export const TOWNS = [
-  { id: 'plains', name: 'Plains Village', cost: 0, preset: PRESET_COZY,
-    style: { id: 'plains', name: 'Village Oak', pattern: 'planks',
-      wall: '#c08b4e', wallAlt: '#a9773f', trim: '#6f4a28', floor: '#8f5f36', floorAlt: '#7c4f2c' } },
-  { id: 'cherry', name: 'Cherry Grove', cost: 800, preset: PRESET_PARTY,
-    style: { id: 'cherry', name: 'Cherry Wood', pattern: 'planks',
-      wall: '#e8b6c8', wallAlt: '#d29bb0', trim: '#8f5f70', floor: '#c98fa4', floorAlt: '#b47b90' } },
-  { id: 'desert', name: 'Desert Town', cost: 2000, preset: PRESET_HALL,
-    style: { id: 'desert', name: 'Sandstone', pattern: 'bricks',
-      wall: '#e0cf9a', wallAlt: '#cbb884', trim: '#9a8a5c', floor: '#d6c48c', floorAlt: '#c0ae78' } },
-  { id: 'snowy', name: 'Snowy City', cost: 4000, preset: PRESET_COZY,
-    style: { id: 'snowy', name: 'Packed Ice', pattern: 'tiles',
-      wall: '#cfe4f2', wallAlt: '#b6d2e6', trim: '#7fa0b8', floor: '#bcd8ea', floorAlt: '#a6c4d8' } },
-  { id: 'savanna', name: 'Savanna Camp', cost: 7000, preset: PRESET_HALL,
-    style: { id: 'savanna', name: 'Acacia', pattern: 'planks',
-      wall: '#d08a52', wallAlt: '#b8743f', trim: '#7d4c26', floor: '#b3763f', floorAlt: '#9c6434' } },
-  { id: 'mushroom', name: 'Mushroom Isle', cost: 11000, preset: PRESET_PARTY,
-    style: { id: 'mushroom', name: 'Mushroom Stem', pattern: 'tiles',
-      wall: '#e8e0d0', wallAlt: '#d2c8b4', trim: '#a4544c', floor: '#cdbfa6', floorAlt: '#b8a98f' } },
-  { id: 'end', name: 'End City', cost: 16000, preset: PRESET_HALL,
-    style: { id: 'end', name: 'Purpur', pattern: 'tiles',
-      wall: '#b295b8', wallAlt: '#9b7ba3', trim: '#5f4468', floor: '#a487ab', floorAlt: '#8e7095' } },
-  { id: 'nether', name: 'Nether Bastion', cost: 22000, preset: PRESET_PARTY,
-    style: { id: 'nether', name: 'Blackstone', pattern: 'bricks',
-      wall: '#4a4048', wallAlt: '#3a323a', trim: '#8f3b2c', floor: '#3f3740', floorAlt: '#332c34' } },
-];
+export const TOWNS = THEME.village.towns;
 export const townById = (id) => TOWNS.find(t => t.id === id) || TOWNS[0];
 
 export const MAX_HOUSES = 4;
@@ -424,14 +368,7 @@ export function mineTileAt(x, y) {
   if (y > 100 && hash2(x + 5, y + 71) > 0.9) return TILES.obsidian;
   return TILES.stone;
 }
-export const PICKAXES = [
-  { id: 'wood',      name: 'Wooden',    dmg: 1,  tier: 0, cost: 0 },
-  { id: 'stone',     name: 'Stone',     dmg: 2,  tier: 1, cost: 200 },
-  { id: 'iron',      name: 'Iron',      dmg: 4,  tier: 2, cost: 1000 },
-  { id: 'gold',      name: 'Gold',      dmg: 7,  tier: 2, cost: 4000 },
-  { id: 'diamond',   name: 'Diamond',   dmg: 12, tier: 3, cost: 15000 },
-  { id: 'netherite', name: 'Netherite', dmg: 20, tier: 4, cost: 50000 },
-];
+export const PICKAXES = THEME.mine.pickaxes;
 export const pickaxeTier = (id) => (PICKAXES.find((p) => p.id === id) || PICKAXES[0]).tier;
 export const canBreak = (pickId, tile) => !tile.hazard && tile.solid !== false && pickaxeTier(pickId) >= (tile.tier || 0);
 // strata by depth — deeper is rarer/prettier
@@ -529,26 +466,7 @@ export function completeChapter(save, id) {
 
 // Daily Expeditions: one date-seeded themed run per day, identical for everyone
 // with no server. `mut` holds the run modifiers the engine reads.
-export const EXPEDITIONS = [
-  { id: 'blaze_rush',   name: 'Blaze Rush',    icon: 'head_piglin',   biome: 'nether',   mode: 'shooter',
-    desc: 'Nether raid — double emeralds and extra speed.',      mut: { emeraldMul: 2, speedMul: 1.15 } },
-  { id: 'creeper_storm', name: 'Creeper Storm', icon: 'head_creeper',  mode: 'shooter',
-    desc: 'Creepers everywhere. Grab the TNT and blast them!',   mut: { enemies: ['creeper', 'creeper', 'spider'], tntCommon: true, emeraldMul: 1.5 } },
-  { id: 'giant_march',  name: 'Giant March',   icon: 'iron_golem',    mode: 'shooter',
-    desc: 'Start with a Giga Steve, but the mobs hit harder.',   mut: { startWorth: 60, enemyHpMul: 1.4, emeraldMul: 1.5 } },
-  { id: 'golden_hour',  name: 'Golden Hour',   icon: 'golden_apple',  mode: 'shooter',
-    desc: 'Golden apples rain down. Triple emeralds!',           mut: { emeraldMul: 3, appleCommon: true } },
-  { id: 'endless_night', name: 'Endless Night', icon: 'boss_warden',  biome: 'deepdark', mode: 'shooter',
-    desc: 'The Deep Dark calls. Face the Warden.',               mut: { emeraldMul: 2 } },
-  { id: 'bone_brigade', name: 'Bone Brigade',  icon: 'head_skeleton', mode: 'shooter',
-    desc: 'Skeletons only. Dodge the arrow storm!',              mut: { enemies: ['skeleton', 'stray', 'skeleton'], emeraldMul: 1.5 } },
-  { id: 'gate_frenzy',  name: 'Gate Frenzy',   icon: 'emerald',       mode: 'gates',
-    desc: 'No bows — pure gates. Grow a giant army!',            mut: { gateBoost: true, emeraldMul: 2 } },
-  { id: 'frozen_stampede', name: 'Frozen Stampede', icon: 'head_skeleton', biome: 'snow', mode: 'shooter',
-    desc: 'Icy sprint — everything is faster. Hold on!',         mut: { speedMul: 1.3, emeraldMul: 2 } },
-  { id: 'swamp_things', name: 'Swamp Things',  icon: 'head_zombie',   biome: 'swamp',    mode: 'gates',
-    desc: 'Witch country, gates only. Choose wisely.',           mut: { gateBoost: true, enemyHpMul: 1.3, emeraldMul: 2 } },
-];
+export const EXPEDITIONS = THEME.expeditions;
 
 export function dayKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

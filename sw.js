@@ -1,5 +1,5 @@
 // Cache-first service worker: full offline play after first load.
-const CACHE = 'craftrush-0a87942b';
+const CACHE = 'craftrush-6848164d';
 const ASSETS = [
   './',
   './manifest.webmanifest',
@@ -32,20 +32,24 @@ const ASSETS = [
   './themes/craft/campaign.json',
   './themes/craft/cosmetics.json',
   './themes/craft/enemies.json',
+  './themes/craft/expeditions.json',
   './themes/craft/mine.json',
   './themes/craft/skins.json',
   './themes/craft/theme.json',
   './themes/craft/tiers.json',
+  './themes/craft/village.json',
   './themes/neon/atlas.json',
   './themes/neon/atlas.png',
   './themes/neon/biomes.json',
   './themes/neon/campaign.json',
   './themes/neon/cosmetics.json',
   './themes/neon/enemies.json',
+  './themes/neon/expeditions.json',
   './themes/neon/mine.json',
   './themes/neon/skins.json',
   './themes/neon/theme.json',
   './themes/neon/tiers.json',
+  './themes/neon/village.json',
 ];
 
 self.addEventListener('install', (e) => {

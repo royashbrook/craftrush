@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { THEME, THEME_INFO, THEME_ART, THEME_ATLAS } from '../js/theme.js';
 import { BIOMES, SKINS, COSMETICS, CAMPAIGN, ENEMY_TYPES, BOSS_TYPES, TILES,
+  VILLAGERS, TOWNS, DECOR, ROOM_TIERS, PICKAXES, EXPEDITIONS,
   loadSave, chapterUnlocked } from '../js/config.js';
 
 const artDir = new URL('./', THEME_ART + '/');
@@ -39,6 +40,9 @@ test('every name the theme references has a drawing behind it', () => {
   for (const s of SKINS) { need(s.head, `skin ${s.id} head`); need(s.body, `skin ${s.id} body`); }
   for (const list of Object.values(COSMETICS)) for (const c of list) need(c.sprite, `cosmetic ${c.id}`);
   for (const c of CAMPAIGN) need(c.icon, `chapter ${c.id} icon`);
+  for (const v of VILLAGERS) { need(v.head, `villager ${v.id} head`); need(v.body, `villager ${v.id} body`); }
+  for (const d of DECOR) need(d.sprite, `decor ${d.id}`);
+  for (const e of EXPEDITIONS) need(e.icon, `expedition ${e.id} icon`);
 
   assert.deepEqual(missing, [], 'nothing points at art that is not there');
 });
@@ -89,5 +93,48 @@ test('every theme in the repo loads and carries what the engine needs', () => {
         () => JSON.parse(readFileSync(new URL(`../themes/${id}/${part}.json`, import.meta.url), 'utf8')),
         `${id}/${part}.json parses`);
     }
+  }
+});
+
+test('the village and world content the theme ships is usable', () => {
+  assert.ok(VILLAGERS.length >= 1, 'someone to hire');
+  for (const v of VILLAGERS) {
+    assert.ok(v.id && v.name, `${v.id} is named`);
+    assert.ok(v.base > 0 && v.income > 0, `${v.id} costs something and earns something`);
+  }
+  assert.equal(TOWNS[0].cost, 0, 'the first town is free, or there is no way in');
+  for (let i = 1; i < TOWNS.length; i++) {
+    assert.ok(TOWNS[i].cost > TOWNS[i - 1].cost, `${TOWNS[i].id} costs more than the one before`);
+    assert.ok(TOWNS[i].style, `${TOWNS[i].id} has materials to build in`);
+  }
+  assert.ok(ROOM_TIERS.length >= 1 && DECOR.length >= 1, 'a house can be furnished');
+});
+
+test('the pickaxe ladder climbs, so the mine has somewhere to go', () => {
+  assert.equal(PICKAXES[0].cost, 0, 'you start holding something');
+  for (let i = 1; i < PICKAXES.length; i++) {
+    const p = PICKAXES[i], prev = PICKAXES[i - 1];
+    assert.ok(p.cost > prev.cost, `${p.id} costs more than ${prev.id}`);
+    assert.ok(p.tier >= prev.tier, `${p.id} never breaks LESS than ${prev.id}`);
+    // gold is deliberately iron's tier and faster, the way it is in the game
+    // this is dressed as. So a step up has to buy reach or speed, not just tier.
+    assert.ok(p.tier > prev.tier || p.dmg > prev.dmg,
+      `${p.id} costs more than ${prev.id} but breaks nothing new and no faster`);
+  }
+  // every tier a tile asks for must be reachable by some pickaxe
+  const top = PICKAXES[PICKAXES.length - 1].tier;
+  for (const [id, t] of Object.entries(TILES)) {
+    if (t.hazard || t.solid === false) continue;
+    assert.ok((t.tier || 0) <= top, `${id} needs tier ${t.tier}, above every pickaxe`);
+  }
+});
+
+test('every expedition runs somewhere real, in a mode that exists', () => {
+  const places = new Set(BIOMES.map((b) => b.id));
+  for (const e of EXPEDITIONS) {
+    assert.ok(e.name && e.desc, `${e.id} is described`);
+    if (e.biome) assert.ok(places.has(e.biome), `${e.id} runs in ${e.biome}`);
+    if (e.mode) assert.ok(['shooter', 'gates'].includes(e.mode), `${e.id} mode ${e.mode} exists`);
+    for (const m of (e.mut?.enemies || [])) assert.ok(ENEMY_TYPES[m], `${e.id} spawns ${m}, which is defined`);
   }
 });
