@@ -1,9 +1,10 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, HOME, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, townPop, townHasRoom, worldIncomeRate, pendingIdleWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
 const BLOCK_COLORS = { stone: '#8a8a8a', coal: '#42413f', iron: '#c8a878', gold: '#e8c84a', diamond: '#5ce0e0', emerald: '#2ecc5e' };
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit, hasSprite } from './assets.js';
+import { TownScene } from './townscene.js';
 import { Audio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -38,7 +39,9 @@ export class UI {
       playScene: $('playScene'), dressPanel: $('dressPanel'), playHint: $('playHint'),
       roomWorld: $('roomWorld'), roomBg: $('roomBg'), roomItems: $('roomItems'), trashZone: $('trashZone'),
       carryZone: $('carryZone'), btnPlaceCarry: $('btnPlaceCarry'), playHouseTitle: $('playHouseTitle'),
-      world: $('world'), worldEmeralds: $('worldEmeralds'), townGrid: $('townGrid'),
+      world: $('world'), townCanvas: $('townCanvas'), townPrev: $('townPrev'), townNext: $('townNext'),
+      townDots: $('townDots'), worldTownName: $('worldTownName'), worldTownSub: $('worldTownSub'),
+      btnTownAction: $('btnTownAction'),
       town: $('town'), townTitle: $('townTitle'), townEmeralds: $('townEmeralds'), townHint: $('townHint'),
       houseGrid: $('houseGrid'), btnBuyHouse: $('btnBuyHouse'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
       mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'), digFace: $('digFace'),
@@ -221,17 +224,24 @@ export class UI {
   }
 
   // ---- home hub ----
+  // the collection clock is world-wide; the crew lives per town
   homeData() {
-    // defensively migrate older saves that predate the home field
-    const h = this.save.home || (this.save.home = { villagers: {}, lastCollect: 0 });
-    if (!h.villagers) h.villagers = {};
-    for (const v of VILLAGERS) if (typeof h.villagers[v.id] !== 'number') h.villagers[v.id] = 0;
+    const h = this.save.home || (this.save.home = { lastCollect: 0 });
+    if (typeof h.lastCollect !== 'number') h.lastCollect = 0;
     return h;
+  }
+
+  // which town the village screen is hiring for: wherever you are on the map
+  villageTownId() {
+    const w = this.worldData();
+    const id = this.viewTown && this.townRec(this.viewTown) && this.townRec(this.viewTown).unlocked
+      ? this.viewTown : w.town;
+    return this.townRec(id).unlocked ? id : 'plains';
   }
 
   homePending() {
     const h = this.homeData();
-    return pendingIdle(h.villagers, h.lastCollect, Date.now());
+    return pendingIdleWorld(this.worldData(), h.lastCollect, Date.now());
   }
 
   showHome() {
@@ -242,10 +252,15 @@ export class UI {
   }
 
   renderHome() {
-    const E = this.els, h = this.homeData();
+    const E = this.els;
+    const townId = this.villageTownId(), rec = this.townRec(townId), town = townById(townId);
+    const crew = rec.villagers;
     E.homeEmeralds.textContent = `${this.save.emeralds}`;
-    const rate = homeIncomeRate(h.villagers);
-    E.homeIncome.textContent = rate > 0 ? `Your village earns +${rate}/hr while you're away` : 'Buy a villager to start earning emeralds!';
+    const rate = worldIncomeRate(this.worldData());
+    const here = homeIncomeRate(crew);
+    E.homeIncome.textContent = rate > 0
+      ? `${town.name}: ${townPop(rec)}/${HOME.townCap} villagers, +${here}/hr · all towns +${rate}/hr`
+      : `Hire someone in ${town.name} to start earning emeralds!`;
 
     const pending = this.homePending();
     if (pending > 0) {
@@ -261,10 +276,10 @@ export class UI {
 
     // scene: one bobbing sprite per owned villager type, with a count
     E.homeScene.innerHTML = '';
-    const owned = VILLAGERS.filter(v => h.villagers[v.id] > 0);
+    const owned = VILLAGERS.filter(v => crew[v.id] > 0);
     if (!owned.length) {
       const empty = document.createElement('div');
-      empty.className = 'homeEmpty'; empty.textContent = 'Your home is empty… bring a villager home!';
+      empty.className = 'homeEmpty'; empty.textContent = `No one lives in ${town.name} yet. Hire someone!`;
       E.homeScene.appendChild(empty);
     } else {
       for (const v of owned) {
@@ -277,7 +292,7 @@ export class UI {
         this.drawSkinPreview(cv, v);
         wrap.appendChild(cv);
         const cnt = document.createElement('div');
-        cnt.className = 'cnt'; cnt.textContent = `×${h.villagers[v.id]}`;
+        cnt.className = 'cnt'; cnt.textContent = `×${crew[v.id]}`;
         wrap.appendChild(cnt);
         E.homeScene.appendChild(wrap);
       }
@@ -286,7 +301,7 @@ export class UI {
     // villager shop list
     E.villagerList.innerHTML = '';
     for (const v of VILLAGERS) {
-      const count = h.villagers[v.id];
+      const count = crew[v.id];
       const cost = villagerCost(v.id, count);
       const canAfford = this.save.emeralds >= cost;
       const card = document.createElement('div');
@@ -310,11 +325,12 @@ export class UI {
   }
 
   buyVillager(id) {
-    const h = this.homeData();
-    const cost = villagerCost(id, h.villagers[id]);
+    const rec = this.townRec(this.villageTownId());
+    if (!townHasRoom(rec)) { Audio.sfx('gate_bad'); return; }   // this town is full
+    const cost = villagerCost(id, rec.villagers[id]);
     if (this.save.emeralds < cost) { Audio.sfx('gate_bad'); return; }
     this.save.emeralds -= cost;
-    h.villagers[id]++;
+    rec.villagers[id]++;
     persistSave(this.save);
     Audio.sfx('buy');
     this.renderHome();
@@ -505,34 +521,145 @@ export class UI {
   showWorld() {
     this.worldData();
     this.openScreen('world');
+    this.wireWorld();
+    if (!this.viewTown || !this.townRec(this.viewTown)) this.viewTown = this.worldData().town;
+    this.renderWorld();
+  }
+
+  // one canvas showing the town you're looking at; swipe or tap the arrows to travel
+  wireWorld() {
+    if (this._worldWired) return;
+    this._worldWired = true;
+    const E = this.els;
+    this.scene = new TownScene(E.townCanvas);
+    this.viewTown = this.worldData().town;
+
+    E.townPrev.addEventListener('click', () => this.stepTown(-1));
+    E.townNext.addEventListener('click', () => this.stepTown(1));
+    E.btnTownAction.addEventListener('click', () => this.townAction());
+
+    // swipe the scene to travel, tap it to poke a house
+    let sx = 0, sy = 0, moved = false, down = false;
+    E.townCanvas.addEventListener('pointerdown', (e) => { down = true; moved = false; sx = e.clientX; sy = e.clientY; });
+    E.townCanvas.addEventListener('pointermove', (e) => {
+      if (down && Math.abs(e.clientX - sx) > 12) moved = true;
+    });
+    E.townCanvas.addEventListener('pointerup', (e) => {
+      if (!down) return;
+      down = false;
+      const dx = e.clientX - sx;
+      if (moved && Math.abs(dx) > 40 && Math.abs(e.clientY - sy) < 60) { this.stepTown(dx < 0 ? 1 : -1); return; }
+      if (!moved) this.tapTown(e);
+    });
+
+    // the scene is alive: villagers keep walking while you look at it
+    const tick = () => {
+      if (!this.els.world.classList.contains('hidden')) {
+        this.fitTownCanvas();
+        this.scene.update(1 / 30);
+        this.scene.draw(!this.townRec(this.viewTown).unlocked);
+      }
+      this._worldRaf = requestAnimationFrame(tick);
+    };
+    if (!this._worldRaf) tick();
+  }
+
+  // the canvas only knows its real size once it is laid out, so keep them in sync
+  fitTownCanvas() {
+    const cv = this.els.townCanvas, r = cv.getBoundingClientRect();
+    const w = Math.round(r.width), h = Math.round(r.height);
+    if (w > 10 && h > 10 && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
+  }
+
+  stepTown(dir) {
+    const ids = TOWNS.map((t) => t.id);
+    const i = Math.max(0, ids.indexOf(this.viewTown));
+    const next = ids[Math.min(ids.length - 1, Math.max(0, i + dir))];
+    if (next === this.viewTown) return;
+    this.viewTown = next;
+    Audio.sfx('click');
+    this.renderWorld();
+  }
+
+  // tapping the scene: a house you own opens, the next slot offers to be bought
+  tapTown(e) {
+    const rec = this.townRec(this.viewTown);
+    if (!rec.unlocked) { this.townAction(); return; }
+    const r = this.els.townCanvas.getBoundingClientRect();
+    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+    for (const slot of this.scene.houseSlots()) {
+      if (Math.abs(fx - slot.x) < 0.13 && Math.abs(fy - slot.y) < 0.15) {
+        if (slot.owned) {
+          const w = this.worldData();
+          w.town = this.viewTown; w.house = slot.index;
+          persistSave(this.save);
+          this.showPlayroom();
+        } else if (slot.price != null) {
+          this.buyHouseIn(this.viewTown);
+        }
+        return;
+      }
+    }
+  }
+
+  // the bottom button does whatever this town needs next
+  townAction() {
+    const rec = this.townRec(this.viewTown);
+    if (!rec.unlocked) { this.unlockTown(this.viewTown); this.renderWorld(); return; }
+    const w = this.worldData();
+    w.town = this.viewTown; w.house = 0;
+    persistSave(this.save);
+    this.showPlayroom();
+  }
+
+  buyHouseIn(townId) {
+    const rec = this.townRec(townId);
+    const price = housePrice(rec.houses.length);
+    if (rec.houses.length >= MAX_HOUSES) { Audio.sfx('gate_bad'); return; }
+    if (this.save.emeralds < price) { Audio.sfx('gate_bad'); return; }
+    this.save.emeralds -= price;
+    rec.houses.push(makeHouse(townId));
+    persistSave(this.save);
+    Audio.sfx('buy');
     this.renderWorld();
   }
 
   renderWorld() {
     const E = this.els, w = this.worldData();
-    E.worldEmeralds.textContent = `${this.save.emeralds}`;
-    E.townGrid.innerHTML = '';
-    for (const t of TOWNS) {
-      const rec = w.towns[t.id];
-      const affordable = this.save.emeralds >= t.cost;
-      const card = document.createElement('button');
-      card.className = 'townCard' + (rec.unlocked ? (t.id === w.town ? ' here' : '') : (affordable ? ' locked' : ' locked cant'));
-      const icon = document.createElement('canvas'); icon.className = 'townIcon';
-      this.drawTownIcon(icon, t, rec.unlocked);
-      const name = document.createElement('div'); name.className = 'townName'; name.textContent = t.name;
-      const meta = document.createElement('div');
-      if (rec.unlocked) {
-        meta.className = 'townMeta';
-        meta.textContent = `${rec.houses.length} ${rec.houses.length === 1 ? 'house' : 'houses'}`;
-      } else {
-        meta.className = 'townMeta cost';
-        meta.innerHTML = `<span class="em"></span> ${t.cost}`;
-      }
-      card.append(icon, name, meta);
-      card.addEventListener('click', () => (rec.unlocked ? this.enterTown(t.id) : this.unlockTown(t.id)));
-      E.townGrid.appendChild(card);
+    if (!this.scene) return;
+    const id = this.viewTown || w.town;
+    this.viewTown = id;
+    const t = townById(id), rec = this.townRec(id);
+
+    this.fitTownCanvas();
+    this.scene.setTown(id, rec);
+    this.scene.draw(!rec.unlocked);
+
+    const ids = TOWNS.map((x) => x.id), i = ids.indexOf(id);
+    E.townPrev.disabled = i <= 0;
+    E.townNext.disabled = i >= ids.length - 1;
+
+    E.townDots.innerHTML = '';
+    for (const x of TOWNS) {
+      const d = document.createElement('i');
+      const xr = this.townRec(x.id);
+      d.className = (x.id === id ? 'on' : (xr.unlocked ? '' : 'locked'));
+      E.townDots.appendChild(d);
+    }
+
+    E.worldTownName.textContent = t.name;
+    if (!rec.unlocked) {
+      E.worldTownSub.textContent = `Locked · ${t.cost} emeralds`;
+      E.btnTownAction.textContent = this.save.emeralds >= t.cost ? 'UNLOCK' : 'TOO PRICEY';
+      E.btnTownAction.style.opacity = this.save.emeralds >= t.cost ? '1' : '0.6';
+    } else {
+      const pop = townPop(rec), rate = homeIncomeRate(rec.villagers);
+      E.worldTownSub.textContent = `${rec.houses.length} ${rec.houses.length === 1 ? 'house' : 'houses'} · ${pop} villagers · +${rate}/hr`;
+      E.btnTownAction.textContent = 'VISIT';
+      E.btnTownAction.style.opacity = '1';
     }
   }
+
 
   unlockTown(id) {
     const t = townById(id), rec = this.townRec(id);
@@ -543,7 +670,8 @@ export class UI {
     if (!rec.houses.length) rec.houses.push(makeHouse(id)); // arrives pre-decorated
     persistSave(this.save);
     Audio.sfx('fanfare');
-    this.enterTown(id);
+    this.viewTown = id;
+    this.renderWorld();
   }
 
   enterTown(id) {
@@ -1162,8 +1290,7 @@ export class UI {
     shop:      { tab: 'shop',  title: 'Skins & Shop', refresh: 'buildShop' },
     home:      { tab: 'home',  title: 'Your Village', refresh: 'renderHome' },
     world:     { tab: 'world', title: 'World', refresh: 'renderWorld' },
-    town:      { tab: 'world', title: 'Town', parent: 'world', refresh: 'renderTown' },
-    playroom:  { tab: 'world', title: 'House', parent: 'town', refresh: 'renderPlayroom' },
+    playroom:  { tab: 'world', title: 'House', parent: 'world', refresh: 'renderPlayroom' },
     mine:      { tab: 'mine',  title: 'The Mine', refresh: 'renderMine' },
     more:      { title: 'More', parent: 'menu', refresh: 'refreshMore' },
     about:     { title: 'About', parent: 'more' },
@@ -1294,7 +1421,7 @@ export class UI {
   }
 
   hideAll() {
-    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home', 'mine', 'playroom', 'world', 'town', 'more', 'about']) this.els[k].classList.add('hidden');
+    for (const k of ['menu', 'shop', 'result', 'hud', 'pause', 'achScreen', 'settings', 'home', 'mine', 'playroom', 'world', 'more', 'about']) this.els[k].classList.add('hidden');
     this.els.bossBar.classList.add('hidden');
     // clear cached HUD values so the next run repaints from scratch
     this._bossShown = false;

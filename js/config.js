@@ -381,7 +381,7 @@ export const COSMETICS = {
 // Home hub: buy villager friends who populate the home and earn emeralds while
 // you're away. Each additional villager of a type costs base * costRate^owned
 // (the classic idle curve). Art reuses existing character skins — no new sprites.
-export const HOME = { costRate: 1.15, idleCapMs: 8 * 3600 * 1000 };
+export const HOME = { costRate: 1.15, idleCapMs: 8 * 3600 * 1000, townCap: 8 };
 // Every villager shares the villager head + robe body; the profession reads from
 // the robe colours (like Minecraft profession robes). s = hands (shared skin).
 const VSKIN = '#a8763f';
@@ -406,6 +406,31 @@ export function homeIncomeRate(villagers) {
   let r = 0;
   for (const v of VILLAGERS) r += (villagers && villagers[v.id] || 0) * v.income;
   return r;
+}
+
+// how many villagers live in a town, and whether there is room for one more
+export function townPop(rec) {
+  let n = 0;
+  for (const v of VILLAGERS) n += (rec && rec.villagers && rec.villagers[v.id]) || 0;
+  return n;
+}
+export const townHasRoom = (rec) => townPop(rec) < HOME.townCap;
+
+// every unlocked town earns on its own; the world rate is the sum
+export function worldIncomeRate(world) {
+  if (!world || !world.towns) return 0;
+  let r = 0;
+  for (const t of TOWNS) {
+    const rec = world.towns[t.id];
+    if (rec && rec.unlocked) r += homeIncomeRate(rec.villagers);
+  }
+  return r;
+}
+
+// idle earnings across the whole world, clamped to the same cap
+export function pendingIdleWorld(world, lastCollect, now) {
+  const elapsed = Math.max(0, Math.min(now - (lastCollect || now), HOME.idleCapMs));
+  return Math.floor(worldIncomeRate(world) * elapsed / 3600000);
 }
 
 // emeralds accrued since lastCollect, clamped to the idle cap. A falsy
@@ -518,6 +543,8 @@ export function migrateWorld(save) {
   for (const t of TOWNS) {
     const rec = w.towns[t.id] || (w.towns[t.id] = { unlocked: t.cost === 0, houses: [] });
     if (!Array.isArray(rec.houses)) rec.houses = [];
+    if (!rec.villagers || typeof rec.villagers !== 'object') rec.villagers = {};
+    for (const v of VILLAGERS) if (typeof rec.villagers[v.id] !== 'number') rec.villagers[v.id] = 0;
     if (rec.unlocked && !rec.houses.length) rec.houses.push(makeHouse(t.id));
   }
   // legacy flat playroom -> plains house 0 (only once; the flat keys are dropped)
@@ -528,6 +555,13 @@ export function migrateWorld(save) {
     if (Array.isArray(save.decor) && save.decor.length) h.decor = save.decor;
     if (save.roomTier) h.style = save.roomTier;
     delete save.playmates; delete save.decor; delete save.roomTier;
+  }
+  // the old single global village becomes the starter town's crew
+  if (save.home && save.home.villagers && !w._villagersMoved) {
+    const plains = w.towns.plains;
+    for (const v of VILLAGERS) plains.villagers[v.id] += save.home.villagers[v.id] || 0;
+    w._villagersMoved = true;
+    delete save.home.villagers;
   }
   if (!w.towns[w.town]) w.town = 'plains';
   const houses = w.towns[w.town].houses;
