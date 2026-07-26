@@ -18,17 +18,22 @@ git-less checkout.)
 
 ## Develop
 
-No dependencies to install. Node 18+ only.
-
 ```sh
-node --test tests/*.test.mjs      # unit + headless integration tests (25, no deps)
-node tools/build.mjs              # build dist/ with a generated SW precache
-node tools/pack-atlas.mjs                         # art/ -> assets/atlas.png
-python3 tools/devserver.py 8300   # no-cache dev server for iterating on modules
+npm install        # once
+npm run dev        # vite dev server, no service worker, always fresh
+npm test           # unit + headless integration (121 tests)
+npm run test:e2e   # browser e2e (playwright)
+npm run art        # rebuild the atlas after editing themes/<id>/art/*.png
+npm run build      # dist/, with a generated service worker precache
+npm run preview    # serve the built dist/ exactly as it deploys
+npx tsc --noEmit   # typecheck the files carrying a // @ts-check pragma
 ```
 
+Play a different theme with `?theme=neon` in the browser, or
+`CRAFTRUSH_THEME=neon` for the node tools and tests.
+
 Two test layers:
-- **Unit + integration** (`tests/*.test.mjs`, zero dependencies) — pure logic
+- **Unit + integration** (`tests/*.test.mjs`) — pure logic
   plus a headless harness that drives the real `Game` class through full runs
   with a stubbed canvas, so cross-module regressions surface without a browser.
 - **Browser e2e** (Playwright, dev-only). One-time setup then run:
