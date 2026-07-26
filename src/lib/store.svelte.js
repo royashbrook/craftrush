@@ -128,9 +128,12 @@ export function togglePause(force) {
  * is nothing left to go back to we do NOT re-arm, so the next back really does
  * leave the app, which is what someone at the menu expects.
  */
-export function initHistory() {
+export function initHistory(pushState) {
   if (typeof window === 'undefined') return;
-  const arm = () => history.pushState({ cr: true }, '');
+  // SvelteKit owns the history stack, so the shallow-routing pushState from
+  // $app/navigation is passed in rather than calling history.pushState directly,
+  // which the router warns about and would eventually fight us over.
+  const arm = () => pushState('', { cr: true });
   arm();
   window.addEventListener('popstate', () => {
     // mid-run, back means "wait, stop" rather than "go somewhere"

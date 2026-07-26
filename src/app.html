@@ -3,31 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Craft Rush</title>
 <meta name="theme-color" content="#17141d">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest">
+<link rel="icon" href="%sveltekit.assets%/icons/icon-192.png">
+<link rel="apple-touch-icon" href="%sveltekit.assets%/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+%sveltekit.head%
 </head>
-<body>
-
+<body data-sveltekit-preload-data="off">
 <!--
-  The shell is now only three things: the stage, the canvas the game draws on,
-  and the node Svelte mounts into. Every screen is a component under src/.
-
   The viewport meta above deliberately has NO viewport-fit=cover. With it, iOS
   pins the 844pt viewport at the top of a 912pt screen and orphans the strip at
   the bottom, so the nav floats above the home indicator. Without it the same
   viewport sits at the bottom and the page bottom IS the screen bottom. That
   took three wrong fixes to find, so please do not add it back.
 -->
-<div id="stage">
-  <canvas id="gameCanvas"></canvas>
-  <div id="app"></div>
-  <div id="loading">LOADING…</div>
-</div>
-
-<script type="module" src="/src/main.js"></script>
+<div style="display: contents">%sveltekit.body%</div>
 </body>
 </html>

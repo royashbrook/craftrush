@@ -1,10 +1,8 @@
-
-*.log
-.DS_Store
-.playwright/
-.vite/
+.svelte-kit/
+build/
 dist/
 node_modules/
 playwright-report/
-scratchpad/
 test-results/
+# generated from themes/ by vite.config.js; the source of truth is themes/
+static/themes/

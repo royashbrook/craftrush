@@ -24,9 +24,9 @@ npm run dev        # vite dev server, no service worker, always fresh
 npm test           # unit + headless integration (121 tests)
 npm run test:e2e   # browser e2e (playwright)
 npm run art        # rebuild the atlas after editing themes/<id>/art/*.png
-npm run build      # dist/, with a generated service worker precache
-npm run preview    # serve the built dist/ exactly as it deploys
-npx tsc --noEmit   # typecheck the files carrying a // @ts-check pragma
+npm run build      # build/, a prerendered page plus a service worker
+npm run preview    # serve the built output exactly as it deploys
+npm run check      # svelte-check over the components and typed modules
 ```
 
 Play a different theme with `?theme=neon` in the browser, or

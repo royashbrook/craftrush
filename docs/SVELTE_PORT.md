@@ -8,6 +8,10 @@ How the UI is put together. The port is done; this is the shape to keep.
   `export let`, no `$:` labels.
 - **One component per screen**, in `src/screens/`. Chrome that floats over
   everything (HUD, pause, toasts) lives in `src/components/`.
+- **One route.** `src/routes/+page.svelte` boots the game and renders the shell.
+  The game has no URLs: what you are looking at is a screen in a stack, not a
+  route. Do not add routes for screens; add a component and a case in
+  `src/App.svelte`.
 - **No `<style>` blocks.** All CSS is global in `src/app.css` and already
   written. Use the existing class names. If a style is genuinely missing, add it
   to `src/app.css` rather than scoping it into a component.
@@ -85,6 +89,24 @@ Audio.unlock();        // before the first sound of a gesture
 ```
 
 Existing sfx names: `click`, `buy`, `gate_bad`, `hit`, `bigboom`, `hurt`.
+
+## Where things live
+
+```
+src/routes/+page.svelte   boots the game, owns the stage and canvas
+src/routes/+layout.js     prerender on, ssr off: one static page, no server
+src/App.svelte            top bar, bottom nav, the screen stack
+src/screens/*.svelte      one per screen
+src/components/*.svelte   chrome that floats over everything
+src/lib/store.svelte.js   the save, the nav state, the back gesture
+src/service-worker.js     precache list comes from $service-worker
+static/                   served verbatim; themes/ is synced in by vite.config.js
+themes/<id>/              a theme: data, art/ source drawings, built atlas
+```
+
+`static/themes/` is generated and gitignored. The source of truth is `themes/`,
+and `vite.config.js` copies everything except `art/` across, because the browser
+never reads the source drawings and they would otherwise land in the precache.
 
 ## Three traps, all of which bit during the port
 

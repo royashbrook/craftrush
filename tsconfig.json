@@ -1,4 +1,5 @@
 {
+  "extends": "./.svelte-kit/tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
@@ -21,6 +22,6 @@
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["js/**/*", "tools/**/*", "types/**/*", "vite.config.js"],
+  "include": ["js/**/*", "tools/**/*", "types/**/*", "src/**/*", "vite.config.js", "svelte.config.js"],
   "exclude": ["node_modules", "dist"]
 }
