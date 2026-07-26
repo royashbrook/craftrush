@@ -2,6 +2,7 @@
 // Everything gameplay-mechanical references ROLES (enemy ids, sprite ids) from
 // here, so a full reskin = new sprite packs + new tables. No engine changes.
 import { Audio } from './audio.js';
+import { hash2 } from './engine.js';
 
 // Build version shown in the UI. Bump the patch each build (0.2.1, 0.2.2, ...);
 // tag the next 0.x milestone in git when cutting a release.
@@ -573,15 +574,74 @@ export function migrateWorld(save) {
 // Mining minigame: tap a dig face to break blocks for emeralds, dig endlessly
 // downward, upgrade the pickaxe. Energy-gated (refills over real time) so it
 // can't out-earn the runner and gives a recharge return-hook.
-export const MINE = { energyCap: 60, energyRefillMs: 20000, gemCritChance: 0.06, gemCritMult: 5, cols: 4, rows: 4 };
-export const PICKAXES = [
-  { id: 'wood',      name: 'Wooden',    dmg: 1,  cost: 0 },
-  { id: 'stone',     name: 'Stone',     dmg: 2,  cost: 200 },
-  { id: 'iron',      name: 'Iron',      dmg: 4,  cost: 1000 },
-  { id: 'gold',      name: 'Gold',      dmg: 7,  cost: 4000 },
-  { id: 'diamond',   name: 'Diamond',   dmg: 12, cost: 15000 },
-  { id: 'netherite', name: 'Netherite', dmg: 20, cost: 50000 },
+export const MINE = { energyCap: 60, energyRefillMs: 20000, cols: 11, rows: 15 };
+
+// The underground is a real tile world: every block has a hardness, a tool tier that
+// can break it, and a worth. Ores come in veins rather than lone tiles, and the deeper
+// you go the better it gets. Generation is a pure function of (x, y) so the same shaft
+// always looks the same, no world to store.
+export const TILES = {
+  air:       { id: 'air',       solid: false, color: '#1a1420' },
+  dirt:      { id: 'dirt',      hp: 1, tier: 0, value: 0,   color: '#7a5236', color2: '#6b4830' },
+  stone:     { id: 'stone',     hp: 2, tier: 0, value: 0,   color: '#8a8a92', color2: '#7a7a82' },
+  deepslate: { id: 'deepslate', hp: 4, tier: 2, value: 0,   color: '#3c3c44', color2: '#33333a' },
+  gravel:    { id: 'gravel',    hp: 1, tier: 0, value: 0,   color: '#8f8478', color2: '#7d7368', falls: true },
+  coal:      { id: 'coal',      hp: 2, tier: 0, value: 2,   color: '#2e2e33', ore: true },
+  copper:    { id: 'copper',    hp: 3, tier: 1, value: 4,   color: '#c8703c', ore: true },
+  iron:      { id: 'iron',      hp: 3, tier: 1, value: 7,   color: '#d8b89a', ore: true },
+  lapis:     { id: 'lapis',     hp: 3, tier: 1, value: 12,  color: '#2b52c8', ore: true },
+  gold:      { id: 'gold',      hp: 4, tier: 2, value: 20,  color: '#f2c541', ore: true },
+  redstone:  { id: 'redstone',  hp: 4, tier: 2, value: 26,  color: '#c22b2b', ore: true },
+  diamond:   { id: 'diamond',   hp: 5, tier: 3, value: 60,  color: '#4fe3e0', ore: true },
+  emeraldore:{ id: 'emeraldore',hp: 5, tier: 3, value: 90,  color: '#2ecc5e', ore: true },
+  obsidian:  { id: 'obsidian',  hp: 9, tier: 4, value: 40,  color: '#1c1428', color2: '#160f20' },
+  lava:      { id: 'lava',      hp: 0, tier: 9, value: 0,   color: '#ff7a2a', hazard: true },
+};
+export const tileById = (id) => TILES[id] || TILES.stone;
+
+// which ores can appear at a depth, and how likely, deepest first
+const ORE_BANDS = [
+  { at: 110, ores: [['emeraldore', 0.030], ['diamond', 0.055], ['gold', 0.055], ['redstone', 0.075], ['lapis', 0.05]] },
+  { at: 70,  ores: [['diamond', 0.030], ['gold', 0.055], ['redstone', 0.075], ['lapis', 0.05], ['iron', 0.07]] },
+  { at: 40,  ores: [['gold', 0.035], ['redstone', 0.05], ['lapis', 0.045], ['iron', 0.08], ['coal', 0.09]] },
+  { at: 18,  ores: [['iron', 0.07], ['copper', 0.07], ['coal', 0.10]] },
+  { at: 0,   ores: [['coal', 0.09], ['copper', 0.05]] },
 ];
+
+// The tile at a column/depth. Veins come from sampling the hash on a coarser grid, so
+// ore arrives in clumps you can chase instead of single lucky squares.
+export function mineTileAt(x, y) {
+  if (y < 0) return TILES.air;
+  if (y < 2) return TILES.dirt;
+
+  // caves: open pockets that make the shaft interesting to navigate
+  const cave = hash2(Math.floor(x / 3) + 41, Math.floor(y / 3) + 17);
+  if (y > 6 && cave > 0.93) return TILES.air;
+
+  if (y > 90 && hash2(x + 7, y + 3) > 0.985) return TILES.lava;
+  if (hash2(x + 13, y + 29) > 0.975) return TILES.gravel;
+
+  const band = ORE_BANDS.find((b) => y >= b.at) || ORE_BANDS[ORE_BANDS.length - 1];
+  const vein = hash2(Math.floor(x / 2) + 101, Math.floor(y / 2) + 211);
+  let acc = 0;
+  for (const [ore, chance] of band.ores) {
+    acc += chance;
+    if (vein < acc) return TILES[ore];
+  }
+  if (y > 60 && hash2(x + 3, y + 61) > 0.55) return TILES.deepslate;
+  if (y > 100 && hash2(x + 5, y + 71) > 0.9) return TILES.obsidian;
+  return TILES.stone;
+}
+export const PICKAXES = [
+  { id: 'wood',      name: 'Wooden',    dmg: 1,  tier: 0, cost: 0 },
+  { id: 'stone',     name: 'Stone',     dmg: 2,  tier: 1, cost: 200 },
+  { id: 'iron',      name: 'Iron',      dmg: 4,  tier: 2, cost: 1000 },
+  { id: 'gold',      name: 'Gold',      dmg: 7,  tier: 2, cost: 4000 },
+  { id: 'diamond',   name: 'Diamond',   dmg: 12, tier: 3, cost: 15000 },
+  { id: 'netherite', name: 'Netherite', dmg: 20, tier: 4, cost: 50000 },
+];
+export const pickaxeTier = (id) => (PICKAXES.find((p) => p.id === id) || PICKAXES[0]).tier;
+export const canBreak = (pickId, tile) => !tile.hazard && tile.solid !== false && pickaxeTier(pickId) >= (tile.tier || 0);
 // strata by depth — deeper is rarer/prettier
 const MINE_STRATA = [
   { at: 200, kind: 'emerald' }, { at: 100, kind: 'diamond' }, { at: 50, kind: 'gold' },

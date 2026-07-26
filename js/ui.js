@@ -1,10 +1,10 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, HOME, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, blockHp, blockPay, blockKind, mineEnergy, pickaxeDmg, nextPickaxe, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, townPop, townHasRoom, worldIncomeRate, pendingIdleWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
-const BLOCK_COLORS = { stone: '#8a8a8a', coal: '#42413f', iron: '#c8a878', gold: '#e8c84a', diamond: '#5ce0e0', emerald: '#2ecc5e' };
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, HOME, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, mineEnergy, pickaxeDmg, nextPickaxe, tileById, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, townPop, townHasRoom, worldIncomeRate, pendingIdleWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit, hasSprite } from './assets.js';
 import { TownScene } from './townscene.js';
+import { MineWorld } from './minegame.js';
 import { Audio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -44,7 +44,8 @@ export class UI {
       btnTownAction: $('btnTownAction'),
       town: $('town'), townTitle: $('townTitle'), townEmeralds: $('townEmeralds'), townHint: $('townHint'),
       houseGrid: $('houseGrid'), btnBuyHouse: $('btnBuyHouse'), mineBadge: $('mineBadge'), mine: $('mine'), mineEmeralds: $('mineEmeralds'),
-      mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'), digFace: $('digFace'),
+      mineStats: $('mineStats'), energyBar: $('energyBar'), energyText: $('energyText'),
+      mineCanvas: $('mineCanvas'), mineBag: $('mineBag'), btnSellOre: $('btnSellOre'),
       btnPickUp: $('btnPickUp'), settings: $('settings'), saveExport: $('saveExport'),
       saveImport: $('saveImport'), btnCopySave: $('btnCopySave'), btnLoadSave: $('btnLoadSave'),
       btnReset: $('btnReset'), setMsg: $('setMsg'),
@@ -354,34 +355,84 @@ export class UI {
     if (typeof m.energy !== 'number') m.energy = MINE.energyCap;
     if (typeof m.energyTs !== 'number') m.energyTs = 0;
     if (!m.pickaxe) m.pickaxe = 'wood';
+    if (!Array.isArray(m.dug)) m.dug = [];
+    if (!m.inv || typeof m.inv !== 'object') m.inv = {};
     return m;
   }
-
-  makeBlock(depth) { return { depth, kind: blockKind(depth), maxHp: blockHp(depth), hp: blockHp(depth) }; }
 
   showMine() {
     const m = this.mineData();
     if (!m.energyTs) { m.energyTs = Date.now(); persistSave(this.save); } // seed the recharge clock
-    this.buildDigFace();
     this.openScreen('mine');
+    this.wireMine();
     this.renderMine();
   }
 
-  buildDigFace() {
-    const m = this.mineData(), n = MINE.cols * MINE.rows;
-    this.digGrid = Array.from({ length: n }, () => this.makeBlock(m.depth));
-    const face = this.els.digFace;
-    face.innerHTML = '';
-    this.digCells = [];
-    for (let i = 0; i < n; i++) {
-      const cell = document.createElement('button');
-      cell.className = 'block';
-      const crack = document.createElement('span'); crack.className = 'crack';
-      cell.appendChild(crack);
-      cell.addEventListener('click', () => this.mineTap(i));
-      face.appendChild(cell);
-      this.digCells.push(cell);
+  wireMine() {
+    if (this._mineWired) return;
+    this._mineWired = true;
+    const E = this.els;
+    this.mine = new MineWorld(E.mineCanvas, this.save);
+    this.mine.settle();
+
+    // tap a neighbouring block to swing at it; drag digs a run of them
+    const swing = (e) => {
+      const r = E.mineCanvas.getBoundingClientRect();
+      const p = this.mine.tileFromPoint(e.clientX - r.left, e.clientY - r.top);
+      this.digAt(p.x, p.y);
+    };
+    let down = false;
+    E.mineCanvas.addEventListener('pointerdown', (e) => { down = true; swing(e); });
+    E.mineCanvas.addEventListener('pointermove', (e) => { if (down) swing(e); });
+    E.mineCanvas.addEventListener('pointerup', () => { down = false; });
+    E.mineCanvas.addEventListener('pointerleave', () => { down = false; });
+    E.btnSellOre.addEventListener('click', () => this.sellOre());
+
+    const tick = () => {
+      if (!E.mine.classList.contains('hidden')) {
+        this.fitMineCanvas();
+        this.mine.update(1 / 30);
+        this.mine.draw();
+      }
+      this._mineRaf = requestAnimationFrame(tick);
+    };
+    if (!this._mineRaf) tick();
+  }
+
+  fitMineCanvas() {
+    const cv = this.els.mineCanvas, r = cv.getBoundingClientRect();
+    const w = Math.round(r.width), h = Math.round(r.height);
+    if (w > 10 && h > 10 && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
+  }
+
+  digAt(x, y) {
+    const m = this.mineData(), now = Date.now();
+    const cur = mineEnergy(m, now);
+    const res = this.mine.dig(x, y, cur);
+    if (!res.ok) {
+      if (res.why === 'tier') { Audio.sfx('gate_bad'); this.els.mineStats.textContent = `Your pickaxe is too weak for ${res.tile.id}!`; }
+      else if (res.why === 'energy') Audio.sfx('gate_bad');
+      return;
     }
+    m.energy = Math.max(0, cur - res.spent);
+    m.energyTs = now;
+    Audio.sfx(res.broke ? (res.gained ? 'emerald' : 'hit') : 'hit', 30);
+    persistSave(this.save);
+    this.renderMine();
+  }
+
+  // the bag turns into emeralds whenever you want it to
+  sellOre() {
+    const m = this.mineData(), inv = m.inv || {};
+    let total = 0;
+    for (const [id, n] of Object.entries(inv)) total += (tileById(id).value || 0) * n;
+    if (total <= 0) { Audio.sfx('gate_bad'); return; }
+    this.save.emeralds += total;
+    m.inv = {};
+    persistSave(this.save);
+    Audio.sfx('buy');
+    this.els.mineStats.textContent = `Sold your haul for ${total}!`;
+    this.renderMine();
   }
 
   renderMine() {
@@ -390,49 +441,34 @@ export class UI {
     const cur = mineEnergy(m, now), cap = MINE.energyCap;
     E.energyBar.style.width = `${(cur / cap) * 100}%`;
     E.energyText.textContent = `ENERGY ${cur} / ${cap}`;
-    E.digFace.classList.toggle('spent', cur <= 0);
     const pick = PICKAXES.find(p => p.id === m.pickaxe) || PICKAXES[0];
     E.mineStats.textContent = `Depth ${m.depth}  ·  ${pick.name} Pickaxe  ·  power ${pick.dmg}`;
-    for (let i = 0; i < this.digCells.length; i++) {
-      const cell = this.digCells[i], blk = this.digGrid[i];
-      cell.style.background = BLOCK_COLORS[blk.kind] || '#8a8a8a';
-      const dmg = 1 - blk.hp / blk.maxHp;
-      cell.querySelector('.crack').style.opacity = dmg > 0 ? (0.15 + dmg * 0.6).toFixed(2) : '0';
+
+    // what is in the bag, and what it is worth
+    const inv = m.inv || {};
+    E.mineBag.innerHTML = '';
+    let worth = 0;
+    for (const [id, n] of Object.entries(inv)) {
+      if (!n) continue;
+      const t = tileById(id);
+      worth += (t.value || 0) * n;
+      const chip = document.createElement('span'); chip.className = 'bagItem';
+      const dot = document.createElement('i'); dot.className = 'bagDot'; dot.style.background = t.color;
+      chip.append(dot, document.createTextNode(`${id.replace('ore', '')} ${n}`));
+      E.mineBag.appendChild(chip);
     }
+    if (!worth) E.mineBag.textContent = 'Dig down and fill your bag with ore.';
+    E.btnSellOre.textContent = worth ? `SELL ORE · ${worth}` : 'BAG EMPTY';
+    E.btnSellOre.style.opacity = worth ? '1' : '0.6';
+
     const next = nextPickaxe(m.pickaxe);
     if (next) {
-      E.btnPickUp.innerHTML = `UPGRADE: ${next.name} Pickaxe (power ${next.dmg}) · <span class="em"></span> ${next.cost}`;
+      E.btnPickUp.innerHTML = `${next.name} PICK · <span class="em"></span> ${next.cost}`;
       E.btnPickUp.style.opacity = this.save.emeralds >= next.cost ? '1' : '0.6';
     } else {
-      E.btnPickUp.innerHTML = 'Netherite Pickaxe — fully upgraded';
+      E.btnPickUp.innerHTML = 'PICK MAXED';
       E.btnPickUp.style.opacity = '0.6';
     }
-  }
-
-  mineTap(i) {
-    const m = this.mineData(), now = Date.now();
-    const cur = mineEnergy(m, now);
-    if (cur <= 0) { Audio.sfx('gate_bad'); this.renderMine(); return; }
-    m.energy = cur - 1; m.energyTs = now; // spend one swing of energy
-    const blk = this.digGrid[i], cell = this.digCells[i];
-    blk.hp -= pickaxeDmg(m.pickaxe);
-    if (blk.hp <= 0) {
-      m.depth += 1;
-      let pay = blockPay(blk.depth);
-      const crit = Math.random() < MINE.gemCritChance;
-      if (crit) pay *= MINE.gemCritMult;
-      this.save.emeralds += pay;
-      cell.classList.remove('pop'); void cell.offsetWidth; cell.classList.add('pop');
-      const pop = document.createElement('span'); pop.className = 'pay';
-      pop.textContent = (crit ? 'GEM +' : '+') + pay;
-      cell.appendChild(pop); setTimeout(() => pop.remove(), 700);
-      Audio.sfx(crit ? 'chest' : 'emerald');
-      this.digGrid[i] = this.makeBlock(m.depth);
-    } else {
-      Audio.sfx('hit', 30);
-    }
-    persistSave(this.save);
-    this.renderMine();
   }
 
   upgradePickaxe() {
