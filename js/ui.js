@@ -50,7 +50,7 @@ export class UI {
       tabPlayIcon: $('tabPlayIcon'), tabPlayLabel: $('tabPlayLabel'),
       barWallet: $('barWallet'), barEmeralds: $('barEmeralds'), navbar: $('navbar'),
       navDotHome: $('navDotHome'), navDotMine: $('navDotMine'),
-      more: $('more'), about: $('about'), aboutVersion: $('aboutVersion'), aboutLayout: $('aboutLayout'),
+      more: $('more'), about: $('about'), aboutVersion: $('aboutVersion'),
       btnGoals: $('btnGoals'), btnCameraMore: $('btnCameraMore'), btnSoundMore: $('btnSoundMore'),
       btnSaveMore: $('btnSaveMore'), btnAbout: $('btnAbout'),
       cameraLabel: $('cameraLabel'), soundLabel: $('soundLabel'),
@@ -115,7 +115,6 @@ export class UI {
       Audio.sfx('click');
       E.aboutVersion.textContent = VERSION;
       this.openScreen('about');
-      E.aboutLayout.textContent = this.layoutReadout(); // after layout, so the numbers are real
     });
     E.btnSoundMore.addEventListener('click', () => {
       this.save.sfx = !this.save.sfx;
@@ -1144,19 +1143,6 @@ export class UI {
       });
       list.appendChild(row);
     }
-  }
-
-  // Exact device numbers on the About screen, so a screenshot tells us what iOS is
-  // really reporting instead of us inferring it from a desktop browser.
-  layoutReadout() {
-    const vv = window.visualViewport;
-    const st = document.getElementById('stage').getBoundingClientRect();
-    const nav = this.els.navbar.getBoundingClientRect();
-    const cs = getComputedStyle(document.getElementById('stage'));
-    const inset = (side) => cs.getPropertyValue(side === 'top' ? '--pad-top' : '--pad-bottom').trim() || '?';
-    return `win ${window.innerWidth}x${window.innerHeight} · vv ${vv ? Math.round(vv.width) + 'x' + Math.round(vv.height) : 'n/a'}`
-      + ` · stage ${Math.round(st.width)}x${Math.round(st.height)} · navBottom ${Math.round(nav.bottom)}`
-      + ` · pad ${inset('top')}/${inset('bottom')}`;
   }
 
   showSettings() {
