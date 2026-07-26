@@ -113,3 +113,12 @@ test('the menu still fits once the whole quest is finished', async ({ page }) =>
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.locator('#btnQuestReplay')).toBeVisible();
 });
+
+test('the browser draws from the atlas, not the fallback packs', async ({ page }) => {
+  await page.goto('/index.html');
+  await expect(page.locator('#btnPlayShooter')).toBeVisible();
+  // assets.js silently falls back to the matrix packs if the atlas is missing or
+  // broken, which would look fine and quietly undo the whole art pipeline
+  const source = await page.evaluate(() => import('/js/assets.js').then((m) => m.assetSource()));
+  expect(source).toBe('atlas');
+});

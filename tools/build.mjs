@@ -22,7 +22,9 @@ function walk(rel, out = []) {
 }
 
 // Runtime files that ship to the browser (source tools/tests/docs excluded).
-const RUNTIME = ['index.html', 'manifest.webmanifest', 'sw.js', ...walk('js'), ...walk('icons')];
+// assets/ is the art: the atlas PNG and its manifest. It has to ship AND be
+// precached, or the game boots to a magenta grid the first time it is offline.
+const RUNTIME = ['index.html', 'manifest.webmanifest', 'sw.js', ...walk('js'), ...walk('icons'), ...walk('assets')];
 
 // Fresh dist/
 rmSync(DIST, { recursive: true, force: true });
