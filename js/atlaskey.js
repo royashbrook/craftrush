@@ -1,3 +1,4 @@
+// @ts-check
 // How a getSprite(id, palette) call turns into a name in the atlas.
 //
 // The bake tool and the runtime MUST agree on this exactly, so it lives in one

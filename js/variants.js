@@ -1,3 +1,4 @@
+// @ts-check
 // Which palette-swapped sprites the game can ask for.
 //
 // Skins, giant tiers, capes, villager robes and town houses are all the same
@@ -13,15 +14,24 @@ import { contentKey } from './atlaskey.js';
 const RAINBOW = ['#ff5545', '#ffd94d', '#2eff70', '#3fa9ff', '#c76bff'];
 
 /**
- * @param {object} cfg   the theme data: SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS
- * @param {string[]} ids every sprite id the packs define
- * @returns {Array<{key: string, id: string, palette: object|null}>}
+ * @typedef {Record<string, string>} Palette a character to hex-colour map
+ *
+ * @param {{
+ *   SKINS?: {id: string, body?: string, palette: Palette}[],
+ *   COSMETICS?: Record<string, {id: string, colors?: Palette, rainbow?: boolean}[]>,
+ *   VILLAGERS?: {id: string, body?: string, palette?: Palette}[],
+ *   TOWNS?: {id: string, style?: {trim: string, wall: string, wallAlt: string}}[],
+ *   TIERS?: {units?: {boots: string}[]},
+ * }} cfg the theme's content
+ * @param {string[]} ids every sprite id the art supplies
+ * @returns {{key: string, id: string, palette: Palette|null}[]}
  */
 export function enumerateVariants(cfg, ids) {
   const { SKINS = [], COSMETICS = {}, VILLAGERS = [], TOWNS = [], TIERS = {} } = cfg;
   const known = new Set(ids);
   const out = new Map();
 
+  /** @type {(id: string, palette?: Palette|null) => void} */
   const want = (id, palette = null) => {
     if (!known.has(id)) return;                  // a theme need not ship every sprite
     const key = contentKey(id, palette);

@@ -1,3 +1,4 @@
+// @ts-check
 // The mine: a real shaft you dig down through. The world is generated from (x, y)
 // so nothing needs storing except which tiles you have already broken. A little
 // miner stands in the hole, falls into empty space, and can only break what the

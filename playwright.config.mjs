@@ -8,7 +8,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: 'list',
   webServer: {
-    command: 'node tools/serve.mjs 8399',
+    command: 'npx vite --port 8399 --strictPort',
     url: 'http://127.0.0.1:8399/index.html',
     reuseExistingServer: true,
     stdout: 'ignore',

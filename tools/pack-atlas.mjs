@@ -27,7 +27,7 @@ const arg = (flag, fallback) => {
 };
 // the theme says where its drawings and its atlas belong; a theme that only
 // recolours can borrow another theme's art and still build its own atlas
-const { THEME_ART, THEME_ATLAS } = await import('../js/theme.js');
+const { THEME_ART, THEME_ATLAS } = await import('../js/theme.js');   // resolves under public/themes
 const ART = arg('--art', fileURLToPath(THEME_ART));
 const OUT = arg('--out', fileURLToPath(THEME_ATLAS));
 

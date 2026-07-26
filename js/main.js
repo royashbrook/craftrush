@@ -84,7 +84,11 @@ async function boot() {
   }
   requestAnimationFrame(frame);
 
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  // Dev deliberately has no service worker. It is the single biggest source of
+  // "I edited it and nothing changed", and vite already serves fresh modules.
+  const wantSW = typeof import.meta.env === 'undefined' ? true : import.meta.env.PROD;
+  if (wantSW && 'serviceWorker' in navigator
+      && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
     // A new deploy activates immediately (the worker calls skipWaiting + claim),
     // but THIS page keeps running the JS it booted with, so it would keep showing

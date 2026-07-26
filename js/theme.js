@@ -1,3 +1,4 @@
+// @ts-check
 // A theme is a folder. It decides what the game looks like and what is in it;
 // the engine decides how any of it behaves.
 //
@@ -35,12 +36,22 @@ export const THEME_ID = chooseTheme();
 // rather than sniffing for `document`: the headless tests stub a fake document
 // to drive the real game, and sniffing that way sent them down the fetch path.
 const inNode = typeof process !== 'undefined' && !!process.versions?.node;
-const ROOT = new URL(`../themes/${THEME_ID}/`, import.meta.url);
+
+// In the browser the themes are served from the site root, so resolve against
+// the document rather than this module: after bundling, import.meta.url points
+// at a hashed chunk and `../themes` would land nowhere. document.baseURI keeps
+// working both at the root in dev and under /craftrush in production.
+// In node there is no document, so read them off disk relative to the repo.
+const ROOT = inNode
+  ? new URL(`../themes/${THEME_ID}/`, import.meta.url)
+  : new URL(`themes/${THEME_ID}/`, document.baseURI);
 
 async function readJSON(name) {
   const url = new URL(`${name}.json`, ROOT);
   if (inNode) {
-    const { readFile } = await import('node:fs/promises');
+    // the specifier is built at runtime so the bundler does not try to follow
+    // it into a browser build, where this branch never runs
+    const { readFile } = await import(/* @vite-ignore */ 'node:' + 'fs/promises');
     return JSON.parse(await readFile(url, 'utf8'));
   }
   const res = await fetch(url);

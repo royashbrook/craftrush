@@ -1,3 +1,4 @@
+// @ts-check
 // Sprite registry. The art is assets/atlas.png plus a manifest saying where
 // each sprite lives in it; both are built from art/ by tools/pack-atlas.mjs.
 //
@@ -8,8 +9,21 @@
 import { contentKey } from './atlaskey.js';
 import { THEME_ATLAS } from './theme.js';
 
-let ATLAS = null;       // { sprites, ids } once loaded and sliced
+/** @typedef {import('../types/craftrush.js').AtlasManifest} AtlasManifest */
+/** @typedef {{frames: HTMLCanvasElement[], flash: HTMLCanvasElement[], w: number, h: number, anchor: string}} Sprite */
+
+/** @type {{sprites: Map<string, Sprite>, ids: Set<string>} | null} */
+let ATLAS = null;       // once loaded and sliced
+/** @type {Sprite | null} */
 let PLACEHOLDER = null;
+
+/** A 2d context, or a loud failure. Canvas creation not returning one means
+ *  something is very wrong, and a null-check at every call site hides it. */
+function ctx2d(c) {
+  const g = c.getContext('2d');
+  if (!g) throw new Error('no 2d canvas context');
+  return g;
+}
 
 /** True once the art is loaded. */
 export function assetsReady() { return !!ATLAS; }
@@ -20,7 +34,7 @@ export async function initAssets({ atlas = THEME_ATLAS } = {}) {
   } catch (e) {
     // a missing atlas means every sprite draws as the magenta placeholder,
     // which is ugly and obvious. Better than a blank screen and no clue why.
-    console.warn('[assets] the art did not load, everything will draw as placeholder:', e.message);
+    console.warn('[assets] the art did not load, everything will draw as placeholder:', String(e));
   }
 }
 
@@ -43,7 +57,7 @@ async function loadAtlas(atlas) {
     for (const [sx, sy] of e.frames) {
       const c = document.createElement('canvas');
       c.width = e.w; c.height = e.h;
-      const g = c.getContext('2d');
+      const g = ctx2d(c);
       g.imageSmoothingEnabled = false;
       g.drawImage(img, sx, sy, e.w, e.h, 0, 0, e.w, e.h);
       frames.push(c);
@@ -58,7 +72,7 @@ async function loadAtlas(atlas) {
 function whiteOut(src) {
   const f = document.createElement('canvas');
   f.width = src.width; f.height = src.height;
-  const g = f.getContext('2d');
+  const g = ctx2d(f);
   g.imageSmoothingEnabled = false;
   g.drawImage(src, 0, 0);
   g.globalCompositeOperation = 'source-in';
@@ -73,7 +87,7 @@ function placeholder() {
   if (PLACEHOLDER) return PLACEHOLDER;
   const c = document.createElement('canvas');
   c.width = 8; c.height = 8;
-  const g = c.getContext('2d');
+  const g = ctx2d(c);
   for (let y = 0; y < 8; y++) {
     for (let x = 0; x < 8; x++) {
       g.fillStyle = ((x >> 1) + (y >> 1)) % 2 ? '#ff00ff' : '#1a1a1a';

@@ -1,3 +1,4 @@
+// @ts-check
 // Craft Rush — tuning, biomes, skins, modes, persistence.
 // Everything gameplay-mechanical references ROLES (enemy ids, sprite ids) from
 // here, so a full reskin = new sprite packs + new tables. No engine changes.
@@ -8,7 +9,10 @@ import { hash2 } from './engine.js';
 // tag the next 0.x milestone in git when cutting a release.
 // Unbuilt source: an honest placeholder, so a dev/local page never looks like a
 // real release. tools/build.mjs stamps the computed semver into dist/.
-export const VERSION = '0.0.0-dev';
+// Vite replaces __APP_VERSION__ at build time with major.minor from the last
+// tag plus commits since, so the number in the corner counts without anyone
+// editing it. In dev the fallback keeps it obvious the build is not a release.
+export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0-dev';
 
 // What the game looks like and what is in it comes from the theme; what any of
 // it does stays here. These re-exports keep the shape every other module
@@ -336,6 +340,12 @@ export const TILES = THEME.mine.tiles;
 export const tileById = (id) => TILES[id] || TILES.stone;
 
 // which ores can appear at a depth, and how likely, deepest first
+/**
+ * What can appear at what depth, and how often. Typed so the pairs stay pairs:
+ * without it the tuples widen to (string|number)[] and the chance arithmetic
+ * below silently accepts a name where a probability belongs.
+ * @type {{at: number, ores: [string, number][]}[]}
+ */
 const ORE_BANDS = [
   { at: 110, ores: [['emeraldore', 0.030], ['diamond', 0.055], ['gold', 0.055], ['redstone', 0.075], ['lapis', 0.05]] },
   { at: 70,  ores: [['diamond', 0.030], ['gold', 0.055], ['redstone', 0.075], ['lapis', 0.05], ['iron', 0.07]] },
