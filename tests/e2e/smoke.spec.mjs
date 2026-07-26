@@ -58,13 +58,19 @@ test('every bottom-nav tab opens a screen with real content', async ({ page }) =
   page.on('pageerror', (e) => errors.push(e.message));
 
   await page.goto('/index.html');
-  for (const [tab, screen] of [['shop', '#shop'], ['home', '#home'], ['world', '#world'], ['mine', '#mine']]) {
+  for (const [tab, screen] of [['shop', '#shop'], ['home', '#home'], ['mine', '#mine']]) {
     await page.click(`.navTab[data-tab="${tab}"]`);
     await expect(page.locator(screen)).toBeVisible();
     // the tab must BUILD the screen, not just reveal an empty panel
     const kids = await page.locator(`${screen} .panel > *`).count();
     expect(kids, `${tab} tab renders content`).toBeGreaterThan(1);
   }
+  // the world is a drawn scene rather than a panel: it must name a town and size its canvas
+  await page.click('.navTab[data-tab="world"]');
+  await expect(page.locator('#world')).toBeVisible();
+  await expect(page.locator('#worldTownName')).not.toBeEmpty();
+  const size = await page.locator('#townCanvas').evaluate((c) => c.width * c.height);
+  expect(size, 'the town diorama is drawn at a real size').toBeGreaterThan(1000);
   expect(errors).toEqual([]);
 });
 
@@ -72,8 +78,8 @@ test('the bottom-left tab becomes BACK inside a stack and walks back out', async
   await page.goto('/index.html');
   await page.click('.navTab[data-tab="world"]');
   await expect(page.locator('#tabPlayLabel')).toHaveText('Play');   // world is a tab root
-  await page.locator('.townCard').first().click();                  // into a town
-  await expect(page.locator('#town')).toBeVisible();
+  await page.click('#btnTownAction');                               // VISIT the town's house
+  await expect(page.locator('#playroom')).toBeVisible();
   await expect(page.locator('#tabPlayLabel')).toHaveText('Back');
   await page.click('.navTab[data-tab="play"]');                     // back out
   await expect(page.locator('#world')).toBeVisible();
