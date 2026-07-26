@@ -11,7 +11,7 @@ import { VERSION, persistSave } from '../js/config.js';
 import { checkAchievements } from '../js/achievements.js';
 import { Game } from '../js/game.js';
 import { Audio } from '../js/audio.js';
-import { save, nav, toast, commit, togglePause } from './lib/store.svelte.js';
+import { save, nav, toast, commit, togglePause, initHistory } from './lib/store.svelte.js';
 import App from './App.svelte';
 import './app.css';
 
@@ -46,6 +46,7 @@ async function boot() {
   persistSave(save);
 
   mount(App, { target: document.getElementById('app'), props: { game } });
+  initHistory();   // the system back gesture walks the screen stack
 
   // auto-pause when the tab is hidden so runs do not die in the background
   document.addEventListener('visibilitychange', () => {

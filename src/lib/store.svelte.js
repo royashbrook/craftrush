@@ -117,3 +117,26 @@ export function togglePause(force) {
     nav.screen = beforePause;
   }
 }
+
+/**
+ * Make the system back gesture walk the screen stack.
+ *
+ * On Android an installed PWA gets a real back button, and without this it
+ * closes the game instead of stepping up a screen, which is a horrible surprise
+ * mid-play. Rather than mirror the whole stack into history, we keep exactly one
+ * spare entry armed: a back gesture pops it, we handle it and re-arm. When there
+ * is nothing left to go back to we do NOT re-arm, so the next back really does
+ * leave the app, which is what someone at the menu expects.
+ */
+export function initHistory() {
+  if (typeof window === 'undefined') return;
+  const arm = () => history.pushState({ cr: true }, '');
+  arm();
+  window.addEventListener('popstate', () => {
+    // mid-run, back means "wait, stop" rather than "go somewhere"
+    if (nav.playing && !nav.paused) { togglePause(true); arm(); return; }
+    if (back()) { arm(); return; }
+    if (nav.screen !== 'menu') { go('menu', { push: false }); arm(); return; }
+    // at the menu with nothing behind it: let the gesture close the app
+  });
+}

@@ -57,6 +57,9 @@
     const cv = canvas;
     world = new MineWorld(canvas, save);
     world.settle();
+    // debug handle, the way the old UI exposed ui.mine. Tests and the console
+    // need a way to reach the shaft.
+    if (typeof window !== 'undefined' && window.CR) window.CR.mine = world;
 
     // tap a neighbouring block to swing at it; drag digs a run of them
     let down = false;
@@ -86,6 +89,7 @@
 
     // the screen unmounts when you navigate away now, so this has to come down
     return () => {
+      if (typeof window !== 'undefined' && window.CR && window.CR.mine === world) window.CR.mine = null;
       cancelAnimationFrame(raf);
       cv.removeEventListener('pointerdown', onDown);
       cv.removeEventListener('pointermove', onMove);

@@ -125,3 +125,23 @@ test('the browser actually loaded the art', async ({ page }) => {
   const ready = await page.evaluate(() => import('/js/assets.js').then((m) => m.assetsReady()));
   expect(ready).toBe(true);
 });
+
+test('the system back gesture walks the screen stack instead of leaving the game', async ({ page }) => {
+  await page.goto('/index.html');
+  await page.locator('#btnPlayShooter').waitFor();
+
+  await page.click('.navTab[data-tab="world"]');
+  await page.click('#btnTownAction');                 // into a house
+  await expect(page.locator('#playroom')).toBeVisible();
+
+  await page.goBack();
+  await expect(page.locator('#world')).toBeVisible();  // up one, not out of the app
+  await page.goBack();
+  await expect(page.locator('#menu')).toBeVisible();
+
+  // mid-run, back means "wait, stop" rather than "go somewhere"
+  await page.click('#btnPlayShooter');
+  await expect(page.locator('#hud')).toBeVisible();
+  await page.goBack();
+  await expect(page.locator('#pause')).toBeVisible();
+});

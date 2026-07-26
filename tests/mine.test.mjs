@@ -125,3 +125,35 @@ test('you cannot step into lava, however much you tap it', () => {
   assert.equal(res.why, 'hazard');
   assert.equal(m.mx, 5, 'he stayed put');
 });
+
+test('digging upward gets you out, instead of dropping you back in', () => {
+  const m = digger();
+  // a shaft you already fell down: open all the way from 30 to 36
+  for (let y = 30; y <= 36; y++) m.dug.add(`5,${y}`);
+  m.mx = 5; m.my = 30;
+  m.settle();
+  assert.equal(m.my, 36, 'you land at the bottom');
+
+  // climb the open part
+  while (m.tileAt(m.mx, m.my - 1).solid === false && m.my > 30) m.step(m.mx, m.my - 1);
+  assert.equal(m.my, 30, 'the open shaft is climbable');
+
+  // now dig through the rock ceiling above it
+  const ceiling = m.my - 1;
+  assert.notEqual(m.tileAt(m.mx, ceiling).solid, false, 'there is rock overhead to break');
+  let res;
+  for (let i = 0; i < 40 && !(res && res.broke); i++) res = m.dig(m.mx, ceiling, 99);
+  assert.equal(res.broke, true);
+  assert.equal(m.my, ceiling, 'you stay up there rather than falling back down the shaft');
+});
+
+test('digging down still sinks you, which is what makes going down feel right', () => {
+  const m = digger();
+  m.mx = 5; m.my = 20;
+  m.dug.add('5,22');            // a pocket under the tile being dug
+  m.dug.add('5,23');
+  let res;
+  for (let i = 0; i < 40 && !(res && res.broke); i++) res = m.dig(5, 21, 99);
+  assert.equal(res.broke, true);
+  assert.ok(m.my > 21, `dug into 21 and kept falling, landed at ${m.my}`);
+});

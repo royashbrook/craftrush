@@ -104,9 +104,13 @@ export class MineWorld {
       gained = tile;
       this.pops.push({ x, y, text: `+1 ${tile.id}`, t: 0, color: tile.color });
     }
-    // step in, then fall down any shaft you have opened up
+    // Step in. Digging down or sideways then drops you through whatever shaft you
+    // opened, which is what makes going down feel right. Digging UP must not:
+    // gravity used to yank you straight back down the shaft you came from, so
+    // once you fell into a cave there was no way out of it at all.
+    const climbing = y < this.my;
     this.mx = x; this.my = y;
-    this.settle();
+    if (!climbing) this.settle();
     this.persist();
     return { ok: true, broke: true, spent: 1, tile, gained };
   }
