@@ -1,32 +1,57 @@
-// Boot: load assets, wire game+UI, run the loop, register the service worker.
-import { initAssets } from './assets.js';
-import { loadSave } from './config.js';
-import { Game } from './game.js';
-import { UI } from './ui.js';
-import { Audio } from './audio.js';
+// Boot: load the art, wire the game to the UI, run the loop, register the worker.
+//
+// The order matters in one non-obvious way. The save is a $state proxy created
+// in the store, and the Game is handed THAT proxy rather than a plain object.
+// So when a run banks emeralds or finishes a chapter, every screen showing those
+// numbers updates on its own. It is why the old refresh-on-entry machinery is
+// gone rather than rewritten.
+import { mount } from 'svelte';
+import { initAssets, getSprite } from '../js/assets.js';
+import { VERSION, persistSave } from '../js/config.js';
+import { checkAchievements } from '../js/achievements.js';
+import { Game } from '../js/game.js';
+import { Audio } from '../js/audio.js';
+import { save, nav, toast, commit, togglePause } from './lib/store.svelte.js';
+import App from './App.svelte';
+import './app.css';
 
 const RES_W = 430; // internal logical width; height derived from viewport aspect
 
 async function boot() {
   await initAssets();
 
-  const save = loadSave();
   Audio.setEnabled(save.sound);
+  Audio.setMusic(save.music !== false);
+  Audio.setSfx(save.sfx !== false);
+
+  // currency icon: bake the emerald sprite into a CSS var so name and icon agree
+  try {
+    const em = getSprite('emerald');
+    document.documentElement.style.setProperty('--em-icon', `url(${em.frames[0].toDataURL()})`);
+  } catch { /* art missing: chips just show the count */ }
 
   const canvas = document.getElementById('gameCanvas');
-  let ui = null;
   const game = new Game(canvas, save, {
-    onHud: (s) => ui && ui.updateHud(s),
-    onRunEnd: (r) => ui && ui.showResult(r),
-    onTutorial: (k) => ui && ui.toast(k),
-    onPause: () => ui && ui.togglePause(),
+    // hudState() deliberately reuses ONE object to stay allocation-free at 15Hz.
+    // Assigning that same reference would never look like a change, so the HUD
+    // would render once and then freeze. Copy it, including the nested boss.
+    onHud: (s) => { nav.hud = { ...s, boss: { ...s.boss } }; },
+    onRunEnd: (r) => { nav.playing = false; nav.paused = false; nav.result = r; },
+    onTutorial: (k) => toast(k),
+    onPause: () => { if (nav.playing) togglePause(); },
   });
-  ui = new UI(game, save);
 
-  // auto-pause when the tab is hidden so runs don't die in the background
+  // back-fill achievements a returning player already earned, silently
+  checkAchievements(save);
+  persistSave(save);
+
+  mount(App, { target: document.getElementById('app'), props: { game } });
+
+  // auto-pause when the tab is hidden so runs do not die in the background
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && (game.state === 'run' || game.state === 'boss') && !game.paused) {
-      ui.openPause();
+      game.paused = true;
+      togglePause(true);
     }
   });
 
@@ -34,17 +59,15 @@ async function boot() {
   function fit() {
     const vv = window.visualViewport;
     // The VISUAL viewport is the part actually on screen: it already excludes
-    // browser chrome (Safari's toolbar) and tracks it sliding in and out. Pinning
-    // the stage to it is what puts the bottom nav on the real bottom edge; CSS
-    // units and innerHeight both left a chrome-sized black gap underneath.
+    // browser chrome (Safari's toolbar) and tracks it sliding in and out.
     const vw = vv ? vv.width : window.innerWidth;
     const vh = vv ? vv.height : window.innerHeight;
     const phone = vw / vh <= 0.68;
     stage.classList.toggle('fullscreen', phone);
     if (phone) {
-      // CSS (100dvh) owns the size here. Pinning to the visual viewport was wrong in
-      // an installed PWA: it reports the area INSIDE the safe areas, so the stage
-      // stopped short of the physical bottom and left a band under the nav.
+      // CSS (100dvh) owns the size here. Pinning to the visual viewport was wrong
+      // in an installed PWA: it reports the area INSIDE the safe areas, so the
+      // stage stopped short of the physical bottom and left a band under the nav.
       stage.style.left = ''; stage.style.top = '';
       stage.style.width = ''; stage.style.height = '';
     } else {
@@ -58,9 +81,7 @@ async function boot() {
   }
   fit();
   window.addEventListener('resize', fit);
-  window.addEventListener('resize', () => ui && ui.fitMenu());   // the menu re-fits when the screen does
   window.addEventListener('orientationchange', fit);
-  // the visual viewport changes as mobile browser chrome collapses; keep up with it
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', fit);
     window.visualViewport.addEventListener('scroll', fit); // offsetTop shifts as chrome moves
@@ -70,9 +91,9 @@ async function boot() {
   const unlock = () => { Audio.unlock(); if (game.state === 'menu' && save.sound) Audio.music('menu'); };
   document.addEventListener('pointerdown', unlock, { once: true });
 
-  document.getElementById('loading').remove();
+  document.getElementById('loading')?.remove();
 
-  window.CR = { game, ui, save }; // debug/testing handle
+  window.CR = { game, save, nav, commit, togglePause }; // debug/testing handle
 
   let last = performance.now();
   function frame(now) {
@@ -90,18 +111,14 @@ async function boot() {
   if (wantSW && 'serviceWorker' in navigator
       && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
-    // A new deploy activates immediately (the worker calls skipWaiting + claim),
-    // but THIS page keeps running the JS it booted with, so it would keep showing
-    // the previous build until the app was fully killed. Reload once when a new
-    // worker takes over. Guarded so a first install (no prior controller) and
-    // repeat events can't loop.
-    // Whether a worker was already driving this page must be captured NOW: by the
-    // time controllerchange fires there is always a controller, so checking it
-    // then would reload on a first install too.
+    // A new deploy activates immediately, but THIS page keeps running the JS it
+    // booted with. Whether a worker was already driving the page has to be
+    // captured NOW: by the time controllerchange fires there is always one, so
+    // checking it then would reload on a first install too.
     const hadController = !!navigator.serviceWorker.controller;
     let reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (reloading || !hadController) return; // first install: nothing to refresh
+      if (reloading || !hadController) return;
       reloading = true;
       location.reload();
     });

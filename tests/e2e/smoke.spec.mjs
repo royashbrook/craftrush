@@ -103,15 +103,18 @@ test('the menu still fits once the whole quest is finished', async ({ page }) =>
   await page.goto('/index.html');
   await page.locator('#btnPlayShooter').waitFor();
   // the finished state adds the replay button, which is where the menu used to spill
+  // finishing the quest is now just a save change: the menu re-derives itself,
+  // which is the whole point of the port. No refresh call to make.
+  await page.evaluate(() => {
+    CR.save.campaign.done = ['mine_obsidian', 'portal', 'fortress', 'stronghold', 'dragon',
+      'endcity', 'bastion', 'skulls', 'wither', 'credits'];
+  });
+  await expect(page.locator('#btnQuestReplay')).toBeVisible();
   const overflow = await page.evaluate(() => {
-    CR.game.save.campaign = { done: ['mine_obsidian', 'portal', 'fortress', 'stronghold', 'dragon',
-      'endcity', 'bastion', 'skulls', 'wither', 'credits'] };
-    CR.ui.refreshQuest();
     const p = document.querySelector('#menu .panel');
     return p.scrollHeight - p.clientHeight;
   });
   expect(overflow).toBeLessThanOrEqual(1);
-  await expect(page.locator('#btnQuestReplay')).toBeVisible();
 });
 
 test('the browser actually loaded the art', async ({ page }) => {
