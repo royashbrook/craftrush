@@ -58,6 +58,7 @@ async function boot() {
   }
   fit();
   window.addEventListener('resize', fit);
+  window.addEventListener('resize', () => ui && ui.fitMenu());   // the menu re-fits when the screen does
   window.addEventListener('orientationchange', fit);
   // the visual viewport changes as mobile browser chrome collapses; keep up with it
   if (window.visualViewport) {

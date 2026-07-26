@@ -98,3 +98,18 @@ test('the HUD chips stay readable over a dark biome sky', async ({ page }) => {
     expect(r + g + b, `chip colour ${c} is not near-black`).toBeGreaterThan(200);
   }
 });
+
+test('the menu still fits once the whole quest is finished', async ({ page }) => {
+  await page.goto('/index.html');
+  await page.locator('#btnPlayShooter').waitFor();
+  // the finished state adds the replay button, which is where the menu used to spill
+  const overflow = await page.evaluate(() => {
+    CR.game.save.campaign = { done: ['mine_obsidian', 'portal', 'fortress', 'stronghold', 'dragon',
+      'endcity', 'bastion', 'skulls', 'wither', 'credits'] };
+    CR.ui.refreshQuest();
+    const p = document.querySelector('#menu .panel');
+    return p.scrollHeight - p.clientHeight;
+  });
+  expect(overflow).toBeLessThanOrEqual(1);
+  await expect(page.locator('#btnQuestReplay')).toBeVisible();
+});

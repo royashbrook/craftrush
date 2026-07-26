@@ -1,6 +1,6 @@
 // Craft Rush core game: crowd sim, dual-mode (shooter / gates), procedural
 // levels, enemies, bosses, effects. World units: blocks; +z is down-track.
-import { TUNE, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS, winBonus, speedById, currentChapter, chapterUnlocked } from './config.js';
+import { TUNE, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS, winBonus, speedById, currentChapter, chapterUnlocked, chapterById } from './config.js';
 import { Camera, renderWorld, DrawQueue } from './engine.js';
 import { Audio } from './audio.js';
 import { CrowdMixin } from './crowd.js';
@@ -105,12 +105,13 @@ export class Game {
 
   // ---------- run lifecycle ----------
   // expedition: optional daily-expedition object (overrides biome/mode + `mut`)
-  startRun(expedition = null) {
+  startRun(expedition = null, replayId = null) {
     this.resetRunState();
     this.expedition = expedition;
-    // a plain run plays the chapter you are up to, if its cost is covered
-    const ch = expedition ? null : currentChapter(this.save);
-    this.chapter = (ch && chapterUnlocked(this.save, ch.id)) ? ch : null;
+    // a plain run plays the chapter you are up to, if its cost is covered;
+    // once the chain is finished you can ask for one back by name
+    const ch = expedition ? (null) : (replayId ? chapterById(replayId) : currentChapter(this.save));
+    this.chapter = (ch && (replayId || chapterUnlocked(this.save, ch.id))) ? ch : null;
     this.mut = expedition ? (expedition.mut || {}) : {};
     this.level = expedition ? expedition.level : this.save.level;
     this.mode = expedition && expedition.mode ? expedition.mode : this.save.mode;

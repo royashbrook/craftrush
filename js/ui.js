@@ -18,6 +18,7 @@ export class UI {
       menuLevel: $('menuLevel'),
       questCard: $('questCard'), questStep: $('questStep'), questIcon: $('questIcon'),
       questName: $('questName'), questDesc: $('questDesc'), questNeed: $('questNeed'),
+      btnQuestReplay: $('btnQuestReplay'),
       btnPlayShooter: $('btnPlayShooter'), btnPlayGates: $('btnPlayGates'),
       cardShooter: $('cardShooter'), cardGates: $('cardGates'),
       shopGrid: $('shopGrid'), shopEmeralds: $('shopEmeralds'),
@@ -90,6 +91,7 @@ export class UI {
     E.btnPlayShooter.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.setMode('shooter'); this.startRun(); });
     E.btnPlayGates.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.setMode('gates'); this.startRun(); });
     E.btnExpedition.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.startExpedition(); });
+    E.btnQuestReplay.addEventListener('click', () => { Audio.unlock(); Audio.sfx('click'); this.replayChapter('credits'); });
     E.btnBuyHouse.addEventListener('click', () => this.buyHouse());
     E.btnPlaceCarry.addEventListener('click', () => this.placeCarry());
     E.btnAddFriend.addEventListener('click', () => this.addFriend());
@@ -223,6 +225,15 @@ export class UI {
     this.els.hud.classList.remove('hidden');
     this.setPlaying(true);
     this.game.startRun();
+    this.toast(null);
+  }
+
+  // the chain is finished, but the walk home is worth walking again
+  replayChapter(id) {
+    this.hideAll();
+    this.els.hud.classList.remove('hidden');
+    this.setPlaying(true);
+    this.game.startRun(null, id);
     this.toast(null);
   }
 
@@ -1499,19 +1510,46 @@ export class UI {
     this.refreshBadges(); // the "come back" dots live on the nav bar now
     this.refreshQuest();
     this.refreshExpedition();
+    this.fitMenu();
+    // the first paint of a boot can measure before the shell has its real height,
+    // so take the decision again once the browser has actually laid the page out
+    requestAnimationFrame(() => this.fitMenu());
   }
 
   // The quest card names the chapter the next START will actually play, so the
   // campaign is something you can see yourself walking through.
+  // The menu must never scroll. What is on it changes (a quest card, a replay
+  // button), so instead of guessing a breakpoint we measure and step down
+  // through the compact tiers until the panel fits the screen it is on.
+  fitMenu() {
+    const m = this.els.menu;
+    const panel = m.querySelector('.panel');
+    if (!panel || m.classList.contains('hidden')) return;   // nothing to measure while hidden
+    m.classList.remove('compact', 'tight');
+    const spills = () => panel.scrollHeight - panel.clientHeight > 1;
+    if (!spills()) return;
+    m.classList.add('compact');
+    if (!spills()) return;
+    m.classList.add('tight');
+  }
+
   refreshQuest() {
     const E = this.els;
+    const done = (this.save.campaign && this.save.campaign.done) || [];
     const ch = currentChapter(this.save);
+    E.questCard.classList.remove('hidden');
+    E.btnQuestReplay.classList.toggle('hidden', !!ch);
     if (!ch) {                                    // the whole chain is behind you
-      E.questCard.classList.add('hidden');
+      E.questStep.textContent = `${done.length} OF ${CAMPAIGN.length}`;
+      E.questName.textContent = 'QUEST COMPLETE';
+      E.questDesc.textContent = 'The dragon, the wither, all of it. Nothing left to beat.';
+      E.questNeed.textContent = '';
+      const gc = E.questIcon.getContext('2d');
+      gc.imageSmoothingEnabled = false;
+      gc.clearRect(0, 0, 40, 40);
+      this.drawIcon(gc, 'ui_trophy', 40, 34);
       return;
     }
-    E.questCard.classList.remove('hidden');
-    const done = (this.save.campaign && this.save.campaign.done) || [];
     E.questStep.textContent = `${done.length} OF ${CAMPAIGN.length}`;
     E.questName.textContent = ch.name.toUpperCase();
     E.questDesc.textContent = ch.blurb;

@@ -76,9 +76,24 @@
   .gameHead { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 14px;
     color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.6); letter-spacing: 1px; }
   .gameDesc { font-size: 11px; color: #cfc9d8; line-height: 1.4; }
-  /* On a short screen the quest card matters more than re-explaining the two
-     modes, so the blurbs step aside rather than letting the menu scroll. */
-  @media (max-height: 780px) { .gameDesc { display: none; } }
+  /* The menu must never scroll, but how tall it is depends on what is in it
+     (a quest card, a replay button) as much as on the screen. So the app
+     measures after each render and steps down through these two tiers until
+     it fits, rather than guessing from a height breakpoint. */
+  #menu.compact .gameDesc, #menu.compact #questDesc { display: none; }
+  #menu.compact .gameCard { flex-direction: row; align-items: center; gap: 10px; }
+  #menu.compact .gameHead { flex: 1 1 auto; min-width: 0; }
+  #menu.compact .gameCard .mcbtn { flex: 0 0 auto; width: auto; padding: 8px 14px; }
+
+  #menu.tight .levelChip { padding: 3px 10px; font-size: 12px; }
+  #menu.tight #expDesc { display: none; }
+  #menu.tight #expIcon, #menu.tight #questIcon { width: 30px; height: 30px; }
+  #menu.tight #expHead { font-size: 11px; }
+  #menu.tight .panel { gap: 5px; padding-top: 8px; padding-bottom: 8px; }
+  #menu.tight #questCard { gap: 4px; padding: 6px; }
+  #menu.tight #btnQuestReplay { padding: 5px 8px; font-size: 11px; }
+  #menu.tight .gameCard { padding: 6px; }
+
   #cardShooter { border-color: #2a7fd4; }
   #cardGates { border-color: #b58a1a; }
 
@@ -300,6 +315,7 @@
   #questDesc { font-size: 11px; color: #bcd6df; line-height: 1.4; }
   #questNeed { font-size: 11px; color: #ffd94d; text-align: left; }
   #questNeed:empty { display: none; }
+  #btnQuestReplay { background: #2a6f86; }
   .questTag { color: #7ee0ff; font-weight: 900; letter-spacing: 1px; }
 
   .modeRow { display: flex; width: 100%; gap: 0; }
@@ -524,6 +540,7 @@
           <div class="expText"><div id="questName">—</div><div id="questDesc">—</div></div>
         </div>
         <div id="questNeed"></div>
+        <button class="mcbtn small hidden" id="btnQuestReplay">REPLAY THE WALK HOME</button>
       </div>
 
       <div class="gameCard" id="cardShooter">
