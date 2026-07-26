@@ -1158,17 +1158,17 @@ export class UI {
   // Each screen declares which tab owns it and what sits above it, so BACK (and a
   // swipe from the left edge) works everywhere without per-screen back buttons.
   static SCREENS = {
-    menu:      { tab: 'play',  title: 'CraftRush' },
-    shop:      { tab: 'shop',  title: 'Skins & Shop' },
-    home:      { tab: 'home',  title: 'Your Village' },
-    world:     { tab: 'world', title: 'World' },
-    town:      { tab: 'world', title: 'Town', parent: 'world' },
-    playroom:  { tab: 'world', title: 'House', parent: 'town' },
-    mine:      { tab: 'mine',  title: 'The Mine' },
-    more:      { title: 'More', parent: 'menu' },
+    menu:      { tab: 'play',  title: 'CraftRush', refresh: 'refreshMenu' },
+    shop:      { tab: 'shop',  title: 'Skins & Shop', refresh: 'buildShop' },
+    home:      { tab: 'home',  title: 'Your Village', refresh: 'renderHome' },
+    world:     { tab: 'world', title: 'World', refresh: 'renderWorld' },
+    town:      { tab: 'world', title: 'Town', parent: 'world', refresh: 'renderTown' },
+    playroom:  { tab: 'world', title: 'House', parent: 'town', refresh: 'renderPlayroom' },
+    mine:      { tab: 'mine',  title: 'The Mine', refresh: 'renderMine' },
+    more:      { title: 'More', parent: 'menu', refresh: 'refreshMore' },
     about:     { title: 'About', parent: 'more' },
-    achScreen: { title: 'Goals', parent: 'more' },
-    settings:  { title: 'Save & Data', parent: 'more' },
+    achScreen: { title: 'Goals', parent: 'more', refresh: 'buildAchievements' },
+    settings:  { title: 'Save & Data', parent: 'more', refresh: 'renderBackups' },
     result:    { title: 'Results', bare: true },
   };
 
@@ -1260,6 +1260,9 @@ export class UI {
     E.tabPlayLabel.textContent = back ? 'Back' : 'Play';
     this.paintIcons(E.navbar);
     this.refreshBadges();
+    // rebuild the screen's contents on EVERY entry, so a back or a tab never shows
+    // a stale price, balance, or list
+    if (def.refresh && typeof this[def.refresh] === 'function') this[def.refresh]();
   }
 
   // a couple of screens name themselves after where you actually are
