@@ -249,6 +249,7 @@ export class UI {
     const h = this.homeData();
     if (!h.lastCollect) { h.lastCollect = Date.now(); persistSave(this.save); } // seed the clock on first visit
     this.openScreen('home');
+    if (this.save.music !== false) Audio.music('village');
     this.renderHome();
   }
 
@@ -364,6 +365,7 @@ export class UI {
     const m = this.mineData();
     if (!m.energyTs) { m.energyTs = Date.now(); persistSave(this.save); } // seed the recharge clock
     this.openScreen('mine');
+    if (this.save.music !== false) Audio.music('mine');
     this.wireMine();
     this.renderMine();
   }
@@ -557,6 +559,7 @@ export class UI {
   showWorld() {
     this.worldData();
     this.openScreen('world');
+    if (this.save.music !== false) Audio.music('village');
     this.wireWorld();
     if (!this.viewTown || !this.townRec(this.viewTown)) this.viewTown = this.worldData().town;
     this.renderWorld();
@@ -809,6 +812,7 @@ export class UI {
     this.playmatesData();
     this.els.dressPanel.classList.add('hidden');
     this.openScreen('playroom');
+    if (this.save.music !== false) Audio.music('cozy');
     this.panX = this.panX || 0;
     this.wirePan();
     this.renderPlayroom();
@@ -1003,16 +1007,17 @@ export class UI {
     };
     const L = { aL: { a: 0, v: 0 }, aR: { a: 0, v: 0 }, lL: { a: 0, v: 0 }, lR: { a: 0, v: 0 } };
     const putTilt = (a, s) => { el.style.transform = `translate(-50%, -100%) rotate(${a.toFixed(2)}deg) scale(${s})`; };
-    // looser damping = more wobble = more ragdolly
-    const spring = (limb, target, stiff) => { limb.v += (target - limb.a) * stiff; limb.v *= 0.87; limb.a += limb.v; };
+    // loose springs: low stiffness and high retention, so limbs trail well behind a
+    // fast drag and overshoot a few times before they settle instead of snapping back
+    const spring = (limb, target, stiff) => { limb.v += (target - limb.a) * stiff; limb.v *= 0.93; limb.a += limb.v; };
 
     const tick = () => {
-      vx *= 0.84;
-      const d = Math.max(-1.1, Math.min(1.1, -vx * 0.028));
-      spring(L.aL, d * 1.3, 0.26); spring(L.aR, d * 1.0, 0.26); // arms swing most
-      spring(L.lL, d * 0.65, 0.20); spring(L.lR, d * 0.85, 0.20); // legs less, slight asymmetry
+      vx *= 0.88;
+      const d = Math.max(-1.7, Math.min(1.7, -vx * 0.045));
+      spring(L.aL, d * 1.45, 0.16); spring(L.aR, d * 1.15, 0.16); // arms swing most
+      spring(L.lL, d * 0.8, 0.12); spring(L.lR, d * 1.0, 0.12);   // legs less, slight asymmetry
       redraw({ aL: L.aL.a, aR: L.aR.a, lL: L.lL.a, lR: L.lR.a });
-      const still = ['aL', 'aR', 'lL', 'lR'].every(k => Math.abs(L[k].a) < 0.008 && Math.abs(L[k].v) < 0.008);
+      const still = ['aL', 'aR', 'lL', 'lR'].every(k => Math.abs(L[k].a) < 0.004 && Math.abs(L[k].v) < 0.004);
       if (!dragging && Math.abs(vx) < 0.3 && still) { raf = 0; redraw(null); return; }
       raf = requestAnimationFrame(tick);
     };
