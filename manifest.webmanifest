@@ -3,7 +3,7 @@
   "short_name": "Craft Rush",
   "description": "Blocky crowd-runner: grow your mob, blast creepers, beat the boss!",
   "start_url": ".",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
   "background_color": "#141218",
   "theme_color": "#17141d",
