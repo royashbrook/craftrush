@@ -17,6 +17,7 @@
 //
 // Usage: node tools/pack-atlas.mjs [--art art] [--out assets]
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { encodePNG, decodePNG } from './png.mjs';
 import { enumerateVariants } from '../js/variants.js';
 
@@ -24,8 +25,11 @@ const arg = (flag, fallback) => {
   const i = process.argv.indexOf(flag);
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 };
-const ART = arg('--art', 'art');
-const OUT = arg('--out', 'assets');
+// the theme says where its drawings and its atlas belong; a theme that only
+// recolours can borrow another theme's art and still build its own atlas
+const { THEME_ART, THEME_ATLAS } = await import('../js/theme.js');
+const ART = arg('--art', fileURLToPath(THEME_ART));
+const OUT = arg('--out', fileURLToPath(THEME_ATLAS));
 
 const meta = JSON.parse(readFileSync(`${ART}/sprites.json`, 'utf8'));
 const { SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS } = await import('../js/config.js');

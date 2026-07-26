@@ -6,6 +6,7 @@
 // sprite the atlas does not carry degrades to a magenta placeholder so the
 // game always boots rather than dying on one missing name.
 import { contentKey } from './atlaskey.js';
+import { THEME_ATLAS } from './theme.js';
 
 let ATLAS = null;       // { sprites, ids } once loaded and sliced
 let PLACEHOLDER = null;
@@ -13,7 +14,7 @@ let PLACEHOLDER = null;
 /** True once the art is loaded. */
 export function assetsReady() { return !!ATLAS; }
 
-export async function initAssets({ atlas = 'assets' } = {}) {
+export async function initAssets({ atlas = THEME_ATLAS } = {}) {
   try {
     await loadAtlas(atlas);
   } catch (e) {

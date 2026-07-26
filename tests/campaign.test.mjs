@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMPAIGN, chapterById, chapterMissing, chapterUnlocked, currentChapter, completeChapter } from '../js/config.js';
+import { CAMPAIGN, chapterById, chapterMissing, chapterUnlocked, currentChapter, completeChapter, THEME_ART } from '../js/config.js';
 
 const fresh = () => ({ inventory: {}, campaign: { done: [] } });
 
@@ -131,7 +131,7 @@ test('campaign loot cannot be bought, only brought home', async () => {
 test('every chapter has a real place to happen, built out of real art', async () => {
   const { BIOMES } = await import('../js/config.js');
   const { readFileSync } = await import('node:fs');
-  const ART = JSON.parse(readFileSync(new URL('../art/sprites.json', import.meta.url), 'utf8'));
+  const ART = JSON.parse(readFileSync(new URL('sprites.json', THEME_ART + '/'), 'utf8'));
   const places = new Set(BIOMES.map((b) => b.id));
   for (const c of CAMPAIGN) assert.ok(places.has(c.biome), `${c.id} runs in ${c.biome}, which exists`);
   for (const b of BIOMES) {

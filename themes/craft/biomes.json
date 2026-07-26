@@ -1,0 +1,434 @@
+[
+ {
+  "id": "plains",
+  "name": "Sunny Plains",
+  "sky": [
+   "#6db8ff",
+   "#c9e8ff"
+  ],
+  "sun": "#fff3b0",
+  "clouds": true,
+  "hillFar": "#8fce7a",
+  "hillNear": "#6cb457",
+  "fog": "#bfe3ff",
+  "ground": {
+   "a": "#71b93f",
+   "b": "#65aa36",
+   "c": "#5c9e31",
+   "pathA": "#b0885a",
+   "pathB": "#a37b4e",
+   "edge": "#4c8428"
+  },
+  "scenery": [
+   "oak_tree",
+   "oak_tree",
+   "flowers",
+   "fence",
+   "hay_bale",
+   "pumpkin",
+   "village_house"
+  ],
+  "enemies": [
+   "zombie",
+   "slime",
+   "creeper",
+   "spider"
+  ],
+  "obstacle": "fence",
+  "boss": "boss_slime"
+ },
+ {
+  "id": "forest",
+  "name": "Dark Forest",
+  "sky": [
+   "#4f8fd0",
+   "#a8d4e8"
+  ],
+  "sun": "#ffefa0",
+  "clouds": true,
+  "hillFar": "#4f8a48",
+  "hillNear": "#3a6f35",
+  "fog": "#a3c9b8",
+  "ground": {
+   "a": "#4f9436",
+   "b": "#46882e",
+   "c": "#3d7c2a",
+   "pathA": "#8a6844",
+   "pathB": "#7d5c3a",
+   "edge": "#33641f"
+  },
+  "scenery": [
+   "oak_tree",
+   "birch_tree",
+   "spruce_tree",
+   "red_mushroom",
+   "flowers"
+  ],
+  "enemies": [
+   "zombie",
+   "skeleton",
+   "creeper",
+   "spider",
+   "witch"
+  ],
+  "obstacle": "fence",
+  "boss": "boss_ravager"
+ },
+ {
+  "id": "desert",
+  "name": "Blazing Desert",
+  "sky": [
+   "#78c0e8",
+   "#f2e3b8"
+  ],
+  "sun": "#fff8c8",
+  "clouds": false,
+  "hillFar": "#e0cf9a",
+  "hillNear": "#cdbb82",
+  "fog": "#f0e2ba",
+  "ground": {
+   "a": "#e3d49f",
+   "b": "#d9c992",
+   "c": "#cfbe85",
+   "pathA": "#c4a35f",
+   "pathB": "#b69451",
+   "edge": "#b3a26e"
+  },
+  "scenery": [
+   "cactus",
+   "cactus",
+   "dead_bush",
+   "dead_bush"
+  ],
+  "enemies": [
+   "husk",
+   "creeper",
+   "spider",
+   "skeleton"
+  ],
+  "obstacle": "cactus",
+  "boss": "boss_ravager"
+ },
+ {
+  "id": "snow",
+  "name": "Frozen Peaks",
+  "sky": [
+   "#8fb8e0",
+   "#e8f2fa"
+  ],
+  "sun": "#ffffff",
+  "clouds": true,
+  "hillFar": "#cfdfea",
+  "hillNear": "#b0c8da",
+  "fog": "#e4eef6",
+  "ground": {
+   "a": "#e9f2f6",
+   "b": "#dce9f0",
+   "c": "#cfe0ea",
+   "pathA": "#9fb6c4",
+   "pathB": "#8ea6b5",
+   "edge": "#b8ccd8"
+  },
+  "scenery": [
+   "snowy_spruce",
+   "snowy_spruce",
+   "spruce_tree",
+   "fence"
+  ],
+  "enemies": [
+   "stray",
+   "skeleton",
+   "creeper",
+   "spider"
+  ],
+  "obstacle": "fence",
+  "boss": "boss_ravager"
+ },
+ {
+  "id": "swamp",
+  "name": "Murky Swamp",
+  "sky": [
+   "#5a7d6a",
+   "#a8b890"
+  ],
+  "sun": "#e8e0a0",
+  "clouds": true,
+  "hillFar": "#5d7a4a",
+  "hillNear": "#48613a",
+  "fog": "#8fa080",
+  "ground": {
+   "a": "#5d7a35",
+   "b": "#54702e",
+   "c": "#4a6528",
+   "pathA": "#6b5d40",
+   "pathB": "#5f5238",
+   "edge": "#3f5522"
+  },
+  "scenery": [
+   "oak_tree",
+   "red_mushroom",
+   "dead_bush",
+   "flowers"
+  ],
+  "enemies": [
+   "witch",
+   "zombie",
+   "slime",
+   "spider"
+  ],
+  "obstacle": "fence",
+  "boss": "boss_slime"
+ },
+ {
+  "id": "nether",
+  "name": "The Nether",
+  "sky": [
+   "#1e0a0e",
+   "#54181c"
+  ],
+  "sun": null,
+  "clouds": false,
+  "embers": true,
+  "hillFar": "#4a1a1e",
+  "hillNear": "#381216",
+  "fog": "#54181c",
+  "ground": {
+   "a": "#7a3030",
+   "b": "#6d2828",
+   "c": "#5f2222",
+   "pathA": "#4a3038",
+   "pathB": "#3e2830",
+   "edge": "#4f1c1c"
+  },
+  "scenery": [
+   "crimson_fungus",
+   "warped_fungus",
+   "basalt_pillar"
+  ],
+  "enemies": [
+   "blaze",
+   "zombified_piglin",
+   "magma_cube",
+   "skeleton"
+  ],
+  "obstacle": "basalt_pillar",
+  "boss": "boss_wither"
+ },
+ {
+  "id": "end",
+  "name": "The End",
+  "sky": [
+   "#0d0716",
+   "#241238"
+  ],
+  "sun": null,
+  "clouds": false,
+  "stars": true,
+  "hillFar": "#2a1a3e",
+  "hillNear": "#1c1030",
+  "fog": "#241238",
+  "ground": {
+   "a": "#dbe0a8",
+   "b": "#cfd49a",
+   "c": "#c2c78d",
+   "pathA": "#a8ad7a",
+   "pathB": "#999e6c",
+   "edge": "#b0b583"
+  },
+  "scenery": [
+   "end_pillar",
+   "end_pillar"
+  ],
+  "enemies": [
+   "enderman",
+   "phantom",
+   "creeper"
+  ],
+  "obstacle": "end_pillar",
+  "boss": "boss_dragon"
+ },
+ {
+  "id": "deepdark",
+  "name": "The Deep Dark",
+  "sky": [
+   "#05090b",
+   "#0c1a1e"
+  ],
+  "sun": null,
+  "clouds": false,
+  "stars": true,
+  "embers": false,
+  "hillFar": "#0c1a1e",
+  "hillNear": "#081215",
+  "fog": "#0a1518",
+  "ground": {
+   "a": "#0f2226",
+   "b": "#0c1c20",
+   "c": "#12282d",
+   "pathA": "#112326",
+   "pathB": "#0d2024",
+   "edge": "#164a44",
+   "vein": "#2fd6d6"
+  },
+  "scenery": [
+   "deepslate_pillar",
+   "sculk_sensor",
+   "sculk_shrieker",
+   "deepslate_pillar"
+  ],
+  "enemies": [
+   "enderman",
+   "skeleton",
+   "creeper",
+   "spider"
+  ],
+  "obstacle": "deepslate_pillar",
+  "boss": "boss_warden"
+ },
+ {
+  "id": "nether_fortress",
+  "name": "Nether Fortress",
+  "structure": true,
+  "dropsRods": true,
+  "sky": [
+   "#160406",
+   "#43101a"
+  ],
+  "sun": null,
+  "clouds": false,
+  "embers": true,
+  "hillFar": "#3a1218",
+  "hillNear": "#2a0d12",
+  "fog": "#43101a",
+  "ground": {
+   "a": "#4e1a22",
+   "b": "#451620",
+   "c": "#3a1218",
+   "pathA": "#5a2028",
+   "pathB": "#4e1a22",
+   "edge": "#6e2028"
+  },
+  "scenery": [
+   "nether_brick_pillar",
+   "nether_brick_pillar",
+   "crimson_fungus",
+   "basalt_pillar"
+  ],
+  "enemies": [
+   "blaze",
+   "zombified_piglin",
+   "skeleton",
+   "blaze"
+  ],
+  "obstacle": "nether_brick_pillar",
+  "boss": "boss_wither"
+ },
+ {
+  "id": "stronghold",
+  "name": "The Stronghold",
+  "structure": true,
+  "sky": [
+   "#0a0d12",
+   "#1c222c"
+  ],
+  "sun": null,
+  "clouds": false,
+  "hillFar": "#242b36",
+  "hillNear": "#1a1f28",
+  "fog": "#1c222c",
+  "ground": {
+   "a": "#5d6068",
+   "b": "#54575f",
+   "c": "#4b4e56",
+   "pathA": "#6b6e64",
+   "pathB": "#5f6259",
+   "edge": "#3c3f46"
+  },
+  "scenery": [
+   "stone_brick_pillar",
+   "stone_brick_pillar",
+   "deepslate_pillar",
+   "end_pillar"
+  ],
+  "enemies": [
+   "skeleton",
+   "zombie",
+   "spider",
+   "creeper"
+  ],
+  "obstacle": "stone_brick_pillar",
+  "boss": "boss_ravager"
+ },
+ {
+  "id": "end_city",
+  "name": "End City",
+  "structure": true,
+  "sky": [
+   "#08060f",
+   "#1a1230"
+  ],
+  "sun": null,
+  "clouds": false,
+  "hillFar": "#1e1836",
+  "hillNear": "#151027",
+  "fog": "#1a1230",
+  "ground": {
+   "a": "#d8c8e8",
+   "b": "#cbb9de",
+   "c": "#bfabd4",
+   "pathA": "#a98fc4",
+   "pathB": "#9b7fb8",
+   "edge": "#6f5a88"
+  },
+  "scenery": [
+   "purpur_pillar",
+   "purpur_pillar",
+   "end_pillar",
+   "purpur_pillar"
+  ],
+  "enemies": [
+   "phantom",
+   "skeleton",
+   "creeper"
+  ],
+  "obstacle": "purpur_pillar",
+  "boss": "boss_ravager"
+ },
+ {
+  "id": "bastion",
+  "name": "Bastion Remnant",
+  "structure": true,
+  "sky": [
+   "#120309",
+   "#38101c"
+  ],
+  "sun": null,
+  "clouds": false,
+  "embers": true,
+  "hillFar": "#2a1016",
+  "hillNear": "#1c0a10",
+  "fog": "#38101c",
+  "ground": {
+   "a": "#2e2b31",
+   "b": "#28252b",
+   "c": "#221f25",
+   "pathA": "#3a3138",
+   "pathB": "#312930",
+   "edge": "#4a3a22"
+  },
+  "scenery": [
+   "blackstone_pillar",
+   "blackstone_pillar",
+   "basalt_pillar",
+   "crimson_fungus"
+  ],
+  "enemies": [
+   "zombified_piglin",
+   "zombified_piglin",
+   "magma_cube",
+   "blaze"
+  ],
+  "obstacle": "blackstone_pillar",
+  "boss": "boss_ravager"
+ }
+]

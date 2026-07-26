@@ -1,0 +1,16 @@
+{
+ "id": "neon",
+ "name": "Neon Rush",
+ "blurb": "Same engine, same art, different world. Proof that a theme is a folder.",
+ "art": "../craft/art",
+ "atlas": ".",
+ "data": [
+  "biomes",
+  "skins",
+  "cosmetics",
+  "enemies",
+  "campaign",
+  "mine",
+  "tiers"
+ ]
+}

@@ -102,12 +102,16 @@ systems switch off cleanly.
 
 Everything visual is data:
 
-- `art/*.png` — the art, one file per sprite, frames left to right. Open any of
-  them in an image editor, then run `node tools/pack-atlas.mjs`. `art/sprites.json`
-  carries what a PNG cannot: anchor, frame count, and the base palette the
-  colour variants are derived from.
-- `assets/atlas.png` + `assets/atlas.json` — build output. Nothing edits these
-  by hand.
+- `themes/<id>/` — what the game looks like and what is in it. Biomes, skins,
+  cosmetics, mobs, the campaign and the mine tiles, all as JSON, plus the art.
+  The engine reads a theme; it does not contain one. `?theme=neon` in the
+  browser or `CRAFTRUSH_THEME=neon` in node picks a different one.
+- `themes/<id>/art/*.png` — one file per sprite, frames left to right. Open any
+  of them in an image editor, then run `node tools/pack-atlas.mjs`.
+  `art/sprites.json` carries what a PNG cannot: anchor, frame count, and the
+  base palette the colour variants are derived from.
+- `themes/<id>/atlas.png` + `atlas.json` — build output. Nothing edits these by
+  hand.
 - `js/config.js` — biomes (palettes, enemy rosters, bosses, scenery), skins
   (palette swaps + head sprite), enemy behavior stats, tuning.
 - Levels are procedurally generated from the level number (seeded), difficulty

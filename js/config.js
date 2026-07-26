@@ -10,6 +10,12 @@ import { hash2 } from './engine.js';
 // real release. tools/build.mjs stamps the computed semver into dist/.
 export const VERSION = '0.0.0-dev';
 
+// What the game looks like and what is in it comes from the theme; what any of
+// it does stays here. These re-exports keep the shape every other module
+// already imports, so a theme swap is a folder swap and nothing else.
+import { THEME } from './theme.js';
+export { THEME_INFO, THEME_ART, THEME_ATLAS, THEME_ID } from './theme.js';
+
 export const TUNE = {
   // world/camera
   laneHalf: 3.1,        // how far the crowd center can steer (blocks)
@@ -103,24 +109,7 @@ export const CAMERAS = {
 // Tiered crowd: worth grows without limit. Runners merge upward through the
 // ladder; worth beyond the render caps is held in `reserve`, which scales the
 // top tier bigger and hits harder ("bigger and bigger", no max).
-export const TIERS = {
-  maxRunners: 96,
-  // ladder above the basic runner; each unit fires one arrow worth `worth`.
-  // scales are gentle with a HARD cap (top tier ~2.15) so no sprite ever eats
-  // the screen — the old runaway top-tier growth is gone.
-  units: [
-    { name: 'MEGA STEVE',  worth: 10,   scale: 1.35, max: 12, boots: '#f3c53f', weight: 3,  color: '#ffd94d' },
-    { name: 'GIGA STEVE',  worth: 100,  scale: 1.7,  max: 10, boots: '#ff8c1a', weight: 6,  color: '#ff8c1a' },
-    { name: 'ULTRA STEVE', worth: 1000, scale: 2.15, max: 6,  boots: '#c76bff', weight: 10, color: '#c76bff' },
-  ],
-  // Star graduation: when the visible army reaches gradWorth it "graduates" —
-  // the clump compacts (worth / starMult) and gains a permanent star. Each star
-  // multiplies arrow damage by starMult and softens damage taken. worth stays
-  // bounded (< gradWorth) forever, so both sprite size AND count stay readable,
-  // while true power = worth * starMult^stars climbs without limit.
-  gradWorth: 5000,
-  starMult: 3,
-};
+export const TIERS = THEME.tiers;
 
 export const MODES = {
   shooter: { id: 'shooter', label: 'BOW BLITZ', desc: 'Your crowd auto-fires arrows. Blast mobs, shoot gates to boost them!' },
@@ -128,31 +117,9 @@ export const MODES = {
 };
 
 // Enemy behavior table. speed = blocks/sec (before level scale). hp at level 1.
-export const ENEMY_TYPES = {
-  creeper:           { hp: 7,  speed: 2.6, kind: 'exploder', boomRadius: 2.0, boomKills: 10, fuse: 0.75, worldH: 1.9 },
-  zombie:            { hp: 10, speed: 2.2, kind: 'chaser',  bitePeriod: 0.7, worldH: 1.9 },
-  husk:              { hp: 12, speed: 2.0, kind: 'chaser',  bitePeriod: 0.7, worldH: 1.9 },
-  zombified_piglin:  { hp: 9,  speed: 3.4, kind: 'chaser',  bitePeriod: 0.6, worldH: 1.9 },
-  skeleton:          { hp: 8,  speed: 2.4, kind: 'archer',  range: 15, shotPeriod: 1.7, worldH: 1.9 },
-  stray:             { hp: 9,  speed: 2.4, kind: 'archer',  range: 16, shotPeriod: 1.5, worldH: 1.9 },
-  blaze:             { hp: 11, speed: 1.8, kind: 'archer',  range: 16, shotPeriod: 2.1, spread: 3, projectile: 'fireball', floats: true, worldH: 1.9 },
-  witch:             { hp: 13, speed: 1.6, kind: 'lobber',  range: 13, shotPeriod: 2.4, aoeRadius: 1.5, aoeKills: 2, worldH: 2.1 },
-  spider:            { hp: 6,  speed: 4.2, kind: 'chaser',  bitePeriod: 0.9, zigzag: true, worldH: 1.0 },
-  slime:             { hp: 8,  speed: 2.4, kind: 'chaser',  bitePeriod: 0.8, hops: true, splitsTo: 'slime_mini', worldH: 1.4 },
-  slime_mini:        { hp: 3,  speed: 3.0, kind: 'chaser',  bitePeriod: 0.8, hops: true, worldH: 0.8, sprite: 'slime' },
-  magma_cube:        { hp: 10, speed: 2.4, kind: 'chaser',  bitePeriod: 0.7, hops: true, splitsTo: 'magma_mini', worldH: 1.4 },
-  magma_mini:        { hp: 4,  speed: 3.0, kind: 'chaser',  bitePeriod: 0.7, hops: true, worldH: 0.8, sprite: 'magma_cube' },
-  phantom:           { hp: 7,  speed: 5.0, kind: 'swooper', worldH: 1.0, floats: true },
-  enderman:          { hp: 14, speed: 3.0, kind: 'chaser',  bitePeriod: 0.5, teleports: true, worldH: 2.6 },
-};
+export const ENEMY_TYPES = THEME.enemies.mobs;
 
-export const BOSS_TYPES = {
-  boss_slime:   { name: 'KING SLIME',    hp: 90,  worldH: 4.3, attacks: ['minions', 'shockwave'] },
-  boss_ravager: { name: 'RAVAGER',       hp: 130, worldH: 4.5, attacks: ['charge', 'minions', 'shockwave'] },
-  boss_wither:  { name: 'THE WITHER',    hp: 170, worldH: 4.8, attacks: ['skulls', 'minions', 'shockwave'] },
-  boss_dragon:  { name: 'ENDER DRAGON',  hp: 220, worldH: 5.4, attacks: ['skulls', 'charge', 'minions'] },
-  boss_warden:  { name: 'THE WARDEN',    hp: 300, worldH: 5.0, attacks: ['sonicboom', 'minions', 'sonicboom', 'charge'] },
-};
+export const BOSS_TYPES = THEME.enemies.bosses;
 
 // Pickup registry: sprite + behavior for every collectible. Adding a new
 // minecrafty pickup (obsidian, blaze rods, wither skulls) is one entry here.
@@ -211,220 +178,14 @@ for (const k of Object.keys(POWERUP_NAMES)) {
   };
 }
 
-export const BIOMES = [
-  {
-    id: 'plains', name: 'Sunny Plains',
-    sky: ['#6db8ff', '#c9e8ff'], sun: '#fff3b0', clouds: true,
-    hillFar: '#8fce7a', hillNear: '#6cb457', fog: '#bfe3ff',
-    ground: { a: '#71b93f', b: '#65aa36', c: '#5c9e31', pathA: '#b0885a', pathB: '#a37b4e', edge: '#4c8428' },
-    scenery: ['oak_tree', 'oak_tree', 'flowers', 'fence', 'hay_bale', 'pumpkin', 'village_house'],
-    enemies: ['zombie', 'slime', 'creeper', 'spider'],
-    obstacle: 'fence', boss: 'boss_slime',
-  },
-  {
-    id: 'forest', name: 'Dark Forest',
-    sky: ['#4f8fd0', '#a8d4e8'], sun: '#ffefa0', clouds: true,
-    hillFar: '#4f8a48', hillNear: '#3a6f35', fog: '#a3c9b8',
-    ground: { a: '#4f9436', b: '#46882e', c: '#3d7c2a', pathA: '#8a6844', pathB: '#7d5c3a', edge: '#33641f' },
-    scenery: ['oak_tree', 'birch_tree', 'spruce_tree', 'red_mushroom', 'flowers'],
-    enemies: ['zombie', 'skeleton', 'creeper', 'spider', 'witch'],
-    obstacle: 'fence', boss: 'boss_ravager',
-  },
-  {
-    id: 'desert', name: 'Blazing Desert',
-    sky: ['#78c0e8', '#f2e3b8'], sun: '#fff8c8', clouds: false,
-    hillFar: '#e0cf9a', hillNear: '#cdbb82', fog: '#f0e2ba',
-    ground: { a: '#e3d49f', b: '#d9c992', c: '#cfbe85', pathA: '#c4a35f', pathB: '#b69451', edge: '#b3a26e' },
-    scenery: ['cactus', 'cactus', 'dead_bush', 'dead_bush'],
-    enemies: ['husk', 'creeper', 'spider', 'skeleton'],
-    obstacle: 'cactus', boss: 'boss_ravager',
-  },
-  {
-    id: 'snow', name: 'Frozen Peaks',
-    sky: ['#8fb8e0', '#e8f2fa'], sun: '#ffffff', clouds: true,
-    hillFar: '#cfdfea', hillNear: '#b0c8da', fog: '#e4eef6',
-    ground: { a: '#e9f2f6', b: '#dce9f0', c: '#cfe0ea', pathA: '#9fb6c4', pathB: '#8ea6b5', edge: '#b8ccd8' },
-    scenery: ['snowy_spruce', 'snowy_spruce', 'spruce_tree', 'fence'],
-    enemies: ['stray', 'skeleton', 'creeper', 'spider'],
-    obstacle: 'fence', boss: 'boss_ravager',
-  },
-  {
-    id: 'swamp', name: 'Murky Swamp',
-    sky: ['#5a7d6a', '#a8b890'], sun: '#e8e0a0', clouds: true,
-    hillFar: '#5d7a4a', hillNear: '#48613a', fog: '#8fa080',
-    ground: { a: '#5d7a35', b: '#54702e', c: '#4a6528', pathA: '#6b5d40', pathB: '#5f5238', edge: '#3f5522' },
-    scenery: ['oak_tree', 'red_mushroom', 'dead_bush', 'flowers'],
-    enemies: ['witch', 'zombie', 'slime', 'spider'],
-    obstacle: 'fence', boss: 'boss_slime',
-  },
-  {
-    id: 'nether', name: 'The Nether',
-    sky: ['#1e0a0e', '#54181c'], sun: null, clouds: false, embers: true,
-    hillFar: '#4a1a1e', hillNear: '#381216', fog: '#54181c',
-    ground: { a: '#7a3030', b: '#6d2828', c: '#5f2222', pathA: '#4a3038', pathB: '#3e2830', edge: '#4f1c1c' },
-    scenery: ['crimson_fungus', 'warped_fungus', 'basalt_pillar'],
-    enemies: ['blaze', 'zombified_piglin', 'magma_cube', 'skeleton'],
-    obstacle: 'basalt_pillar', boss: 'boss_wither',
-  },
-  {
-    id: 'end', name: 'The End',
-    sky: ['#0d0716', '#241238'], sun: null, clouds: false, stars: true,
-    hillFar: '#2a1a3e', hillNear: '#1c1030', fog: '#241238',
-    ground: { a: '#dbe0a8', b: '#cfd49a', c: '#c2c78d', pathA: '#a8ad7a', pathB: '#999e6c', edge: '#b0b583' },
-    scenery: ['end_pillar', 'end_pillar'],
-    enemies: ['enderman', 'phantom', 'creeper'],
-    obstacle: 'end_pillar', boss: 'boss_dragon',
-  },
-  {
-    id: 'deepdark', name: 'The Deep Dark',
-    sky: ['#05090b', '#0c1a1e'], sun: null, clouds: false, stars: true, embers: false,
-    hillFar: '#0c1a1e', hillNear: '#081215', fog: '#0a1518',
-    ground: { a: '#0f2226', b: '#0c1c20', c: '#12282d', pathA: '#112326', pathB: '#0d2024', edge: '#164a44', vein: '#2fd6d6' },
-    scenery: ['deepslate_pillar', 'sculk_sensor', 'sculk_shrieker', 'deepslate_pillar'],
-    enemies: ['enderman', 'skeleton', 'creeper', 'spider'],
-    obstacle: 'deepslate_pillar', boss: 'boss_warden',
-  },
-  {
-    // First campaign STRUCTURE: the Nether Fortress. Blaze-heavy, rods drop
-    // and bank to the save inventory. Boss: the Wither.
-    id: 'nether_fortress', name: 'Nether Fortress', structure: true, dropsRods: true,
-    sky: ['#160406', '#43101a'], sun: null, clouds: false, embers: true,
-    hillFar: '#3a1218', hillNear: '#2a0d12', fog: '#43101a',
-    ground: { a: '#4e1a22', b: '#451620', c: '#3a1218', pathA: '#5a2028', pathB: '#4e1a22', edge: '#6e2028' },
-    scenery: ['nether_brick_pillar', 'nether_brick_pillar', 'crimson_fungus', 'basalt_pillar'],
-    enemies: ['blaze', 'zombified_piglin', 'skeleton', 'blaze'],
-    obstacle: 'nether_brick_pillar', boss: 'boss_wither',
-  },
-  {
-    // Damp stone corridors under the world. Lit low, so the silverfish-green mossy
-    // brick and the end-portal room read as somewhere you were not meant to be.
-    id: 'stronghold', name: 'The Stronghold', structure: true,
-    sky: ['#0a0d12', '#1c222c'], sun: null, clouds: false,
-    hillFar: '#242b36', hillNear: '#1a1f28', fog: '#1c222c',
-    ground: { a: '#5d6068', b: '#54575f', c: '#4b4e56', pathA: '#6b6e64', pathB: '#5f6259', edge: '#3c3f46' },
-    scenery: ['stone_brick_pillar', 'stone_brick_pillar', 'deepslate_pillar', 'end_pillar'],
-    enemies: ['skeleton', 'zombie', 'spider', 'creeper'],
-    obstacle: 'stone_brick_pillar', boss: 'boss_ravager',
-  },
-  {
-    // Out past the island, in the dark. Pale purpur towers against a void sky,
-    // so it reads as somewhere far past where the dragon was.
-    id: 'end_city', name: 'End City', structure: true,
-    sky: ['#08060f', '#1a1230'], sun: null, clouds: false,
-    hillFar: '#1e1836', hillNear: '#151027', fog: '#1a1230',
-    ground: { a: '#d8c8e8', b: '#cbb9de', c: '#bfabd4', pathA: '#a98fc4', pathB: '#9b7fb8', edge: '#6f5a88' },
-    scenery: ['purpur_pillar', 'purpur_pillar', 'end_pillar', 'purpur_pillar'],
-    enemies: ['phantom', 'skeleton', 'creeper'],
-    obstacle: 'purpur_pillar', boss: 'boss_ravager',
-  },
-  {
-    // Back to the Nether, but ruined: blackstone and gold instead of red brick.
-    id: 'bastion', name: 'Bastion Remnant', structure: true,
-    sky: ['#120309', '#38101c'], sun: null, clouds: false, embers: true,
-    hillFar: '#2a1016', hillNear: '#1c0a10', fog: '#38101c',
-    ground: { a: '#2e2b31', b: '#28252b', c: '#221f25', pathA: '#3a3138', pathB: '#312930', edge: '#4a3a22' },
-    scenery: ['blackstone_pillar', 'blackstone_pillar', 'basalt_pillar', 'crimson_fungus'],
-    enemies: ['zombified_piglin', 'zombified_piglin', 'magma_cube', 'blaze'],
-    obstacle: 'blackstone_pillar', boss: 'boss_ravager',
-  },
-];
+export const BIOMES = THEME.biomes;
 
 // Skins are palette swaps over core.runner_back + a head sprite for the shop.
-export const SKINS = [
-  { id: 'steve',    name: 'Steve',    cost: 0,   head: 'head_steve',
-    palette: { h: '#4a2f1b', s: '#d8a077', t: '#00afaf', T: '#008f8f', l: '#3d55b8', L: '#2e4090', b: '#6e6e6e' } },
-  { id: 'alex',     name: 'Alex',     cost: 40,  head: 'head_alex',
-    palette: { h: '#e5843c', s: '#eab88f', t: '#7ea33c', T: '#63822c', l: '#6b4f35', L: '#573f2a', b: '#4a4a4a' } },
-  { id: 'zombie',   name: 'Zombie',   cost: 120, head: 'head_zombie',
-    palette: { h: '#2e7d32', s: '#4fa554', t: '#1e8b8b', T: '#177070', l: '#5e3f8f', L: '#4a3172', b: '#333333' } },
-  { id: 'skeleton', name: 'Skeleton', cost: 300, head: 'head_skeleton',
-    palette: { h: '#d6d6d6', s: '#e8e8e8', t: '#9e9e9e', T: '#7d7d7d', l: '#cfcfcf', L: '#ababab', b: '#8a8a8a' } },
-  { id: 'creeper',  name: 'Creeper Kid', cost: 700, head: 'head_creeper',
-    palette: { h: '#4fbf3c', s: '#66d94f', t: '#3da52e', T: '#2b7d20', l: '#2b7d20', L: '#1e4f16', b: '#173d10' } },
-  { id: 'piglin',   name: 'Piglin',   cost: 1500, head: 'head_piglin',
-    palette: { h: '#f3c53f', s: '#efa08f', t: '#8a6d3b', T: '#6f562d', l: '#4d3a22', L: '#3d2d1a', b: '#3a2a16' } },
-  { id: 'knight',   name: 'Knight',   cost: 200, head: 'head_knight',
-    palette: { h: '#8f969e', s: '#d8a077', t: '#9aa3ad', T: '#6f777f', l: '#5a616a', L: '#43484f', b: '#3a3d42' } },
-  { id: 'chef',     name: 'Chef',     cost: 350, head: 'head_chef_c',
-    palette: { h: '#ffffff', s: '#e8b78f', t: '#f4f4f0', T: '#d6d6d0', l: '#4a4a52', L: '#35353c', b: '#2b2b30' } },
-  { id: 'ninja',    name: 'Ninja',    cost: 550, head: 'head_ninja',
-    palette: { h: '#20242e', s: '#d8a077', t: '#262b36', T: '#171a22', l: '#20242e', L: '#141821', b: '#0e1016' } },
-  { id: 'pirate',   name: 'Pirate',   cost: 900, head: 'head_pirate',
-    palette: { h: '#c0392b', s: '#d8a077', t: '#8f2f28', T: '#67211c', l: '#3a3f4a', L: '#282c34', b: '#4a3524' } },
-  { id: 'pillager', name: 'Pillager', cost: 1200, head: 'head_pillager',
-    palette: { h: '#6b7a6b', s: '#9aa89a', t: '#5f5a4a', T: '#464235', l: '#3f4a3f', L: '#2c332c', b: '#332f28' } },
-  { id: 'witch',    name: 'Witch',    cost: 1800, head: 'head_witch_c',
-    palette: { h: '#2b2438', s: '#7fae6a', t: '#4a3a68', T: '#332748', l: '#2b2438', L: '#1c1728', b: '#191320' } },
-  { id: 'slimey',   name: 'Slime',    cost: 2200, head: 'head_slime',
-    palette: { h: '#7ee06a', s: '#8fe87a', t: '#6ed05a', T: '#4fb03f', l: '#5cc04a', L: '#3f9a32', b: '#357f2a' } },
-  { id: 'wizard',   name: 'Wizard',   cost: 4500, head: 'head_wizard_c',
-    palette: { h: '#efeae0', s: '#e8c9a8', t: '#5b3aa6', T: '#3a2472', l: '#4a2f8a', L: '#31205c', b: '#2a1b4a' } },
-  { id: 'enderman', name: 'Enderman', cost: 3000, head: 'head_enderman',
-    palette: { h: '#171717', s: '#101010', t: '#1c1c1c', T: '#0c0c0c', l: '#171717', L: '#0b0b0b', b: '#7b2fbe' } },
-];
+export const SKINS = THEME.skins;
 
 // Cosmetics — all purchasable with emeralds. Capes/hats render on every runner
 // (camera sits behind the crowd, so capes are always on screen).
-export const COSMETICS = {
-  cape: [
-    { id: 'none', name: 'No Cape', cost: 0 },
-    { id: 'cape_red', name: 'Hero Red', cost: 80, colors: { c: '#c8322a', C: '#8f1f14' } },
-    { id: 'cape_emerald', name: 'Emerald', cost: 200, colors: { c: '#2ecc5e', C: '#1d8f3e' } },
-    { id: 'cape_ice', name: 'Frost', cost: 400, colors: { c: '#9fd8f0', C: '#6aaece' } },
-    { id: 'cape_ender', name: 'Ender', cost: 800, colors: { c: '#8b3fd6', C: '#5c2496' } },
-    { id: 'cape_gold', name: 'Royal Gold', cost: 1400, colors: { c: '#f3c53f', C: '#c29222' } },
-    // earned on the End Ship, never for sale: the wings are the reward itself
-    { id: 'cape_elytra', name: 'Elytra', cost: 0, quest: 'elytra', colors: { c: '#cfc8dc', C: '#6d6880' } },
-    { id: 'cape_forest', name: 'Forest', cost: 150, colors: { c: '#3f8f45', C: '#276030' } },
-    { id: 'cape_ocean', name: 'Ocean Wave', cost: 300, colors: { c: '#2f8fd0', C: '#1c5f92' } },
-    { id: 'cape_candy', name: 'Candy', cost: 500, colors: { c: '#f57ab6', C: '#c04a86' } },
-    { id: 'cape_checker', name: 'Checkered', cost: 650, colors: { c: '#e8e8e8', C: '#2b2b2b' } },
-    { id: 'cape_lava', name: 'Lava Flow', cost: 1000, colors: { c: '#ff7a2a', C: '#b02a10' } },
-    { id: 'cape_storm', name: 'Lightning', cost: 1200, colors: { c: '#ffe14d', C: '#4a4468' } },
-    { id: 'cape_phantom', name: 'Phantom', cost: 1700, colors: { c: '#7fb0a8', C: '#3d5f60' } },
-    { id: 'cape_dragon', name: 'Dragon Wing', cost: 2000, colors: { c: '#4a3a68', C: '#241a38' } },
-    { id: 'cape_rainbow', name: 'Rainbow', cost: 2500, rainbow: true, colors: { c: '#ff5545', C: '#3fa9ff' } },
-    { id: 'cape_galaxy', name: 'Galaxy', cost: 3200, rainbow: true, colors: { c: '#6a4fd0', C: '#1b1040' } },
-    { id: 'cape_aurora', name: 'Aurora', cost: 4000, rainbow: true, colors: { c: '#4ff0c0', C: '#3f6fd0' } },
-  ],
-  hat: [
-    { id: 'none', name: 'No Hat', cost: 0 },
-    { id: 'hat_pumpkin', name: 'Pumpkin', cost: 120, sprite: 'hat_pumpkin' },
-    { id: 'hat_party', name: 'Party Hat', cost: 160, sprite: 'hat_party' },
-    { id: 'hat_flower', name: 'Flower Crown', cost: 220, sprite: 'hat_flower' },
-    { id: 'hat_cat', name: 'Cat Ears', cost: 260, sprite: 'hat_cat' },
-    { id: 'hat_slime', name: 'Slime Blob', cost: 300, sprite: 'hat_slime' },
-    { id: 'hat_cowboy', name: 'Cowboy Hat', cost: 380, sprite: 'hat_cowboy' },
-    { id: 'hat_chef', name: 'Chef Toque', cost: 440, sprite: 'hat_chef' },
-    { id: 'hat_crown', name: 'Crown', cost: 550, sprite: 'hat_crown' },
-    { id: 'hat_propeller', name: 'Propeller Beanie', cost: 700, sprite: 'hat_propeller' },
-    { id: 'hat_top', name: 'Top Hat', cost: 850, sprite: 'hat_top' },
-    { id: 'hat_tnt', name: 'TNT Cap', cost: 900, sprite: 'hat_tnt' },
-    { id: 'hat_wizard', name: 'Wizard Hat', cost: 1200, sprite: 'hat_wizard' },
-    { id: 'hat_santa', name: 'Santa', cost: 1500, sprite: 'hat_santa' },
-    // brought back from the bastion, not bought
-    { id: 'helm_gold_trim', name: 'Gold Trim Helm', cost: 0, quest: 'trims', sprite: 'helm_gold_trim' },
-    { id: 'helm_diamond_trim', name: 'Diamond Trim Helm', cost: 0, quest: 'trims', sprite: 'helm_diamond_trim' },
-  ],
-  trail: [
-    { id: 'none', name: 'No Trail', cost: 0 },
-    { id: 'trail_emerald', name: 'Emerald', cost: 150, colors: ['#2eff70', '#1fcf58'] },
-    { id: 'trail_fire', name: 'Fire', cost: 400, colors: ['#ffb63c', '#ff5e2e'] },
-    { id: 'trail_ender', name: 'Ender', cost: 800, colors: ['#c76bff', '#8b3fd6'] },
-    { id: 'trail_rainbow', name: 'Rainbow', cost: 1600, rainbow: true, colors: ['#ff5545', '#ffd94d', '#2eff70', '#3fa9ff'] },
-  ],
-  pet: [
-    { id: 'none', name: 'No Pet', cost: 0 },
-    { id: 'pet_wolf', name: 'Wolf', cost: 500, sprite: 'wolf' },
-    { id: 'pet_chicken', name: 'Chicken', cost: 220, sprite: 'pet_chicken' },
-    { id: 'pet_pig', name: 'Pig', cost: 320, sprite: 'pet_pig' },
-    { id: 'pet_cat', name: 'Cat', cost: 450, sprite: 'pet_cat' },
-    { id: 'pet_parrot', name: 'Parrot', cost: 1200, sprite: 'parrot' },
-    { id: 'pet_fox', name: 'Fox', cost: 1600, sprite: 'pet_fox' },
-    { id: 'pet_bee', name: 'Bee', cost: 2100, sprite: 'pet_bee' },
-    { id: 'pet_axolotl', name: 'Axolotl', cost: 2800, sprite: 'pet_axolotl' },
-  ],
-};
+export const COSMETICS = THEME.cosmetics;
 
 // Home hub: buy villager friends who populate the home and earn emeralds while
 // you're away. Each additional villager of a type costs base * costRate^owned
@@ -627,23 +388,7 @@ export const MINE = { energyCap: 60, energyRefillMs: 20000, cols: 11, rows: 15 }
 // can break it, and a worth. Ores come in veins rather than lone tiles, and the deeper
 // you go the better it gets. Generation is a pure function of (x, y) so the same shaft
 // always looks the same, no world to store.
-export const TILES = {
-  air:       { id: 'air',       solid: false, color: '#1a1420' },
-  dirt:      { id: 'dirt',      hp: 1, tier: 0, value: 0,   color: '#7a5236', color2: '#6b4830' },
-  stone:     { id: 'stone',     hp: 2, tier: 0, value: 0,   color: '#8a8a92', color2: '#7a7a82' },
-  deepslate: { id: 'deepslate', hp: 4, tier: 2, value: 0,   color: '#3c3c44', color2: '#33333a' },
-  gravel:    { id: 'gravel',    hp: 1, tier: 0, value: 0,   color: '#8f8478', color2: '#7d7368', falls: true },
-  coal:      { id: 'coal',      hp: 2, tier: 0, value: 2,   color: '#2e2e33', ore: true },
-  copper:    { id: 'copper',    hp: 3, tier: 1, value: 4,   color: '#c8703c', ore: true },
-  iron:      { id: 'iron',      hp: 3, tier: 1, value: 7,   color: '#d8b89a', ore: true },
-  lapis:     { id: 'lapis',     hp: 3, tier: 1, value: 12,  color: '#2b52c8', ore: true },
-  gold:      { id: 'gold',      hp: 4, tier: 2, value: 20,  color: '#f2c541', ore: true },
-  redstone:  { id: 'redstone',  hp: 4, tier: 2, value: 26,  color: '#c22b2b', ore: true },
-  diamond:   { id: 'diamond',   hp: 5, tier: 3, value: 60,  color: '#4fe3e0', ore: true },
-  emeraldore:{ id: 'emeraldore',hp: 5, tier: 3, value: 90,  color: '#2ecc5e', ore: true },
-  obsidian:  { id: 'obsidian',  hp: 9, tier: 4, value: 40,  color: '#1c1428', color2: '#160f20' },
-  lava:      { id: 'lava',      hp: 0, tier: 9, value: 0,   color: '#ff7a2a', hazard: true },
-};
+export const TILES = THEME.mine.tiles;
 export const tileById = (id) => TILES[id] || TILES.stone;
 
 // which ores can appear at a depth, and how likely, deepest first
@@ -714,48 +459,9 @@ export function mineEnergy(mine, now) {
 // something you have to go and earn first. Resources bank between runs, so a
 // chapter is a goal you work toward rather than a level that just arrives.
 // ---------------------------------------------------------------------------
-export const RESOURCES = {
-  obsidian:     { label: 'Obsidian' },
-  blazeRods:    { label: 'Blaze Rods' },
-  enderEyes:    { label: 'Ender Eyes' },
-  elytra:       { label: 'Elytra' },
-  trims:        { label: 'Armor Trims' },
-  witherSkulls: { label: 'Wither Skulls' },
-};
+export const RESOURCES = THEME.campaign.resources;
 
-export const CAMPAIGN = [
-  { id: 'mine_obsidian', icon: 'ui_pickaxe', name: 'Obsidian Hunt', biome: 'plains',
-    blurb: 'Mine obsidian on the run. You need ten to frame a portal.',
-    repeatable: true, grants: { obsidian: 4 } },
-  { id: 'portal', icon: 'ui_door', name: 'The Nether Portal', biome: 'nether', requires: { obsidian: 10 },
-    blurb: 'Light the frame and step through.', consumes: { obsidian: 10 } },
-  { id: 'fortress', icon: 'ui_bow', name: 'Nether Fortress', biome: 'nether_fortress', structure: true,
-    blurb: 'Blazes guard the halls. Bring back their rods.',
-    repeatable: true, grants: { blazeRods: 2 } },
-  { id: 'stronghold', icon: 'ui_world', name: 'The Stronghold', biome: 'stronghold', structure: true,
-    requires: { blazeRods: 6 },
-    blurb: 'Rods become eyes, and eyes find the portal room.',
-    consumes: { blazeRods: 6 }, grants: { enderEyes: 12 } },
-  { id: 'dragon', icon: 'ui_trophy', name: 'The Ender Dragon', biome: 'end', boss: 'boss_dragon',
-    requires: { enderEyes: 12 }, phases: 3, crystals: true,
-    blurb: 'Break the crystals that heal her, then bring her down.' },
-  { id: 'endcity', icon: 'ui_world', name: 'End City', biome: 'end_city', structure: true,
-    blurb: 'Out past the island: a ship, and wings worth taking.',
-    grants: { elytra: 1 } },
-  { id: 'bastion', icon: 'ui_house', name: 'Bastion Remnant', biome: 'bastion', structure: true,
-    requires: { elytra: 1 },
-    blurb: 'Back to the Nether for blackstone and armor trims.',
-    grants: { trims: 2, witherSkulls: 1 } },
-  { id: 'skulls', icon: 'ui_bow', name: 'Skull Hunt', biome: 'nether_fortress',
-    blurb: 'Wither skeletons, and the skulls you need to summon.',
-    repeatable: true, grants: { witherSkulls: 1 } },
-  { id: 'wither', icon: 'ui_trophy', name: 'The Wither', biome: 'nether', boss: 'boss_wither',
-    requires: { witherSkulls: 3 }, phases: 3,
-    consumes: { witherSkulls: 3 },
-    blurb: 'Three skulls, three heads, three phases.' },
-  { id: 'credits', icon: 'ui_person', name: 'The Long Walk Home', biome: 'plains', credits: true,
-    blurb: 'Everything you built, on the way home.' },
-];
+export const CAMPAIGN = THEME.campaign.chapters;
 // Some cosmetics are campaign loot: the shop shows them, but emeralds cannot
 // buy them - you have to have brought the thing home.
 export function questCosmeticEarned(save, def) {

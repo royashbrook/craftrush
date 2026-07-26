@@ -1,5 +1,5 @@
 // Cache-first service worker: full offline play after first load.
-const CACHE = 'craftrush-347a9d07';
+const CACHE = 'craftrush-0a87942b';
 const ASSETS = [
   './',
   './manifest.webmanifest',
@@ -18,6 +18,7 @@ const ASSETS = [
   './js/main.js',
   './js/minegame.js',
   './js/render.js',
+  './js/theme.js',
   './js/townscene.js',
   './js/ui.js',
   './js/variants.js',
@@ -25,8 +26,26 @@ const ASSETS = [
   './icons/icon-192.png',
   './icons/icon-512-maskable.png',
   './icons/icon-512.png',
-  './assets/atlas.json',
-  './assets/atlas.png',
+  './themes/craft/atlas.json',
+  './themes/craft/atlas.png',
+  './themes/craft/biomes.json',
+  './themes/craft/campaign.json',
+  './themes/craft/cosmetics.json',
+  './themes/craft/enemies.json',
+  './themes/craft/mine.json',
+  './themes/craft/skins.json',
+  './themes/craft/theme.json',
+  './themes/craft/tiers.json',
+  './themes/neon/atlas.json',
+  './themes/neon/atlas.png',
+  './themes/neon/biomes.json',
+  './themes/neon/campaign.json',
+  './themes/neon/cosmetics.json',
+  './themes/neon/enemies.json',
+  './themes/neon/mine.json',
+  './themes/neon/skins.json',
+  './themes/neon/theme.json',
+  './themes/neon/tiers.json',
 ];
 
 self.addEventListener('install', (e) => {

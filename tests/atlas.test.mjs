@@ -2,10 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { contentKey, paletteKey } from '../js/atlaskey.js';
 import { enumerateVariants } from '../js/variants.js';
-import { SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS } from '../js/config.js';
+import { SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS, THEME_ART } from '../js/config.js';
 import { readFileSync } from 'node:fs';
 
-const ART = JSON.parse(readFileSync(new URL('../art/sprites.json', import.meta.url), 'utf8'));
+const ART = JSON.parse(readFileSync(new URL('sprites.json', THEME_ART + '/'), 'utf8'));
 
 const cfg = { SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS };
 

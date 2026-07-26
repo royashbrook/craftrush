@@ -22,9 +22,10 @@ function walk(rel, out = []) {
 }
 
 // Runtime files that ship to the browser (source tools/tests/docs excluded).
-// assets/ is the art: the atlas PNG and its manifest. It has to ship AND be
-// precached, or the game boots to a magenta grid the first time it is offline.
-const RUNTIME = ['index.html', 'manifest.webmanifest', 'sw.js', ...walk('js'), ...walk('icons'), ...walk('assets')];
+// A theme ships its data and its built atlas, but not art/: those are the
+// source drawings the atlas was packed from, and the browser never reads them.
+const themeFiles = walk('themes').filter((f) => !f.includes('/art/'));
+const RUNTIME = ['index.html', 'manifest.webmanifest', 'sw.js', ...walk('js'), ...walk('icons'), ...themeFiles];
 
 // Fresh dist/
 rmSync(DIST, { recursive: true, force: true });

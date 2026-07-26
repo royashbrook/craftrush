@@ -1,0 +1,182 @@
+{
+ "mobs": {
+  "creeper": {
+   "hp": 7,
+   "speed": 2.6,
+   "kind": "exploder",
+   "boomRadius": 2,
+   "boomKills": 10,
+   "fuse": 0.75,
+   "worldH": 1.9
+  },
+  "zombie": {
+   "hp": 10,
+   "speed": 2.2,
+   "kind": "chaser",
+   "bitePeriod": 0.7,
+   "worldH": 1.9
+  },
+  "husk": {
+   "hp": 12,
+   "speed": 2,
+   "kind": "chaser",
+   "bitePeriod": 0.7,
+   "worldH": 1.9
+  },
+  "zombified_piglin": {
+   "hp": 9,
+   "speed": 3.4,
+   "kind": "chaser",
+   "bitePeriod": 0.6,
+   "worldH": 1.9
+  },
+  "skeleton": {
+   "hp": 8,
+   "speed": 2.4,
+   "kind": "archer",
+   "range": 15,
+   "shotPeriod": 1.7,
+   "worldH": 1.9
+  },
+  "stray": {
+   "hp": 9,
+   "speed": 2.4,
+   "kind": "archer",
+   "range": 16,
+   "shotPeriod": 1.5,
+   "worldH": 1.9
+  },
+  "blaze": {
+   "hp": 11,
+   "speed": 1.8,
+   "kind": "archer",
+   "range": 16,
+   "shotPeriod": 2.1,
+   "spread": 3,
+   "projectile": "fireball",
+   "floats": true,
+   "worldH": 1.9
+  },
+  "witch": {
+   "hp": 13,
+   "speed": 1.6,
+   "kind": "lobber",
+   "range": 13,
+   "shotPeriod": 2.4,
+   "aoeRadius": 1.5,
+   "aoeKills": 2,
+   "worldH": 2.1
+  },
+  "spider": {
+   "hp": 6,
+   "speed": 4.2,
+   "kind": "chaser",
+   "bitePeriod": 0.9,
+   "zigzag": true,
+   "worldH": 1
+  },
+  "slime": {
+   "hp": 8,
+   "speed": 2.4,
+   "kind": "chaser",
+   "bitePeriod": 0.8,
+   "hops": true,
+   "splitsTo": "slime_mini",
+   "worldH": 1.4
+  },
+  "slime_mini": {
+   "hp": 3,
+   "speed": 3,
+   "kind": "chaser",
+   "bitePeriod": 0.8,
+   "hops": true,
+   "worldH": 0.8,
+   "sprite": "slime"
+  },
+  "magma_cube": {
+   "hp": 10,
+   "speed": 2.4,
+   "kind": "chaser",
+   "bitePeriod": 0.7,
+   "hops": true,
+   "splitsTo": "magma_mini",
+   "worldH": 1.4
+  },
+  "magma_mini": {
+   "hp": 4,
+   "speed": 3,
+   "kind": "chaser",
+   "bitePeriod": 0.7,
+   "hops": true,
+   "worldH": 0.8,
+   "sprite": "magma_cube"
+  },
+  "phantom": {
+   "hp": 7,
+   "speed": 5,
+   "kind": "swooper",
+   "worldH": 1,
+   "floats": true
+  },
+  "enderman": {
+   "hp": 14,
+   "speed": 3,
+   "kind": "chaser",
+   "bitePeriod": 0.5,
+   "teleports": true,
+   "worldH": 2.6
+  }
+ },
+ "bosses": {
+  "boss_slime": {
+   "name": "KING SLIME",
+   "hp": 90,
+   "worldH": 4.3,
+   "attacks": [
+    "minions",
+    "shockwave"
+   ]
+  },
+  "boss_ravager": {
+   "name": "RAVAGER",
+   "hp": 130,
+   "worldH": 4.5,
+   "attacks": [
+    "charge",
+    "minions",
+    "shockwave"
+   ]
+  },
+  "boss_wither": {
+   "name": "THE WITHER",
+   "hp": 170,
+   "worldH": 4.8,
+   "attacks": [
+    "skulls",
+    "minions",
+    "shockwave"
+   ]
+  },
+  "boss_dragon": {
+   "name": "ENDER DRAGON",
+   "hp": 220,
+   "worldH": 5.4,
+   "attacks": [
+    "skulls",
+    "charge",
+    "minions"
+   ]
+  },
+  "boss_warden": {
+   "name": "THE WARDEN",
+   "hp": 300,
+   "worldH": 5,
+   "attacks": [
+    "sonicboom",
+    "minions",
+    "sonicboom",
+    "charge"
+   ]
+  }
+ }
+}

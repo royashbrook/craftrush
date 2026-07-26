@@ -1,0 +1,16 @@
+{
+ "id": "craft",
+ "name": "Craft Rush",
+ "blurb": "Blocky voxel mobs, gates and giant crowds. The look this engine grew up in.",
+ "art": "art",
+ "atlas": ".",
+ "data": [
+  "biomes",
+  "skins",
+  "cosmetics",
+  "enemies",
+  "campaign",
+  "mine",
+  "tiers"
+ ]
+}
