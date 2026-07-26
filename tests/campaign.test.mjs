@@ -127,3 +127,14 @@ test('campaign loot cannot be bought, only brought home', async () => {
   const granted = new Set(CAMPAIGN.flatMap((ch) => Object.keys(ch.grants || {})));
   for (const c of loot) assert.ok(granted.has(c.quest), `${c.quest} is granted somewhere in the chain`);
 });
+
+test('every chapter has a real place to happen, built out of real art', async () => {
+  const { BIOMES } = await import('../js/config.js');
+  const { SCENERY } = await import('../js/sprites/scenery.js');
+  const places = new Set(BIOMES.map((b) => b.id));
+  for (const c of CAMPAIGN) assert.ok(places.has(c.biome), `${c.id} runs in ${c.biome}, which exists`);
+  for (const b of BIOMES) {
+    for (const s of b.scenery) assert.ok(SCENERY[s], `${b.id} scenery ${s} is drawn somewhere`);
+    assert.ok(SCENERY[b.obstacle], `${b.id} obstacle ${b.obstacle} is drawn somewhere`);
+  }
+});

@@ -85,3 +85,16 @@ test('the bottom-left tab becomes BACK inside a stack and walks back out', async
   await expect(page.locator('#world')).toBeVisible();
   await expect(page.locator('#tabPlayLabel')).toHaveText('Play');
 });
+
+test('the HUD chips stay readable over a dark biome sky', async ({ page }) => {
+  await page.goto('/index.html');
+  await page.locator('#btnPlayShooter').click();
+  await expect(page.locator('#hud')).toBeVisible();
+  // black text on a near-black chip is invisible; every chip must carry real contrast
+  const colors = await page.evaluate(() =>
+    [...document.querySelectorAll('#hudTop .chip')].map((c) => getComputedStyle(c).color));
+  for (const c of colors) {
+    const [r, g, b] = c.match(/\d+/g).map(Number);
+    expect(r + g + b, `chip colour ${c} is not near-black`).toBeGreaterThan(200);
+  }
+});

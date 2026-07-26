@@ -330,7 +330,10 @@
   /* HUD */
   #hud { position: absolute; inset: 0; z-index: 5; pointer-events: none;
     padding: calc(8px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)); }
-  #hudTop { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  /* the chips sit over the sky, so they carry their own colour and outline -
+     without this the level chip inherits black and vanishes in a dark biome */
+  #hudTop { display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    font-weight: 900; color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.7); }
   #hudTop .chip { font-size: 13px; }
   #btnPause { font-family: inherit; color: #fff; cursor: pointer; pointer-events: auto;
     font-size: 15px; padding: 4px 12px; box-shadow: inset 1px 1px 0 rgba(255,255,255,0.15); }
