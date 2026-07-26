@@ -113,3 +113,17 @@ test('the walk home is peaceful: no enemies, no obstacles, only kind gates', asy
   assert.ok(g.creditSigns.length >= 5, 'the thanks are there to run past');
   assert.ok(g.creditSigns.every((c) => c.z < g.length), 'every sign is on the track');
 });
+
+test('campaign loot cannot be bought, only brought home', async () => {
+  const { COSMETICS, questCosmeticEarned } = await import('../js/config.js');
+  const loot = Object.values(COSMETICS).flat().filter((c) => c.quest);
+  assert.ok(loot.length >= 2, 'the chain hands back things you can wear');
+  const rich = { inventory: {}, emeralds: 9e9 };
+  for (const c of loot) {
+    assert.equal(questCosmeticEarned(rich, c), false, `${c.id} is not for sale`);
+    assert.equal(questCosmeticEarned({ inventory: { [c.quest]: 1 } }, c), true, `${c.id} opens once earned`);
+  }
+  // and every quest key is something a chapter actually grants
+  const granted = new Set(CAMPAIGN.flatMap((ch) => Object.keys(ch.grants || {})));
+  for (const c of loot) assert.ok(granted.has(c.quest), `${c.quest} is granted somewhere in the chain`);
+});

@@ -444,6 +444,42 @@ export const CORE = {
       ],
     ],
   },
+  helm_gold_trim: {
+    w: 12, h: 10, anchor: 'bottom',
+    palette: { c: '#4aede0', C: '#2a9d94', g: '#f3c53f', G: '#c29222', k: '#173d38' },
+    frames: [
+      [
+        "....cggc....",
+        "...cCggGc...",
+        "..cCCggCCc..",
+        ".cCCCggCCCc.",
+        "CGCCggggCCGC",
+        "ccCc....CCCc",
+        "cCCC....CCCC",
+        "cCCC....CCCC",
+        "cCCCC..CCCCC",
+        "kcCCCCCCCGCk",
+      ],
+    ],
+  },
+  helm_diamond_trim: {
+    w: 12, h: 10, anchor: 'bottom',
+    palette: { h: '#6a6a72', H: '#2e2e36', b: '#7ef0e8', T: '#3fb8ae', k: '#1a1a1a' },
+    frames: [
+      [
+        "....hbbh....",
+        "...hHbbTh...",
+        "..hHHbbHHh..",
+        ".hHHHbbHHHh.",
+        "THHHbbbbHHTH",
+        "hhHh....HHHh",
+        "hHHH....HHHH",
+        "hHHH....HHHH",
+        "hHHHH..HHHHH",
+        "khHHHHHHHTHk",
+      ],
+    ],
+  },
   parrot: {
     w: 10, h: 10, anchor: 'bottom',
     palette: { r: '#e0362b', b: '#3fa9ff', o: '#e8871e', k: '#0c0c0c', g: '#2eff70' },

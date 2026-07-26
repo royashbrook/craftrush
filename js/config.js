@@ -352,6 +352,8 @@ export const COSMETICS = {
     { id: 'cape_ice', name: 'Frost', cost: 400, colors: { c: '#9fd8f0', C: '#6aaece' } },
     { id: 'cape_ender', name: 'Ender', cost: 800, colors: { c: '#8b3fd6', C: '#5c2496' } },
     { id: 'cape_gold', name: 'Royal Gold', cost: 1400, colors: { c: '#f3c53f', C: '#c29222' } },
+    // earned on the End Ship, never for sale: the wings are the reward itself
+    { id: 'cape_elytra', name: 'Elytra', cost: 0, quest: 'elytra', colors: { c: '#cfc8dc', C: '#6d6880' } },
     { id: 'cape_forest', name: 'Forest', cost: 150, colors: { c: '#3f8f45', C: '#276030' } },
     { id: 'cape_ocean', name: 'Ocean Wave', cost: 300, colors: { c: '#2f8fd0', C: '#1c5f92' } },
     { id: 'cape_candy', name: 'Candy', cost: 500, colors: { c: '#f57ab6', C: '#c04a86' } },
@@ -379,6 +381,9 @@ export const COSMETICS = {
     { id: 'hat_tnt', name: 'TNT Cap', cost: 900, sprite: 'hat_tnt' },
     { id: 'hat_wizard', name: 'Wizard Hat', cost: 1200, sprite: 'hat_wizard' },
     { id: 'hat_santa', name: 'Santa', cost: 1500, sprite: 'hat_santa' },
+    // brought back from the bastion, not bought
+    { id: 'helm_gold_trim', name: 'Gold Trim Helm', cost: 0, quest: 'trims', sprite: 'helm_gold_trim' },
+    { id: 'helm_diamond_trim', name: 'Diamond Trim Helm', cost: 0, quest: 'trims', sprite: 'helm_diamond_trim' },
   ],
   trail: [
     { id: 'none', name: 'No Trail', cost: 0 },
@@ -730,6 +735,13 @@ export const CAMPAIGN = [
   { id: 'credits', icon: 'ui_person', name: 'The Long Walk Home', biome: 'plains', credits: true,
     blurb: 'Everything you built, on the way home.' },
 ];
+// Some cosmetics are campaign loot: the shop shows them, but emeralds cannot
+// buy them - you have to have brought the thing home.
+export function questCosmeticEarned(save, def) {
+  if (!def || !def.quest) return true;
+  return ((save && save.inventory && save.inventory[def.quest]) || 0) > 0;
+}
+
 export const chapterById = (id) => CAMPAIGN.find((c) => c.id === id);
 export const chapterIndex = (id) => CAMPAIGN.findIndex((c) => c.id === id);
 

@@ -80,7 +80,10 @@ test('shop pricing stays sane as the catalog grows', () => {
   assert.ok(SKINS.slice(1).every(s => s.cost > 0), 'every other skin costs something');
   for (const [cat, list] of Object.entries(COSMETICS)) {
     assert.equal(list[0].id, 'none', `${cat} starts with a free none option`);
-    assert.ok(list.slice(1).every(c => c.cost > 0), `${cat} items all cost something`);
+    for (const c of list.slice(1)) {
+      if (c.quest) assert.equal(c.cost, 0, `${c.id} is campaign loot, not stock`);
+      else assert.ok(c.cost > 0, `${cat} item ${c.id} costs something`);
+    }
   }
   const total = SKINS.reduce((a, s) => a + s.cost, 0)
     + Object.values(COSMETICS).flat().reduce((a, c) => a + c.cost, 0);

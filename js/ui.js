@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, HOME, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, mineEnergy, pickaxeDmg, nextPickaxe, tileById, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, SPEEDS, speedById, CAMPAIGN, currentChapter, chapterMissing, completeChapter, RESOURCES, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, townPop, townHasRoom, worldIncomeRate, pendingIdleWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, HOME, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, mineEnergy, pickaxeDmg, nextPickaxe, tileById, clamp01, questCosmeticEarned, DECOR, decorById, ROOM_TIERS, roomTierById, SPEEDS, speedById, CAMPAIGN, currentChapter, chapterMissing, completeChapter, RESOURCES, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, townPop, townHasRoom, worldIncomeRate, pendingIdleWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit, hasSprite } from './assets.js';
 import { TownScene } from './townscene.js';
@@ -1551,9 +1551,10 @@ export class UI {
     this.buildShop();
   }
 
-  _card(grid, { name, selected, owned, cost, draw, onClick }) {
+  _card(grid, { name, selected, owned, cost, quest, draw, onClick }) {
     const card = document.createElement('button');
-    card.className = 'skinCard' + (selected ? ' sel' : '') + (!owned && this.save.emeralds < cost ? ' locked' : '');
+    const short = quest ? quest === 'QUEST' : this.save.emeralds < cost;
+    card.className = 'skinCard' + (selected ? ' sel' : '') + (!owned && short ? ' locked' : '');
     const cv = document.createElement('canvas');
     cv.width = 64; cv.height = 88;
     const g = cv.getContext('2d');
@@ -1566,7 +1567,9 @@ export class UI {
     card.appendChild(nm);
     const tag = document.createElement('div');
     tag.className = 'skinTag';
-    tag.innerHTML = selected ? 'PICKED' : owned ? 'OWNED' : `<span class="em"></span> ${cost}`;
+    tag.innerHTML = selected ? 'PICKED' : owned ? 'OWNED'
+      : quest ? `<span class="questTag">${quest}</span>`
+      : `<span class="em"></span> ${cost}`;
     card.appendChild(tag);
     card.addEventListener('click', onClick);
     grid.appendChild(card);
@@ -1607,6 +1610,7 @@ export class UI {
           selected: this.save.cosmetics[cat] === def.id,
           owned: this.save.cosmeticsOwned.includes(def.id),
           cost: def.cost,
+          quest: def.quest ? questCosmeticEarned(this.save, def) ? 'EARNED' : 'QUEST' : null,
           draw: (g) => this.drawCosmeticPreview(g, cat, def),
           onClick: () => this.onCosmeticClick(cat, def),
         });
@@ -1653,6 +1657,16 @@ export class UI {
       // click equipped item again to take it off
       this.save.cosmetics[cat] = this.save.cosmetics[cat] === def.id ? 'none' : def.id;
       Audio.sfx('click');
+    } else if (def.quest) {
+      // campaign loot: free once you have it, and no amount of emeralds buys it early
+      if (!questCosmeticEarned(this.save, def)) {
+        this.toast(`Find this on your quest: ${def.name}.`);
+        Audio.sfx('gate_bad');
+        return;
+      }
+      this.save.cosmeticsOwned.push(def.id);
+      this.save.cosmetics[cat] = def.id;
+      Audio.sfx('buy');
     } else if (this.save.emeralds >= def.cost) {
       this.save.emeralds -= def.cost;
       this.save.cosmeticsOwned.push(def.id);

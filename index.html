@@ -76,6 +76,9 @@
   .gameHead { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 14px;
     color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.6); letter-spacing: 1px; }
   .gameDesc { font-size: 11px; color: #cfc9d8; line-height: 1.4; }
+  /* On a short screen the quest card matters more than re-explaining the two
+     modes, so the blurbs step aside rather than letting the menu scroll. */
+  @media (max-height: 780px) { .gameDesc { display: none; } }
   #cardShooter { border-color: #2a7fd4; }
   #cardGates { border-color: #b58a1a; }
 
@@ -297,6 +300,7 @@
   #questDesc { font-size: 11px; color: #bcd6df; line-height: 1.4; }
   #questNeed { font-size: 11px; color: #ffd94d; text-align: left; }
   #questNeed:empty { display: none; }
+  .questTag { color: #7ee0ff; font-weight: 900; letter-spacing: 1px; }
 
   .modeRow { display: flex; width: 100%; gap: 0; }
   .modeRow .mcbtn { font-size: 13px; padding: 10px 4px; }
