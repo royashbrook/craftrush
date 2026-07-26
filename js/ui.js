@@ -1,6 +1,6 @@
 // DOM UI: menu, shop, HUD, results, tutorial toasts. Game world stays on canvas;
 // chrome lives in DOM for crisp text and fat touch targets.
-import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, HOME, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, mineEnergy, pickaxeDmg, nextPickaxe, tileById, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, townPop, townHasRoom, worldIncomeRate, pendingIdleWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
+import { SKINS, MODES, BIOMES, CAMERAS, COSMETICS, VERSION, VILLAGERS, HOME, villagerCost, homeIncomeRate, pendingIdle, MINE, PICKAXES, mineEnergy, pickaxeDmg, nextPickaxe, tileById, clamp01, DECOR, decorById, ROOM_TIERS, roomTierById, SPEEDS, speedById, TOWNS, townById, MAX_HOUSES, housePrice, makeHouse, styleById, migrateWorld, townPop, townHasRoom, worldIncomeRate, pendingIdleWorld, dailyExpedition, expeditionStatus, recordExpedition, persistSave, exportSave, importSave, resetSave, writeBackup, listBackups, restoreBackup, dayStamp } from './config.js';
 import { ACHIEVEMENTS, checkAchievements } from './achievements.js';
 import { getSprite, blit, hasSprite } from './assets.js';
 import { TownScene } from './townscene.js';
@@ -58,6 +58,7 @@ export class UI {
       btnGoals: $('btnGoals'), btnCameraMore: $('btnCameraMore'), btnSoundMore: $('btnSoundMore'),
       btnSaveMore: $('btnSaveMore'), btnAbout: $('btnAbout'),
       cameraLabel: $('cameraLabel'), soundLabel: $('soundLabel'),
+      btnSpeedMore: $('btnSpeedMore'), speedLabel: $('speedLabel'),
       btnMusicMore: $('btnMusicMore'), musicLabel: $('musicLabel'),
       btnDownloadSave: $('btnDownloadSave'), backupList: $('backupList'),
       btnForceUpdate: $('btnForceUpdate'),
@@ -132,6 +133,13 @@ export class UI {
       Audio.unlock();
       Audio.setMusic(this.save.music);
       if (this.save.music) Audio.music('menu');
+      persistSave(this.save);
+      this.refreshMore();
+    });
+    E.btnSpeedMore.addEventListener('click', () => {
+      Audio.sfx('click');
+      const ids = SPEEDS.map((x) => x.id);
+      this.save.speed = ids[(ids.indexOf(this.save.speed || 'normal') + 1) % ids.length];
       persistSave(this.save);
       this.refreshMore();
     });
@@ -1449,6 +1457,8 @@ export class UI {
     const E = this.els;
     E.soundLabel.textContent = this.save.sfx ? 'EFFECTS ON' : 'EFFECTS OFF';
     E.soundLabel.previousElementSibling.dataset.icon = this.save.sfx ? 'ui_sound_on' : 'ui_sound_off';
+    const pace = speedById(this.save.speed);
+    E.speedLabel.textContent = `PACE: ${pace.label} · ${pace.rewardMul}x REWARD`;
     E.musicLabel.textContent = this.save.music ? 'MUSIC ON' : 'MUSIC OFF';
     E.musicLabel.previousElementSibling.dataset.icon = this.save.music ? 'ui_sound_on' : 'ui_sound_off';
     E.cameraLabel.textContent = `CAMERA: ${(CAMERAS[this.save.camera] || CAMERAS.far).label}`;

@@ -55,3 +55,18 @@ test('a legacy global village moves into the starter town exactly once', () => {
   migrateWorld(save);                             // idempotent, must not double up
   assert.equal(w.towns.plains.villagers.farmer, 3);
 });
+
+test('picking a faster pace pays more, a calmer one pays less', async () => {
+  const { SPEEDS, speedById } = await import('../js/config.js');
+  assert.equal(speedById('normal').speedMul, 1);
+  assert.equal(speedById('normal').rewardMul, 1);
+  assert.equal(speedById('nonsense').id, 'normal', 'unknown falls back to normal');
+  const calm = speedById('calm'), turbo = speedById('turbo');
+  assert.ok(calm.speedMul < 1 && calm.rewardMul < 1, 'calmer is slower and pays less');
+  assert.ok(turbo.speedMul > 1 && turbo.rewardMul > 1, 'turbo is faster and pays more');
+  // risk should track reward: every step up is faster AND worth more
+  for (let i = 1; i < SPEEDS.length; i++) {
+    assert.ok(SPEEDS[i].speedMul > SPEEDS[i - 1].speedMul, `${SPEEDS[i].id} is faster`);
+    assert.ok(SPEEDS[i].rewardMul > SPEEDS[i - 1].rewardMul, `${SPEEDS[i].id} pays more`);
+  }
+});

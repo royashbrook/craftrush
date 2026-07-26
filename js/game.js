@@ -1,6 +1,6 @@
 // Craft Rush core game: crowd sim, dual-mode (shooter / gates), procedural
 // levels, enemies, bosses, effects. World units: blocks; +z is down-track.
-import { TUNE, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS, winBonus } from './config.js';
+import { TUNE, BIOMES, SKINS, CAMERAS, TIERS, COSMETICS, winBonus, speedById } from './config.js';
 import { Camera, renderWorld, DrawQueue } from './engine.js';
 import { Audio } from './audio.js';
 import { CrowdMixin } from './crowd.js';
@@ -113,7 +113,10 @@ export class Game {
     this.applySkin();
     this.paused = false;
     const diff = this.levelDiff();
-    this.speed = Math.min(TUNE.speedCap, TUNE.runSpeed * (1 + TUNE.speedRamp * (this.level - 1)) * (this.mut.speedMul || 1));
+    // the player's chosen pace scales the run and, at the end, the payout
+    const pace = speedById(this.save.speed).speedMul;
+    this.speed = Math.min(TUNE.speedCap * pace,
+      TUNE.runSpeed * (1 + TUNE.speedRamp * (this.level - 1)) * (this.mut.speedMul || 1) * pace);
     this.genLevel(diff);
     this.setWorth(this.mut.startWorth || TUNE.crowdStart);
     this.state = 'run';
@@ -245,7 +248,7 @@ export class Game {
     Audio.stopMusic();
     Audio.sfx(win ? 'fanfare' : 'defeat');
     const bonus = win ? winBonus(this.level, this.bestCrowd) : 0;
-    const mul = this.mut.emeraldMul || 1;
+    const mul = (this.mut.emeraldMul || 1) * speedById(this.save.speed).rewardMul;
     const total = Math.round((this.runEmeralds + bonus) * mul);
     const st = this.save.stats;
     if (st) {

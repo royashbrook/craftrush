@@ -76,6 +76,16 @@ export const TUNE = {
   chargeSpendDivisor: 40, // gates-mode charge: worth spent per tick = worth/this
 };
 
+// Run pace, chosen by the player. Going faster is harder to read and react to, so it
+// pays more; going slower is a gentler ride for a smaller cut.
+export const SPEEDS = [
+  { id: 'calm',   label: 'CALM',   speedMul: 0.8,  rewardMul: 0.8 },
+  { id: 'normal', label: 'NORMAL', speedMul: 1.0,  rewardMul: 1.0 },
+  { id: 'fast',   label: 'FAST',   speedMul: 1.28, rewardMul: 1.5 },
+  { id: 'turbo',  label: 'TURBO',  speedMul: 1.6,  rewardMul: 2.0 },
+];
+export const speedById = (id) => SPEEDS.find((s) => s.id === id) || SPEEDS[1];
+
 // Camera presets — live-switchable in the menu, persisted in the save.
 export const CAMERAS = {
   // crowd should sit in the bottom third with lots of track receding ahead, so
@@ -737,7 +747,7 @@ const SAVE_KEY = 'craftrush_save_v1';
 export function loadSave() {
   const def = { emeralds: 0, level: 1, bestLevel: 1, mode: 'shooter', skin: 'steve',
     unlocked: ['steve'], sound: true, bestCrowd: 0, tutorialSeen: false,
-    camera: 'far',
+    camera: 'far', speed: 'normal',
     cosmetics: { cape: 'none', hat: 'none', trail: 'none', pet: 'none' },
     cosmeticsOwned: ['none'],
     stats: { runs: 0, wins: 0, kills: 0, golems: 0, gigas: 0, totalEmeralds: 0, bossWins: {}, expeditions: 0 },
