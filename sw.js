@@ -1,5 +1,5 @@
 // Cache-first service worker: full offline play after first load.
-const CACHE = 'craftrush-v3';
+const CACHE = 'craftrush-viewport-fix';
 const ASSETS = [
   // NOTE: precache './' (the dir index), NOT './index.html'. Some static hosts (e.g. Cloudflare
   // static assets, which serves this under a subpath) 30x-redirect '/index.html' -> '/'. cache.addAll

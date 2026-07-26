@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Craft Rush</title>
 <meta name="theme-color" content="#17141d">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -29,7 +28,9 @@
   /* Island/notch clearance: at least a little breathing room even where the inset
      reports 0. The home-indicator gap is capped, since a full 34px under a nav bar
      reads as the bar floating rather than sitting on the bottom edge. */
-  #stage { --pad-top: max(env(safe-area-inset-top), 10px);
+  /* No viewport-fit=cover, so the status bar and home indicator sit OUTSIDE the
+     viewport and the insets report 0. Plain padding is all the bars need. */
+  #stage { --pad-top: 8px;
            --pad-bottom: 8px;
            --bar-top: calc(46px + var(--pad-top)); --bar-bottom: calc(54px + var(--pad-bottom)); }
   #stage.playing { --bar-top: 0px; --bar-bottom: 0px; }   /* a run gets the whole screen */
@@ -494,6 +495,8 @@
       <div class="setLabel">Paste a code to restore your game:</div>
       <textarea id="saveImport" class="saveBox" placeholder="paste your code here"></textarea>
       <button class="mcbtn small rowBtn" id="btnLoadSave"><canvas class="icon" data-icon="ui_back"></canvas>LOAD CODE</button>
+      <button class="mcbtn small rowBtn" id="btnForceUpdate"><canvas class="icon" data-icon="ui_gear"></canvas>GET LATEST VERSION</button>
+      <div class="setLabel">Reloads the app files. Your save is NOT touched.</div>
       <button class="mcbtn small rowBtn" id="btnReset"><canvas class="icon" data-icon="ui_trash"></canvas>RESET EVERYTHING</button>
       <textarea id="saveExport" class="saveBox hidden" readonly></textarea>
       <div id="setMsg"></div>

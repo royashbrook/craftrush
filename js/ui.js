@@ -56,6 +56,7 @@ export class UI {
       cameraLabel: $('cameraLabel'), soundLabel: $('soundLabel'),
       btnMusicMore: $('btnMusicMore'), musicLabel: $('musicLabel'),
       btnDownloadSave: $('btnDownloadSave'), backupList: $('backupList'),
+      btnForceUpdate: $('btnForceUpdate'),
     };
     this.returnTo = 'menu';   // where BACK from shop/achievements goes
     this.achQueue = [];
@@ -132,6 +133,7 @@ export class UI {
       this.refreshMore();
     });
     E.btnDownloadSave.addEventListener('click', () => { Audio.sfx('click'); this.downloadSave(); });
+    E.btnForceUpdate.addEventListener('click', () => { Audio.sfx('click'); this.forceUpdate(); });
     E.btnCameraMore.addEventListener('click', () => {
       Audio.sfx('click');
       const keys = Object.keys(CAMERAS);
@@ -1097,6 +1099,24 @@ export class UI {
       this.els.saveExport.classList.remove('hidden'); // fall back to the code
       this.els.setMsg.textContent = 'Could not save a file — copy the code instead.';
     }
+  }
+
+  // An installed PWA suspends and resumes instead of re-navigating, so it can hold
+  // onto old app files indefinitely. This drops the cached files and the worker and
+  // reloads. It only clears CACHES, never localStorage, so the save survives.
+  async forceUpdate() {
+    this.els.setMsg.textContent = 'Getting the latest version…';
+    try {
+      if (window.caches) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if (navigator.serviceWorker) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch { /* clearing is best effort; the reload below still helps */ }
+    location.reload();
   }
 
   renderBackups() {
