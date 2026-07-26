@@ -431,12 +431,13 @@ export class UI {
   digAt(x, y) {
     const m = this.mineData(), now = Date.now();
     const cur = mineEnergy(m, now);
-    const res = this.mine.dig(x, y, cur);
+    const res = this.mine.act(x, y, cur);
     if (!res.ok) {
       if (res.why === 'tier') { Audio.sfx('gate_bad'); this.els.mineStats.textContent = `Your pickaxe is too weak for ${res.tile.id}!`; }
       else if (res.why === 'energy') Audio.sfx('gate_bad');
       return;
     }
+    if (res.moved) { Audio.sfx('click'); return; }   // a step costs nothing
     m.energy = Math.max(0, cur - res.spent);
     m.energyTs = now;
     Audio.sfx(res.broke ? (res.gained ? 'emerald' : 'hit') : 'hit', 30);
@@ -480,7 +481,7 @@ export class UI {
       chip.append(dot, document.createTextNode(`${id.replace('ore', '')} ${n}`));
       E.mineBag.appendChild(chip);
     }
-    if (!worth) E.mineBag.textContent = 'Dig down and fill your bag with ore.';
+    if (!worth) E.mineBag.textContent = 'Tap rock to dig, tap open space to climb.';
     E.btnSellOre.textContent = worth ? `SELL ORE · ${worth}` : 'BAG EMPTY';
     E.btnSellOre.style.opacity = worth ? '1' : '0.6';
 

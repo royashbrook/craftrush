@@ -439,7 +439,12 @@
   .homeSprite canvas { image-rendering: pixelated; animation: homeBob 1.6s ease-in-out infinite; height: 52px; width: auto; }
   .homeSprite .cnt { font-size: 10px; font-weight: 900; color: #fff; text-shadow: 1px 1px 0 #000; margin-top: -4px; }
   @keyframes homeBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-  .homeEmpty { align-self: center; color: #3a2c1a; font-size: 12px; font-weight: 900; }
+  /* the empty-town line sits over the scene, so it has to wrap inside the box
+     and carry its own contrast against whatever sky is behind it */
+  .homeEmpty { align-self: center; margin: 0 auto; max-width: 90%; text-align: center;
+    color: #fff; font-size: 12px; font-weight: 900; line-height: 1.35;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.85), -1px 1px 0 rgba(0,0,0,0.85),
+                 1px -1px 0 rgba(0,0,0,0.85), -1px -1px 0 rgba(0,0,0,0.85); }
   .villagerList { width: 100%; display: flex; flex-direction: column; gap: 5px; }
   .vCard { display: flex; align-items: center; gap: 8px; background: #3a3444; border: 2px solid #000; padding: 4px 8px;
     box-shadow: inset 2px 2px 0 rgba(255,255,255,0.12), inset -2px -2px 0 rgba(0,0,0,0.4); }

@@ -38,16 +38,44 @@ export class MineWorld {
     m.depth = Math.max(m.depth || 0, this.my);
   }
 
-  // the miner sinks through any air beneath him, like a dug shaft should behave
+  // the miner sinks through any air beneath him, like a dug shaft should behave.
+  // Only digging does this. Stepping is deliberate and sticks, which is what
+  // lets you climb back up a shaft instead of falling straight down it again.
   settle() {
     let guard = 0;
     while (this.isOpen(this.mx, this.my + 1) && guard++ < 64) this.my++;
   }
 
-  // only the four neighbours are in reach, so digging feels deliberate
+  // the whole ring around him, corners included, so carving a room is not a
+  // chore and a vein one step off the diagonal is not out of reach
   inReach(x, y) {
     const dx = Math.abs(x - this.mx), dy = Math.abs(y - this.my);
-    return (dx + dy) === 1;
+    return Math.max(dx, dy) === 1;
+  }
+
+  /** The eight tiles around the miner, for reach hints and hit testing. */
+  static RING = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]];
+
+  /**
+   * Step into an already-open tile. No energy, no gravity: a step you chose is
+   * a step you keep, which is the whole of climbing back up.
+   */
+  step(x, y) {
+    if (!this.inReach(x, y)) return { ok: false, why: 'reach' };
+    const tile = this.tileAt(x, y);
+    if (tile.solid !== false) return { ok: false, why: 'solid' };
+    if (tile.hazard) return { ok: false, why: 'hazard' };
+    this.mx = x; this.my = y;
+    this.persist();
+    return { ok: true, moved: true };
+  }
+
+  /**
+   * What a tap means depends on what was tapped: open ground is a step, rock is
+   * a dig. One entry point so the UI does not have to know the difference.
+   */
+  act(x, y, energyLeft) {
+    return this.tileAt(x, y).solid === false ? this.step(x, y) : this.dig(x, y, energyLeft);
   }
 
   /** Try to dig a tile. Returns a result the UI can speak to the player. */
@@ -156,13 +184,27 @@ export class MineWorld {
       blit(g, getSprite('head_steve'), 0, mpx, mpy - size * 0.66 - bob, size * 0.5);
     }
 
-    // reach hints: the four tiles you could dig next
-    g.strokeStyle = 'rgba(255,255,255,0.5)';
+    // reach hints: solid neighbours you can dig, open ones you can step into.
+    // Two different marks, because they do two different things.
     g.lineWidth = 2;
-    for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+    for (const [dx, dy] of MineWorld.RING) {
       const tx = this.mx + dx, ty = this.my + dy;
-      if (this.tileAt(tx, ty).solid === false) continue;
-      g.strokeRect((tx - x0) * size + 1, (ty - y0) * size + 1, size - 2, size - 2);
+      const tile = this.tileAt(tx, ty);
+      if (tile.hazard) continue;                 // never invite a tap into lava
+      const px = (tx - x0) * size, py = (ty - y0) * size;
+      if (tile.solid === false) {
+        // a step: a small mark in the middle rather than a whole outline, so a
+        // dug-out shaft does not turn into a wall of boxes
+        g.strokeStyle = 'rgba(126,224,255,0.55)';
+        const c = size / 2, r = size * 0.16;
+        g.beginPath();
+        g.moveTo(px + c - r, py + c); g.lineTo(px + c + r, py + c);
+        g.moveTo(px + c, py + c - r); g.lineTo(px + c, py + c + r);
+        g.stroke();
+      } else {
+        g.strokeStyle = 'rgba(255,255,255,0.5)';
+        g.strokeRect(px + 1, py + 1, size - 2, size - 2);
+      }
     }
     g.lineWidth = 1;
 
