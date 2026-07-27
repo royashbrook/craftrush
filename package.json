@@ -8,11 +8,12 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "art": "node tools/pack-atlas.mjs",
+    "art": "node tools/pack-themes.mjs && node tools/pack-atlas.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:e2e": "playwright test",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "test:build": "PW_TARGET=build playwright test"
+    "test:build": "PW_TARGET=build playwright test",
+    "prebuild": "node tools/pack-themes.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
