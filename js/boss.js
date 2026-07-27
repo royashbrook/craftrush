@@ -2,18 +2,27 @@
 import { TUNE, BOSS_TYPES, TIERS } from './config.js';
 import { Audio } from './audio.js';
 
+export function crowdBossDamageFactor(actualPower, parPower) {
+  const actual = Math.max(0, Number(actualPower) || 0);
+  const par = Math.max(1, Number(parPower) || 1);
+  const ratio = actual / par;
+  if (ratio <= 1) return 1;
+  const effectiveRatio = 1 + TUNE.bossSurplusLogScale * Math.log(ratio);
+  return effectiveRatio / ratio;
+}
+
 export const BossMixin = {
   // ---------- boss ----------
   startBoss() {
     const bt = BOSS_TYPES[this.biome.boss];
     const diff = 1 + (this.level - 1) * 0.3;
     const par = this.expectedBossArmy();
-    // Arrival power no longer moves the goalposts. A strong line earns a short
-    // fight; a weak line has to survive longer or gets wiped out. The generated
-    // track still sets a fixed par so multiplier-heavy levels cannot erase the
-    // entire active boss phase in one hit.
+    // HP stays tied to the generated track rather than the arrival army. Good
+    // play still shortens the fight, but surplus crowd damage is compressed below.
     const baseHp = bt.hp * diff * (this.mode === 'gates' ? 0.45 : 0.75);
-    const parHp = this.mode === 'gates' ? par.worth * 2.1 : par.power * 12;
+    const parHp = par.power * (this.mode === 'gates'
+      ? TUNE.bossGatesHpPerParPower
+      : TUNE.bossShooterHpPerParPower);
     const hp = Math.max(12, Math.ceil(baseHp), Math.ceil(parHp));
     const reaction = this.bossReactionScale();
     this.bossArrivalCrowd = this.armyPower();
@@ -22,6 +31,7 @@ export const BossMixin = {
     this.boss = {
       id: this.biome.boss, type: bt, name: bt.name,
       hp, maxHp: hp,
+      parPower: Math.max(1, par.power), arrivalPower: this.bossArrivalCrowd,
       x: 0, z: this.length + TUNE.bossSpawnZ, targetZ: this.length + TUNE.bossHoldZ,
       t: 0, flash: 0, attackT: 3.2 * reaction, attackIdx: 0, lunge: 0, entering: true,
       // a long fight in stages: each phase hits harder and comes faster
@@ -97,12 +107,19 @@ export const BossMixin = {
     return ({ calm: 1.3, normal: 1, fast: 0.86, turbo: 0.74 })[this.save.speed] || 1;
   },
 
+  bossCrowdDamageFactor() {
+    // Freeze the surplus ratio at arrival. Gate Dash spends its crowd while it
+    // attacks; recomputing from the shrinking army would release the soft cap
+    // mid-fight and make its curve much steeper than Bow Blitz.
+    return crowdBossDamageFactor(this.boss?.arrivalPower, this.boss?.parPower);
+  },
+
   spawnBossWave(wave) {
     wave.threatened = Math.abs(this.playerX - wave.x) < wave.halfW + 0.4;
     this.waves.push(wave);
   },
 
-  damageBoss(amount) {
+  damageBoss(amount, crowdScaled = false) {
     const b = this.boss;
     if (!b || b.entering || this.bossDead) return false;
     if (b.shielded > 0 || b.guarded) {
@@ -112,6 +129,7 @@ export const BossMixin = {
     const phaseFloor = b.phases > 1 && b.phase < b.phases
       ? b.maxHp - (b.maxHp / b.phases) * b.phase
       : -Infinity;
+    if (crowdScaled) amount *= this.bossCrowdDamageFactor();
     b.hp = Math.max(phaseFloor, b.hp - Math.max(0, amount));
     b.flash = 0.08;
     if (b.hp <= 0) this.bossDefeated();
@@ -244,15 +262,18 @@ export const BossMixin = {
         if (Math.abs(target.x - this.playerX) > 1.85) {
           this.chargeT = 0.14;
         } else {
+          const powerBefore = this.armyPower();
           const spend = Math.max(1, Math.ceil(this.worth() / TUNE.chargeSpendDivisor));
           this.setWorth(this.worth() - spend);
+          const powerSpent = Math.max(1, powerBefore - this.armyPower());
+          const chargeDamage = powerSpent * 3;
           if (crystal) {
-            crystal.hp -= spend * 3;
+            crystal.hp -= chargeDamage;
             this.burst(crystal.x + (Math.random() - 0.5) * 1.2, 1.4, crystal.z, ['#c76bff', '#ffffff'], 6);
             Audio.sfx('hit', 60);
             if (crystal.hp <= 0) this.crystalDown(crystal);
           } else {
-            this.damageBoss(spend * 3);
+            this.damageBoss(chargeDamage, true);
             this.burst(b.x + (Math.random() - 0.5) * 1.6, 1.2, b.z - 0.8, [this.skin.palette.t, '#ffd94d'], 6);
             Audio.sfx('hit', 40);
             if (this.bossDead) return;
