@@ -32,6 +32,10 @@ npm run check      # svelte-check over the components and typed modules
 Play a different theme with `?theme=neon` in the browser, or
 `CRAFTRUSH_THEME=neon` for the node tools and tests.
 
+**Every commit must reference an issue** (`Closes #12`, or just `#12`). `npm install`
+points git at `.githooks`, which enforces it locally, and a workflow checks it on
+push as well, since a hook cannot police a commit made somewhere else.
+
 Two test layers:
 - **Unit + integration** (`tests/*.test.mjs`) — pure logic
   plus a headless harness that drives the real `Game` class through full runs

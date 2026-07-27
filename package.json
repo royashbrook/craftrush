@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Craft Rush \u2014 a blocky Minecraft-style crowd-runner PWA.",
   "scripts": {
+    "postinstall": "git config core.hooksPath .githooks || true",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
