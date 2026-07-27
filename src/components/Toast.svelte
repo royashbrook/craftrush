@@ -10,7 +10,9 @@
 
   const text = $derived(nav.toast === 'steer'
     ? 'DRAG ANYWHERE TO STEER!'
-    : 'GOLEM READY: TAP OR PRESS SPACE!');
+    : nav.toast === 'golem'
+      ? 'GOLEM READY: TAP OR PRESS SPACE!'
+      : nav.toast || '');
 </script>
 
 <div id="toast" class:hidden={!nav.toast}>{nav.toast ? text : ''}</div>

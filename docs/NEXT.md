@@ -5,7 +5,7 @@ Research and adversarial review, 2026-07-27.
 ## Implementation status
 
 v1.1 delivered the settlement and post-port hardening work in #74 and #75.
-v1.2 delivers #76, #77, #78, and #80. The same NORMAL level 2 through 20
+v1.2 delivered #76, #77, #78, and #80. The same NORMAL level 2 through 20
 headless matrix now separates the two players cleanly:
 
 | Mode | Passive wins | Competent wins |
@@ -13,7 +13,9 @@ headless matrix now separates the two players cleanly:
 | Bow Blitz | 0/19 | 19/19 |
 | Gate Dash | 0/19 | 19/19 |
 
-The compact shop remains #79. Issue #81 intentionally waits for observations
+v1.3 delivered #79 as a five-category dressing room with a three-column phone
+grid and separate select, buy, claim, equip, and remove actions. Shared-origin
+PWA/save hardening remains #82. Issue #81 intentionally waits for observations
 from the production playtest described in `docs/PLAYTEST.md`.
 
 ## Product direction

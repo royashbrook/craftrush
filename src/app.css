@@ -1,5 +1,5 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overflow: hidden; background: #17141d; touch-action: none;
+  html, body { height: 100%; overflow: hidden; background: #17141d;
     font-family: 'Courier New', Courier, monospace; user-select: none; -webkit-user-select: none; }
   #stage { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
     box-shadow: 0 0 60px rgba(0,0,0,0.9); overflow: hidden; }
@@ -10,7 +10,7 @@
      Safari, which is exactly right for both. */
   #stage.fullscreen { position: fixed; left: 0; top: 0; width: 100vw; height: 100dvh;
     transform: none; }
-  #gameCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  #gameCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; touch-action: none; }
 
   /* ---- mobile app shell: a fixed top bar and bottom nav, content between ---- */
   /* Island/notch clearance: at least a little breathing room even where the inset
@@ -31,7 +31,7 @@
     box-shadow: inset 0 2px 0 rgba(255,255,255,0.07), 0 2px 8px rgba(0,0,0,0.5); }
   #appTitle { flex: 1 1 auto; min-width: 0; font-weight: 900; font-size: 15px; letter-spacing: 1px;
     color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .barBtn { flex: 0 0 auto; width: 34px; height: 34px; background: #3a3444; border: 2px solid #000; cursor: pointer;
+  .barBtn { flex: 0 0 auto; width: 44px; height: 44px; background: #3a3444; border: 2px solid #000; cursor: pointer;
     display: flex; align-items: center; justify-content: center; padding: 0;
     box-shadow: inset 2px 2px 0 rgba(255,255,255,0.16), inset -2px -2px 0 rgba(0,0,0,0.4); }
   .barBtn:active { transform: translateY(1px); }
@@ -325,18 +325,46 @@
     .mcbtn { padding: 9px 14px; font-size: 15px; }
   }
 
-  /* shop */
-  #shopGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
-  .shopSection { grid-column: 1 / -1; font-weight: 900; font-size: 13px; letter-spacing: 2px;
-    color: #ffd94d; text-shadow: 2px 2px 0 #000; margin-top: 6px; }
-  .skinCard { font-family: inherit; background: #3a3444; border: 2px solid #000; padding: 8px 4px;
-    display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
+  /* shop: a dressing room, not one long storefront wall */
+  #shop { padding: 6px calc(8px + env(safe-area-inset-right))
+                    6px calc(8px + env(safe-area-inset-left)); }
+  #shop .panel { width: min(360px, 100%); height: 100%; min-height: 0; overflow: hidden;
+    align-items: stretch; gap: 6px; padding: 8px; }
+  .shopTabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; width: 100%; }
+  .shopTab { min-width: 0; min-height: 44px; padding: 2px; border: 2px solid #000; cursor: pointer;
+    background: #3a3444; color: #cfc9d8; font: 900 9px/1 'Courier New', Courier, monospace;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.13), inset -2px -2px 0 rgba(0,0,0,0.4); }
+  .shopTab.sel { background: #2a7fd4; color: #fff; }
+  .shopPreview { flex: 0 0 104px; min-height: 104px; width: 100%; display: flex; align-items: center;
+    gap: 8px; padding: 6px 8px; border: 2px solid #000; background: rgba(58,52,68,0.72);
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1); }
+  .shopPreviewCanvas { flex: 0 0 56px; width: 56px; height: 77px; image-rendering: pixelated; }
+  .shopPreviewInfo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;
+    align-items: stretch; justify-content: center; gap: 3px; }
+  .shopPreviewName { overflow: hidden; color: #fff; font-size: 13px; font-weight: 900;
+    line-height: 1.1; text-overflow: ellipsis; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
+  .shopPreviewState { min-height: 2.4em; color: #cfc9d8; font-size: 9px; font-weight: 700; line-height: 1.2; }
+  .shopAction { min-height: 44px; padding: 5px 8px; font-size: 12px; }
+  .shopCatalog { flex: 1 1 auto; min-height: 0; width: 100%; overflow-y: auto; overscroll-behavior: contain;
+    touch-action: pan-y; scrollbar-gutter: stable; }
+  #shopGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; width: 100%;
+    padding-bottom: 2px; }
+  .skinCard { min-width: 0; min-height: 94px; font-family: inherit; background: #3a3444;
+    border: 2px solid #000; padding: 4px 2px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; cursor: pointer; overflow: hidden;
     box-shadow: inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4); }
   .skinCard.sel { background: #2a7fd4; }
-  .skinCard.locked { opacity: 0.65; }
-  .skinCard canvas { width: 64px; height: 88px; image-rendering: pixelated; }
-  .skinName { font-weight: 900; color: #fff; font-size: 13px; text-shadow: 1px 1px 0 #000; }
-  .skinTag { font-size: 11px; font-weight: 900; color: #7dff7d; text-shadow: 1px 1px 0 #000; }
+  .skinCard.equipped { box-shadow: inset 0 0 0 2px #7dff5a, inset 2px 2px 0 rgba(255,255,255,0.15); }
+  .skinCard.locked canvas { opacity: 0.42; filter: grayscale(0.35); }
+  .skinCard canvas { width: 44px; height: 60px; image-rendering: pixelated; }
+  .skinName { width: 100%; overflow: hidden; color: #fff; font-size: 10px; font-weight: 900;
+    line-height: 1.1; text-align: center; text-overflow: ellipsis; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
+  .skinTag { min-height: 10px; color: #7dff7d; font-size: 9px; font-weight: 900;
+    line-height: 1.1; text-align: center; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
+  #shopEmpty { color: #8f88a0; font-size: 11px; font-weight: 900; text-align: center; padding: 20px 4px; }
+  button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+    outline: 3px solid #ffd94d; outline-offset: -3px;
+  }
 
   /* HUD */
   #hud { position: absolute; inset: 0; z-index: 5; pointer-events: none;
