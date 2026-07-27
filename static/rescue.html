@@ -46,6 +46,11 @@
     browser storage. It never deletes anything.
   </div>
 
+  <div class="card" id="whereCard">
+    <h2>WHERE YOU ARE</h2>
+    <div id="where" class="dim"></div>
+  </div>
+
   <div class="card">
     <h2>YOUR SAVE</h2>
     <div id="status" class="msg"></div>
@@ -102,7 +107,28 @@
     try { return localStorage.getItem(SAVE_KEY); } catch (e) { return null; }
   }
 
+  function describeContext() {
+    // On iOS an app added to the Home Screen gets its OWN storage, separate from
+    // Safari's. Same game, same device, two different saves — which is baffling
+    // unless someone says so plainly.
+    var standalone = false;
+    try {
+      standalone = (window.navigator && window.navigator.standalone === true)
+        || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    } catch (e) {}
+    var el = $('where');
+    if (standalone) {
+      el.innerHTML = '<strong class="ok">The installed app.</strong> On iPhone this keeps its own save, '
+        + 'separate from the one in Safari. The save below is the installed app\'s.';
+    } else {
+      el.innerHTML = '<strong class="ok">A browser tab.</strong> If you also added the game to your Home Screen, '
+        + 'that installed app keeps a SEPARATE save on iPhone. To move progress between them, copy the save '
+        + 'here and paste it into the other one, using this page from inside whichever you want to change.';
+    }
+  }
+
   function show() {
+    describeContext();
     raw = readSave();
     if (raw) {
       $('status').innerHTML = '<span class="ok">FOUND YOUR SAVE — it is safe.</span>';

@@ -9,6 +9,19 @@
 <link rel="apple-touch-icon" href="%sveltekit.assets%/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 %sveltekit.head%
+<style>
+  #stuck { position: fixed; inset: 0; z-index: 9999; background: #17141d; color: #fff;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.6; }
+  #stuck[hidden] { display: none; }
+  #stuckBox { max-width: 420px; }
+  #stuckTitle { color: #ff8a7a; font-weight: 900; letter-spacing: 1px; margin-bottom: 12px; }
+  #stuck p { margin: 0 0 12px; font-size: 14px; }
+  #stuck a { color: #7ee0ff; font-weight: 700; }
+  .stuckDim { color: #9a92ad; font-size: 12px; }
+  #stuckReload { font: inherit; font-weight: 700; cursor: pointer; padding: 10px 16px;
+    background: #4a8f2f; color: #fff; border: 2px solid #000; }
+</style>
 </head>
 <body data-sveltekit-preload-data="off">
 <!--
@@ -19,5 +32,48 @@
   took three wrong fixes to find, so please do not add it back.
 -->
 <div style="display: contents">%sveltekit.body%</div>
+
+<div id="stuck" hidden>
+  <div id="stuckBox">
+    <div id="stuckTitle">THE GAME DID NOT START</div>
+    <p>Your save is safe. It is stored on this device and nothing here has touched it.</p>
+    <p><a id="stuckLink" href="./rescue.html" rel="external">Open the save rescue page</a></p>
+    <p class="stuckDim">From there you can copy your save out, put one back, or clear the
+      app's cached files without losing anything.</p>
+    <p><button type="button" id="stuckReload">TRY AGAIN</button></p>
+  </div>
+</div>
+
+<script>
+/*
+  A watchdog, deliberately INLINE and dependency free.
+
+  An installed app has no address bar, so a player whose game will not start has
+  no way to type in a rescue URL. On iOS the installed app also has its own
+  storage, separate from Safari's, so their save is ONLY reachable from inside
+  the app. When the module graph died, that combination left a blank screen with
+  no way out at all, which is the worst thing this project can do to someone.
+
+  So if the app has not mounted shortly after load, offer a plain way through.
+  This runs even when every module fails, because it is not a module. It only
+  ever adds an escape hatch, and it never touches storage.
+*/
+(function () {
+  var GRACE_MS = 9000;
+  function mounted() { return !!document.getElementById('stage'); }
+  function show() {
+    if (mounted()) return;
+    var el = document.getElementById('stuck');
+    if (el) el.hidden = false;
+  }
+  var timer = setTimeout(show, GRACE_MS);
+  // a module failure surfaces as an unhandled rejection well before the timeout
+  window.addEventListener('unhandledrejection', function () { setTimeout(show, 1500); });
+  window.addEventListener('error', function () { setTimeout(show, 1500); }, true);
+  window.addEventListener('load', function () { if (mounted()) clearTimeout(timer); });
+  var btn = document.getElementById('stuckReload');
+  if (btn) btn.addEventListener('click', function () { location.reload(); });
+})();
+</script>
 </body>
 </html>

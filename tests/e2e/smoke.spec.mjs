@@ -165,3 +165,38 @@ test('the save rescue page works with the whole app bundle blocked', async ({ pa
   const kept = await page.evaluate(() => localStorage.getItem('craftrush_save_v1'));
   expect(kept, 'the rescue page never deletes a save').toBe(SAVE);
 });
+
+// An installed app has no address bar, and on iOS its storage is separate from
+// the browser's — so if the game will not start, the save inside it is reachable
+// ONLY from inside it. The watchdog in app.html is inline and dependency free
+// precisely so it still runs when every module is dead.
+test('a dead app still offers a way to reach the save', async ({ page, context }) => {
+  await context.addInitScript(() => {
+    Object.defineProperty(window.navigator, 'standalone', { get: () => true });
+    localStorage.setItem('craftrush_save_v1', JSON.stringify({ emeralds: 777, level: 5, unlocked: ['steve'] }));
+  });
+  // kill the app's modules in BOTH environments: the built bundle lives under
+  // _app/, the dev server serves them straight out of src/
+  await page.route('**/_app/**', (r) => r.abort());
+  await page.route('**/src/**', (r) => r.abort());
+
+  await page.goto('/');
+  await expect(page.locator('#stuck')).toBeVisible({ timeout: 15000 });
+  await page.click('#stuckLink');
+
+  await expect(page.locator('#status')).toContainText('FOUND YOUR SAVE');
+  await expect(page.locator('#summary')).toContainText('777 emeralds');
+  // and it names which storage you are looking at, since the app and the
+  // browser keep different ones
+  await expect(page.locator('#where')).toContainText('installed app');
+});
+
+test('the settings screen links to the rescue page', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+  await page.evaluate(() => CR.nav.screen = 'settings');
+  const href = await page.locator('#btnRescue').getAttribute('href');
+  expect(href).toBe('./rescue.html');
+  // a real page load, not a client-side navigation into a route that does not exist
+  expect(await page.locator('#btnRescue').getAttribute('rel')).toBe('external');
+});

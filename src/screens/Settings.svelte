@@ -120,6 +120,17 @@
     <button class="mcbtn small rowBtn" id="btnForceUpdate" onclick={forceUpdate}><Sprite name="ui_gear" />GET LATEST VERSION</button>
 
     <div class="setLabel">Reloads the app files. Your save is NOT touched.</div>
+
+    <!-- Reachable from INSIDE the app on purpose. An installed app has no
+         address bar, and on iOS its storage is separate from the browser's, so
+         this is the only route to that save if the game ever will not start. -->
+    <a class="mcbtn small rowBtn" id="btnRescue" href="./rescue.html" rel="external">
+      <Sprite name="ui_bag" />SAVE RESCUE PAGE
+    </a>
+    <div class="setLabel">
+      Works even if the game stops starting. Note the installed app and the browser
+      each keep their own separate save.
+    </div>
     <button class="mcbtn small rowBtn" id="btnReset" onclick={reset}><Sprite name="ui_trash" />RESET EVERYTHING</button>
 
     <textarea id="saveExport" class="saveBox" class:hidden={!showExport} readonly bind:this={exportEl}>{code}</textarea>
