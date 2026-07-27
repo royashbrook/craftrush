@@ -408,7 +408,13 @@
   .statRow b { color: #fff; }
 
   #loading { position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-    background: #141218; color: #7dff5a; font-weight: 900; font-size: 18px; letter-spacing: 2px; }
+    background: #141218; color: #7dff5a; font-weight: 900; font-size: 18px; letter-spacing: 2px;
+    text-align: center; padding: 20px; }
+  #loadFail { color: #ff8a7a; margin-bottom: 10px; }
+  .loadWhy { color: #9a92ad; font-size: 12px; font-weight: 400; letter-spacing: 0;
+    line-height: 1.5; margin-bottom: 14px; word-break: break-word; }
+  .loadHelp { color: #fff; font-size: 13px; font-weight: 400; letter-spacing: 0; line-height: 1.6; }
+  .loadHelp a { color: #7ee0ff; }
   /* roy's maker's mark , the same colophon that rides every project (ported from royashbrook.com's
      Footer.astro to the game's monospace/dark theme). the red heart + gold sponsor stay literal. */
   /* home hub */

@@ -18,7 +18,11 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
 // it does stays here. These re-exports keep the shape every other module
 // already imports, so a theme swap is a folder swap and nothing else.
 import { THEME } from './theme.js';
-export { THEME_INFO, THEME_ART, THEME_ATLAS, THEME_ID } from './theme.js';
+
+// Fallbacks so a theme that failed to load cannot throw while this module is
+// still evaluating. An empty game that says why beats a blank page that does not.
+const T = (name, fallback) => (THEME[name] === undefined ? fallback : THEME[name]);
+export { THEME_INFO, THEME_ART, THEME_ATLAS, THEME_ID, THEME_ERROR } from './theme.js';
 
 export const TUNE = {
   // world/camera
@@ -113,7 +117,7 @@ export const CAMERAS = {
 // Tiered crowd: worth grows without limit. Runners merge upward through the
 // ladder; worth beyond the render caps is held in `reserve`, which scales the
 // top tier bigger and hits harder ("bigger and bigger", no max).
-export const TIERS = THEME.tiers;
+export const TIERS = T('tiers', { units: [] });
 
 export const MODES = {
   shooter: { id: 'shooter', label: 'BOW BLITZ', desc: 'Your crowd auto-fires arrows. Blast mobs, shoot gates to boost them!' },
@@ -121,9 +125,9 @@ export const MODES = {
 };
 
 // Enemy behavior table. speed = blocks/sec (before level scale). hp at level 1.
-export const ENEMY_TYPES = THEME.enemies.mobs;
+export const ENEMY_TYPES = T('enemies', {}).mobs || {};
 
-export const BOSS_TYPES = THEME.enemies.bosses;
+export const BOSS_TYPES = T('enemies', {}).bosses || {};
 
 // Pickup registry: sprite + behavior for every collectible. Adding a new
 // minecrafty pickup (obsidian, blaze rods, wither skulls) is one entry here.
@@ -182,20 +186,20 @@ for (const k of Object.keys(POWERUP_NAMES)) {
   };
 }
 
-export const BIOMES = THEME.biomes;
+export const BIOMES = T('biomes', []);
 
 // Skins are palette swaps over core.runner_back + a head sprite for the shop.
-export const SKINS = THEME.skins;
+export const SKINS = T('skins', []);
 
 // Cosmetics — all purchasable with emeralds. Capes/hats render on every runner
 // (camera sits behind the crowd, so capes are always on screen).
-export const COSMETICS = THEME.cosmetics;
+export const COSMETICS = T('cosmetics', { cape: [], hat: [], trail: [], pet: [] });
 
 // Home hub: buy villager friends who populate the home and earn emeralds while
 // you're away. Each additional villager of a type costs base * costRate^owned
 // (the classic idle curve). Art reuses existing character skins — no new sprites.
 export const HOME = { costRate: 1.15, idleCapMs: 8 * 3600 * 1000, townCap: 8 };
-export const VILLAGERS = THEME.village.villagers;
+export const VILLAGERS = T('village', {}).villagers || [];
 
 // cost of the NEXT villager of `id` given how many are already owned
 export function villagerCost(id, owned) {
@@ -244,11 +248,11 @@ export function pendingIdle(villagers, lastCollect, now) {
 
 // Playroom decorations: buyable placeable furniture (an emerald sink) and room
 // backdrops. Each buy drops one draggable instance into the playroom.
-export const DECOR = THEME.village.decor;
+export const DECOR = T('village', {}).decor || [];
 export const decorById = (id) => DECOR.find(d => d.id === id);
 // Room styles are real house interiors: a patterned wall, a floor with depth, and
 // baseboard trim, drawn to a pixel canvas. The first is free; the rest you keep.
-export const ROOM_TIERS = THEME.village.roomTiers;
+export const ROOM_TIERS = T('village', {}).roomTiers || [];
 export const roomTierById = (id) => ROOM_TIERS.find(r => r.id === id) || ROOM_TIERS[0];
 
 // ---------------------------------------------------------------------------
@@ -272,7 +276,7 @@ const PRESET_PARTY = [
   { item: 'potted_plant', x: 0.92, y: 0.94 },
 ];
 
-export const TOWNS = THEME.village.towns;
+export const TOWNS = T('village', {}).towns || [];
 export const townById = (id) => TOWNS.find(t => t.id === id) || TOWNS[0];
 
 export const MAX_HOUSES = 4;
@@ -336,7 +340,7 @@ export const MINE = { energyCap: 60, energyRefillMs: 20000, cols: 11, rows: 15 }
 // can break it, and a worth. Ores come in veins rather than lone tiles, and the deeper
 // you go the better it gets. Generation is a pure function of (x, y) so the same shaft
 // always looks the same, no world to store.
-export const TILES = THEME.mine.tiles;
+export const TILES = T('mine', {}).tiles || {};
 export const tileById = (id) => TILES[id] || TILES.stone;
 
 // which ores can appear at a depth, and how likely, deepest first
@@ -378,7 +382,7 @@ export function mineTileAt(x, y) {
   if (y > 100 && hash2(x + 5, y + 71) > 0.9) return TILES.obsidian;
   return TILES.stone;
 }
-export const PICKAXES = THEME.mine.pickaxes;
+export const PICKAXES = T('mine', {}).pickaxes || [];
 export const pickaxeTier = (id) => (PICKAXES.find((p) => p.id === id) || PICKAXES[0]).tier;
 export const canBreak = (pickId, tile) => !tile.hazard && tile.solid !== false && pickaxeTier(pickId) >= (tile.tier || 0);
 // strata by depth — deeper is rarer/prettier
@@ -406,9 +410,9 @@ export function mineEnergy(mine, now) {
 // something you have to go and earn first. Resources bank between runs, so a
 // chapter is a goal you work toward rather than a level that just arrives.
 // ---------------------------------------------------------------------------
-export const RESOURCES = THEME.campaign.resources;
+export const RESOURCES = T('campaign', {}).resources || {};
 
-export const CAMPAIGN = THEME.campaign.chapters;
+export const CAMPAIGN = T('campaign', {}).chapters || [];
 // Some cosmetics are campaign loot: the shop shows them, but emeralds cannot
 // buy them - you have to have brought the thing home.
 export function questCosmeticEarned(save, def) {
@@ -476,7 +480,7 @@ export function completeChapter(save, id) {
 
 // Daily Expeditions: one date-seeded themed run per day, identical for everyone
 // with no server. `mut` holds the run modifiers the engine reads.
-export const EXPEDITIONS = THEME.expeditions;
+export const EXPEDITIONS = T('expeditions', []);
 
 export function dayKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

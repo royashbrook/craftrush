@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Craft Rush — Save Rescue</title>
+<!--
+  Get a save out, even when the game will not start.
+
+  DELIBERATELY DEPENDENCY FREE. No modules, no imports, no bundle, no service
+  worker, no framework, one file, inline everything. It cannot break the way the
+  app broke, which is the entire point: a player whose game will not boot still
+  needs a way to reach their progress before anyone suggests clearing anything.
+
+  A save lives in localStorage under craftrush_save_v1, and daily backups under
+  craftrush_backups_v1. Nothing here ever deletes either.
+-->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: #17141d; color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.5; }
+  main { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; color: #7dff5a; }
+  .sub { color: #9a92ad; font-size: 13px; margin-bottom: 20px; }
+  .card { border: 2px solid #000; background: #241f2e; padding: 12px; margin-bottom: 14px;
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.08); }
+  h2 { font-size: 14px; margin: 0 0 8px; color: #ffd94d; letter-spacing: 1px; }
+  textarea { width: 100%; min-height: 120px; background: #12101a; color: #cfe8ff;
+    border: 1px solid #4a4359; padding: 8px; font: inherit; font-size: 11px; }
+  button { font: inherit; font-weight: 700; cursor: pointer; padding: 10px 14px; margin: 6px 6px 0 0;
+    background: #4a8f2f; color: #fff; border: 2px solid #000;
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.2); }
+  button.grey { background: #4a4359; }
+  button.red { background: #8f3a2f; }
+  .ok { color: #7dff5a; } .bad { color: #ff8a7a; } .dim { color: #9a92ad; font-size: 12px; }
+  .msg { margin-top: 10px; font-weight: 700; min-height: 20px; }
+  ul { margin: 6px 0 0; padding-left: 20px; } li { margin: 3px 0; font-size: 13px; }
+  a { color: #7ee0ff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Save Rescue</h1>
+  <div class="sub">
+    For when the game will not start. This page reads your progress straight out of
+    browser storage. It never deletes anything.
+  </div>
+
+  <div class="card">
+    <h2>YOUR SAVE</h2>
+    <div id="status" class="msg"></div>
+    <div id="summary" class="dim"></div>
+    <textarea id="box" spellcheck="false" placeholder="nothing found yet"></textarea>
+    <div>
+      <button id="copy">COPY</button>
+      <button id="download">DOWNLOAD FILE</button>
+      <button id="reload" class="grey">RELOAD THIS PAGE</button>
+    </div>
+    <div class="msg" id="msg1"></div>
+  </div>
+
+  <div class="card">
+    <h2>DAILY BACKUPS</h2>
+    <div class="dim">The game keeps one automatic backup per day you played.</div>
+    <div id="backups" class="dim">—</div>
+  </div>
+
+  <div class="card">
+    <h2>PUT A SAVE BACK</h2>
+    <div class="dim">
+      Paste a save you copied earlier and press restore. Use this after a reinstall,
+      or to move progress to another device.
+    </div>
+    <textarea id="restoreBox" spellcheck="false" placeholder="paste a save here"></textarea>
+    <div><button id="restore" class="red">RESTORE THIS SAVE</button></div>
+    <div class="msg" id="msg2"></div>
+  </div>
+
+  <div class="card">
+    <h2>IF THE GAME STILL WILL NOT START</h2>
+    <div class="dim">
+      Copy or download your save first, from the box above. Then this button clears the
+      app's cached files and its service worker so the browser fetches a clean copy.
+      <strong>It does not touch your save.</strong>
+    </div>
+    <div><button id="clean" class="grey">CLEAR CACHED APP FILES ONLY</button></div>
+    <div class="msg" id="msg3"></div>
+    <div class="dim" style="margin-top:10px">
+      Back to the game: <a href="./">/craftrush/</a>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  var SAVE_KEY = 'craftrush_save_v1';
+  var BACKUP_KEY = 'craftrush_backups_v1';
+  var $ = function (id) { return document.getElementById(id); };
+  var raw = null;
+
+  function readSave() {
+    try { return localStorage.getItem(SAVE_KEY); } catch (e) { return null; }
+  }
+
+  function show() {
+    raw = readSave();
+    if (raw) {
+      $('status').innerHTML = '<span class="ok">FOUND YOUR SAVE — it is safe.</span>';
+      $('box').value = raw;
+      try {
+        var s = JSON.parse(raw);
+        var bits = [];
+        if (s.emeralds != null) bits.push(s.emeralds + ' emeralds');
+        if (s.level != null) bits.push('level ' + s.level);
+        if (s.unlocked && s.unlocked.length) bits.push(s.unlocked.length + ' skins');
+        if (s.campaign && s.campaign.done) bits.push(s.campaign.done.length + ' chapters done');
+        $('summary').textContent = bits.join('  ·  ');
+      } catch (e) { $('summary').textContent = '(could not read the details, but the text below is your save)'; }
+    } else {
+      $('status').innerHTML = '<span class="bad">No save found in this browser.</span>';
+      $('summary').textContent = 'If you played in a different browser, or as an installed app, try there.';
+    }
+
+    var b = null;
+    try { b = localStorage.getItem(BACKUP_KEY); } catch (e) {}
+    if (!b) { $('backups').textContent = 'none found'; return; }
+    try {
+      var list = JSON.parse(b);
+      var keys = Object.keys(list);
+      if (!keys.length) { $('backups').textContent = 'none found'; return; }
+      var html = '<ul>';
+      for (var i = 0; i < keys.length; i++) {
+        var entry = list[keys[i]];
+        var em = '';
+        try { var p = typeof entry === 'string' ? JSON.parse(entry) : entry; if (p && p.emeralds != null) em = ' — ' + p.emeralds + ' emeralds'; } catch (e) {}
+        html += '<li>' + keys[i] + em + ' <button data-k="' + keys[i] + '" class="grey useBackup">USE THIS ONE</button></li>';
+      }
+      $('backups').innerHTML = html + '</ul>';
+      var btns = document.querySelectorAll('.useBackup');
+      for (var j = 0; j < btns.length; j++) {
+        btns[j].addEventListener('click', function () {
+          var entry = list[this.getAttribute('data-k')];
+          $('restoreBox').value = typeof entry === 'string' ? entry : JSON.stringify(entry);
+          $('msg2').innerHTML = '<span class="ok">Loaded into the box below. Press RESTORE to use it.</span>';
+          $('restoreBox').scrollIntoView({ block: 'center' });
+        });
+      }
+    } catch (e) { $('backups').textContent = 'found, but could not be read'; }
+  }
+
+  $('copy').addEventListener('click', function () {
+    var t = $('box'); t.select(); t.setSelectionRange(0, 999999);
+    var done = false;
+    try { if (navigator.clipboard) { navigator.clipboard.writeText(t.value); done = true; } } catch (e) {}
+    if (!done) { try { done = document.execCommand('copy'); } catch (e) {} }
+    $('msg1').innerHTML = done
+      ? '<span class="ok">Copied. Paste it somewhere safe.</span>'
+      : '<span class="bad">Could not copy automatically — select the text and copy it by hand.</span>';
+  });
+
+  $('download').addEventListener('click', function () {
+    if (!$('box').value) { $('msg1').innerHTML = '<span class="bad">Nothing to download.</span>'; return; }
+    try {
+      var blob = new Blob([$('box').value], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'craftrush-save.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      $('msg1').innerHTML = '<span class="ok">Downloaded craftrush-save.json</span>';
+    } catch (e) {
+      $('msg1').innerHTML = '<span class="bad">Download failed — use COPY instead.</span>';
+    }
+  });
+
+  $('reload').addEventListener('click', function () { location.reload(); });
+
+  $('restore').addEventListener('click', function () {
+    var v = $('restoreBox').value.trim();
+    if (!v) { $('msg2').innerHTML = '<span class="bad">Paste a save first.</span>'; return; }
+    try { JSON.parse(v); } catch (e) {
+      $('msg2').innerHTML = '<span class="bad">That does not look like a save (not valid JSON).</span>'; return;
+    }
+    var current = readSave();
+    if (current && !confirm('This replaces the save currently in this browser. Copy it first if you need it. Continue?')) return;
+    try {
+      localStorage.setItem(SAVE_KEY, v);
+      $('msg2').innerHTML = '<span class="ok">Restored. Open the game to check it.</span>';
+      show();
+    } catch (e) {
+      $('msg2').innerHTML = '<span class="bad">Could not write to storage: ' + e.message + '</span>';
+    }
+  });
+
+  $('clean').addEventListener('click', function () {
+    $('msg3').textContent = 'Working…';
+    var jobs = [];
+    try {
+      if (window.caches) jobs.push(caches.keys().then(function (ks) {
+        return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+      }));
+    } catch (e) {}
+    try {
+      if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+        return Promise.all(rs.map(function (r) { return r.unregister(); }));
+      }));
+    } catch (e) {}
+    Promise.all(jobs).then(function () {
+      var still = readSave();
+      $('msg3').innerHTML = '<span class="ok">Cleared the app cache. Your save is '
+        + (still ? 'still here' : 'NOT in this browser (it was not here before either)')
+        + '.</span> Now open <a href="./">the game</a>.';
+    }).catch(function (e) {
+      $('msg3').innerHTML = '<span class="bad">Something went wrong: ' + e.message + '</span>';
+    });
+  });
+
+  show();
+})();
+</script>
+</body>
+</html>

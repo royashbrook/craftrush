@@ -145,3 +145,23 @@ test('the system back gesture walks the screen stack instead of leaving the game
   await page.goBack();
   await expect(page.locator('#pause')).toBeVisible();
 });
+
+// The rescue page exists for players whose game will not start, so it must not
+// depend on anything the game depends on. Blocking the app bundle is the test:
+// if it still works with every module aborted, it cannot break the same way.
+test('the save rescue page works with the whole app bundle blocked', async ({ page, context }) => {
+  const SAVE = JSON.stringify({ emeralds: 4242, level: 9, unlocked: ['steve'], campaign: { done: ['mine_obsidian'] } });
+  await context.addInitScript((s) => localStorage.setItem('craftrush_save_v1', s), SAVE);
+  await page.route('**/_app/**', (r) => r.abort());
+
+  await page.goto('/rescue.html');
+  await expect(page.locator('#status')).toContainText('FOUND YOUR SAVE');
+  await expect(page.locator('#summary')).toContainText('4242 emeralds');
+  expect(await page.inputValue('#box')).toBe(SAVE);
+
+  // clearing the app cache must never take the save with it
+  await page.click('#clean');
+  await expect(page.locator('#msg3')).toContainText('still here');
+  const kept = await page.evaluate(() => localStorage.getItem('craftrush_save_v1'));
+  expect(kept, 'the rescue page never deletes a save').toBe(SAVE);
+});

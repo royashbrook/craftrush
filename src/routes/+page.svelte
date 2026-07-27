@@ -14,7 +14,7 @@
   import { pushState } from '$app/navigation';
   import { dev } from '$app/environment';
   import { initAssets, getSprite, assetsReady } from '../../js/assets.js';
-  import { persistSave } from '../../js/config.js';
+  import { persistSave, THEME_ERROR } from '../../js/config.js';
   import { checkAchievements } from '../../js/achievements.js';
   import { Game } from '../../js/game.js';
   import { Audio } from '../../js/audio.js';
@@ -31,6 +31,9 @@
   onMount(() => {
     let stop = () => {};
     (async () => {
+      // the theme failing is the one error that used to render a blank page,
+      // because it happens while modules are still evaluating
+      if (THEME_ERROR) throw new Error(THEME_ERROR);
       await initAssets();
 
       Audio.setEnabled(save.sound);
@@ -155,6 +158,22 @@
   {#if game}
     <App {game} />
   {:else}
-    <div id="loading">{failed ? `FAILED TO LOAD: ${failed}` : 'LOADING…'}</div>
+    <div id="loading">
+      {#if failed}
+        <div>
+          <div id="loadFail">COULD NOT START</div>
+          <div class="loadWhy">{failed}</div>
+          <!-- A player whose game will not boot still has their save sitting in
+               localStorage. Say so, and hand them the one page that cannot break
+               the same way, instead of leaving them to clear data and lose it. -->
+          <div class="loadHelp">
+            Your save is safe. Get it out here:
+            <a href="./rescue.html">rescue page</a>
+          </div>
+        </div>
+      {:else}
+        LOADING…
+      {/if}
+    </div>
   {/if}
 </div>

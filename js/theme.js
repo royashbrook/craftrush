@@ -59,8 +59,25 @@ async function readJSON(name) {
   return res.json();
 }
 
-const manifest = await readJSON('theme');
-const parts = await Promise.all((manifest.data || []).map((n) => readJSON(n)));
+// This module loads the theme in a TOP-LEVEL await, which means a failure here
+// does not throw into anyone's catch: it fails the module graph itself, before a
+// single line of app code runs. The page then renders NOTHING — no error, no
+// loading text, just blank, with the browser reporting only that it preloaded a
+// chunk it never used. That is unshippable for a game kids open, so a failure is
+// caught HERE and turned into something the app can show.
+/** Non-null when the theme could not be loaded. The app renders this. */
+export let THEME_ERROR = null;
+
+let manifest = { data: [] };
+let parts = [];
+try {
+  manifest = await readJSON('theme');
+  parts = await Promise.all((manifest.data || []).map((n) => readJSON(n)));
+} catch (e) {
+  THEME_ERROR = `could not load the theme "${THEME_ID}": ${e && e.message ? e.message : e}`;
+  manifest = { data: [] };
+  parts = [];
+}
 
 /** Everything the theme supplies, keyed by file name. */
 export const THEME = Object.fromEntries((manifest.data || []).map((n, i) => [n, parts[i]]));
