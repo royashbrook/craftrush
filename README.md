@@ -16,6 +16,9 @@ and cutting a milestone is just tagging the next `v0.x` in git (`v0.3`, …), wh
 resets the patch. (`VERSION` in `js/config.js` is only a fallback for an unbuilt or
 git-less checkout.)
 
+Picking this up cold? Read [docs/HANDOFF.md](docs/HANDOFF.md) first: architecture,
+the two repo deploy, and the gotchas that cost hours.
+
 ## Develop
 
 ```sh
