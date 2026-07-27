@@ -9,6 +9,22 @@ export function ownsCraftRushCache(name) {
 }
 
 /**
+ * A static host may canonicalize `rescue.html` to `/rescue`. Cache.addAll keeps
+ * the final 200 response under the original request, including redirected=true.
+ * Chromium rejects that response when a worker passes it directly to
+ * respondWith for a navigation. Re-wrapping preserves the bytes and headers
+ * while dropping only the redirect metadata.
+ */
+export function replayableCachedResponse(response) {
+  if (!response?.redirected) return response;
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
+/**
  * The deployed game lives below /craftrush/. Derive a deeper mount when there
  * is one, but never interpret a root-hosted test page as authority over every
  * service worker on that origin.

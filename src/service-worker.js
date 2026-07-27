@@ -7,7 +7,7 @@
 // the theme data come along for free), and `version` changes per build, which
 // is what retires the old cache.
 import { build, files, prerendered, version } from '$service-worker';
-import { ownsCraftRushCache } from '../js/pwa-safety.js';
+import { ownsCraftRushCache, replayableCachedResponse } from '../js/pwa-safety.js';
 
 const CACHE = `craftrush-${version}`;
 
@@ -48,7 +48,7 @@ self.addEventListener('fetch', (event) => {
     // anything we built is content-hashed, so a cache hit is always correct
     if (ASSETS.includes(url.pathname)) {
       const hit = await cache.match(url.pathname);
-      if (hit) return hit;
+      if (hit) return replayableCachedResponse(hit);
     }
 
     try {
@@ -59,7 +59,7 @@ self.addEventListener('fetch', (event) => {
       return res;
     } catch {
       const hit = await cache.match(request);
-      if (hit) return hit;
+      if (hit) return replayableCachedResponse(hit);
       throw new Error('offline and not cached');
     }
   })());

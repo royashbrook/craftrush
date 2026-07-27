@@ -7,6 +7,7 @@ import {
   ownsCraftRushCache,
   ownsCraftRushRegistration,
   parsePlayableSave,
+  replayableCachedResponse,
   saveSchemaError,
   updateReloadIsSafe,
 } from '../js/pwa-safety.js';
@@ -16,6 +17,24 @@ test('cache ownership never reaches a neighboring app', () => {
   assert.equal(ownsCraftRushCache('craftrush-1.4.0'), true);
   assert.equal(ownsCraftRushCache('quarkatamari-v7'), false);
   assert.equal(ownsCraftRushCache('craftrush'), false);
+});
+
+test('a redirected cache hit is safe to replay as a worker navigation response', async () => {
+  const redirected = new Response('save rescue', {
+    status: 200,
+    headers: { 'content-type': 'text/html' },
+  });
+  Object.defineProperty(redirected, 'redirected', { value: true });
+
+  const replay = replayableCachedResponse(redirected);
+  assert.notEqual(replay, redirected);
+  assert.equal(replay.redirected, false);
+  assert.equal(replay.status, 200);
+  assert.equal(replay.headers.get('content-type'), 'text/html');
+  assert.equal(await replay.text(), 'save rescue');
+
+  const ordinary = new Response('asset');
+  assert.equal(replayableCachedResponse(ordinary), ordinary);
 });
 
 test('registration ownership stays below the game mount', () => {
