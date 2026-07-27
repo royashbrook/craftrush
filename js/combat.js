@@ -211,7 +211,7 @@ export const CombatMixin = {
       a.dead = true;
       // a phase change shields her briefly, so a burst cannot skip a whole stage,
       // and her crystals guard her outright until they are down
-      if (this.damageBoss(a.dmg)) {
+      if (this.damageBoss(a.dmg, true)) {
         this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerHit);
       }
       Audio.sfx('hit', 70);

@@ -16,8 +16,21 @@ headless matrix now separates the two players cleanly:
 v1.3 delivered #79 as a five-category dressing room with a three-column phone
 grid and separate select, buy, claim, equip, and remove actions. v1.4 delivered
 #82: shared-origin cache and worker ownership, schema-checked restore with a
-byte-exact rollback, and update reloads deferred through active runs. Issue #81
-intentionally waits for observations from the production playtest described in
+byte-exact rollback, and update reloads deferred through active runs. v1.5
+delivered #90: standard bosses now target an active encounter at generated par,
+above-par crowd damage receives logarithmic diminishing returns, and Gate Dash
+uses actual power spent across star graduations.
+
+| Arrival power | Bow Blitz | Gate Dash |
+| --- | ---: | ---: |
+| 1x generated par | 8.95–9.00s | 9.42–9.82s |
+| 2x generated par | 7.15–7.22s | 6.42–6.52s |
+| 3x generated par | 6.28–6.35s | 5.32–5.42s |
+| 5x generated par | 5.45–5.48s | 4.52s |
+
+The matrix covers levels 1, 6, 12, and 20 at every pace. Normal and Turbo differ
+by at most 0.07 seconds for equivalent arrivals. Issue #81 intentionally waits
+for further observations from the production playtest described in
 `docs/PLAYTEST.md`.
 
 ## Product direction
@@ -44,7 +57,9 @@ Two GitHub issues were already open before this review:
   Closed after the production map returned HTTP 200, parsed as a valid source
   map, and contained all 69 source files.
 
-The product backlog below is tracked in issues #74 through #81.
+The product backlog below is tracked in issues #74 through #90. Issue #89 is the
+remaining small UI cleanup; issue #90 records the production boss-balance
+finding and v1.5 fix.
 
 ## The balance problem is proven
 
@@ -65,7 +80,7 @@ The primary cause is deterministic:
    stable, so it selects the first generated gate.
 5. The first generated gate is always good.
 
-Several other mechanics compound that result:
+Before v1.2, several other mechanics compounded that result:
 
 - Bow Blitz targets every enemy in range regardless of the player's lane.
 - shooting is automatic

@@ -91,7 +91,10 @@ export const TUNE = {
 
   // boss arena (blocks past the track end)
   bossSpawnZ: 17, bossHoldZ: 10,
-  chargeSpendDivisor: 40, // gates-mode charge: worth spent per tick = worth/this
+  bossShooterHpPerParPower: 21,
+  bossGatesHpPerParPower: 2.1,
+  bossSurplusLogScale: 0.4,
+  chargeSpendDivisor: 84, // gates-mode charge: worth spent per tick = worth/this
 };
 
 // Run pace, chosen by the player. Going faster is harder to read and react to, so it

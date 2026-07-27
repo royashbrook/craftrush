@@ -32,9 +32,11 @@ globalThis.window = { addEventListener: noop, removeEventListener: noop };
 let Game;
 let loadSave;
 let TUNE;
+let crowdBossDamageFactor;
 before(async () => {
   ({ Game } = await import('../js/game.js'));
   ({ loadSave, TUNE } = await import('../js/config.js'));
+  ({ crowdBossDamageFactor } = await import('../js/boss.js'));
 });
 
 function seeded(seed) {
@@ -121,6 +123,35 @@ function simulate(mode, level, active, speed = 'normal') {
       ticks++;
     }
     return game.bossDead || result?.win === true;
+  } finally {
+    game.destroy();
+    Math.random = originalRandom;
+  }
+}
+
+function measureBoss(mode, level, speed, arrivalMultiple) {
+  const originalRandom = Math.random;
+  Math.random = seeded(level * 1009 + arrivalMultiple * 101 + (mode === 'gates' ? 7 : 3));
+  const game = makeGame(mode, level, speed);
+  try {
+    game.startRun();
+    const par = game.expectedBossArmy();
+    game.setWorth(Math.max(1, Math.round(par.power * arrivalMultiple)), true);
+    game.playerZ = game.length;
+    game.startBoss();
+    game.boss.entering = false;
+    game.boss.z = game.boss.targetZ;
+    let ticks = 0;
+    while (game.state === 'boss' && !game.bossDead && ticks < 1800) {
+      game.boss.attackT = 999;
+      game.targetX = game.boss.x;
+      game.update(1 / 60);
+      ticks++;
+    }
+    return {
+      won: game.bossDead,
+      seconds: ticks / 60,
+    };
   } finally {
     game.destroy();
     Math.random = originalRandom;
@@ -227,29 +258,53 @@ test('graduated crowd retention is graded in effective-power units', () => {
   game.destroy();
 });
 
-test('a par run gets an active boss phase instead of a one-hit ending', () => {
+test('above-par boss crowd damage has logarithmic diminishing returns', () => {
+  const par = 100;
+  assert.equal(crowdBossDamageFactor(50, par), 1, 'below-par damage stays linear');
+  assert.equal(crowdBossDamageFactor(par, par), 1, 'the curve is continuous at par');
+
+  let previousEffective = par;
+  for (const ratio of [1.5, 2, 3, 5, 10]) {
+    const effective = par * ratio * crowdBossDamageFactor(par * ratio, par);
+    assert.ok(effective > previousEffective, `${ratio}x still earns more boss damage`);
+    assert.ok(effective < par * ratio, `${ratio}x surplus damage is compressed`);
+    previousEffective = effective;
+  }
+});
+
+test('boss duration stays active, monotonic, and pace-independent above par', () => {
+  const speeds = ['calm', 'normal', 'fast', 'turbo'];
+  const multiples = [1, 2, 3, 5];
   for (const mode of ['shooter', 'gates']) {
     for (const level of [1, 6, 12, 20]) {
-      const game = makeGame(mode, level);
-      game.startRun();
-      const par = game.expectedBossArmy();
-      game.setWorth(par.power, true);
-      game.playerZ = game.length;
-      game.startBoss();
-      game.boss.entering = false;
-      game.boss.z = game.boss.targetZ;
-      let ticks = 0;
-      while (game.state === 'boss' && !game.bossDead && ticks < 1200) {
-        game.boss.attackT = 999;
-        game.targetX = game.boss.x;
-        game.update(1 / 60);
-        ticks++;
+      const bySpeed = new Map();
+      for (const speed of speeds) {
+        const samples = multiples.map((multiple) => measureBoss(mode, level, speed, multiple));
+        bySpeed.set(speed, samples);
+        for (const [i, sample] of samples.entries()) {
+          assert.equal(sample.won, true,
+            `${mode} level ${level} ${speed} ${multiples[i]}x clears`);
+          if (i > 0) {
+            assert.ok(sample.seconds <= samples[i - 1].seconds + 0.1,
+              `${mode} level ${level} ${speed} stays monotonic at ${multiples[i]}x`);
+          }
+        }
+        assert.ok(samples[0].seconds >= 8 && samples[0].seconds <= 10.5,
+          `${mode} level ${level} ${speed} par boss lasts ${samples[0].seconds.toFixed(1)}s`);
+        assert.ok(samples[1].seconds >= 6,
+          `${mode} level ${level} ${speed} 2x boss lasts ${samples[1].seconds.toFixed(1)}s`);
+        assert.ok(samples[3].seconds >= 4.5,
+          `${mode} level ${level} ${speed} 5x boss lasts ${samples[3].seconds.toFixed(1)}s`);
       }
-      const seconds = ticks / 60;
-      assert.equal(game.bossDead, true, `${mode} level ${level} par run clears`);
-      assert.ok(seconds >= 3 && seconds <= 12,
-        `${mode} level ${level} par boss lasts ${seconds.toFixed(1)}s`);
-      game.destroy();
+      const normal = bySpeed.get('normal');
+      // CALM intentionally auto-releases a ready golem. The active paces do not,
+      // so their crowd damage must remain identical despite reward/rhythm changes.
+      for (const speed of ['normal', 'fast', 'turbo']) {
+        bySpeed.get(speed).forEach((sample, i) => {
+          assert.ok(Math.abs(sample.seconds - normal[i].seconds) <= 0.1,
+            `${mode} level ${level} ${multiples[i]}x damage is independent of ${speed} pace`);
+        });
+      }
     }
   }
 });

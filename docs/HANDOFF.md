@@ -16,8 +16,8 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.4**, tag `v1.4`, deployed builds count up from it
-(`v1.4.1` and so on). `main` is the deployed branch.
+Current release: **v1.5**, tag `v1.5`, deployed builds count up from it
+(`v1.5.1` and so on). `main` is the deployed branch.
 
 ## The two repo deploy, which is easy to miss
 
@@ -169,16 +169,21 @@ Comments explain why, not what. Match the density around you.
 ## What is open
 
 The researched product roadmap lives in `docs/NEXT.md` and is tracked by issues
-#74 through #82. v1.1 delivered settlement safety and post-port cleanup
+#74 through #90. v1.1 delivered settlement safety and post-port cleanup
 (#74, #75). v1.2 delivered gameplay agency, boss skill, visible mastery, and the
 offline observer sheet (#76, #77, #78, #80). v1.3 delivered the compact
 dressing-room shop (#79). v1.4 delivered shared-origin PWA/save hardening (#82).
-Content issue #81 stays gated on actual playtest observations.
+v1.5 made standard boss fights survive strong arrivals with logarithmic surplus
+damage and fixed Gate Dash's star-power discontinuity (#90). Content issue #81
+stays gated on actual playtest observations.
 
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker
   and Aseprite exports have. At 512x212 none of that earns its complexity. When
   it does, adopt an existing format rather than growing ours.
+- **#89 Remove the duplicate version from the About footer.** The main screen is
+  the canonical in-app release display; About should keep its credits without
+  repeating the version.
 - **#72 Sourcemaps do not reach production.** Closed after production verification:
   the map returns, parses, and embeds all source bodies.
 
