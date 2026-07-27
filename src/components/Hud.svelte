@@ -41,8 +41,13 @@
   <div id="powerChips">{chips}</div>
   <div id="golemMeter" class:ready>
     <div id="golemFill" style="width:{(pct * 100).toFixed(0)}%"></div>
-    <span id="golemLabel">{ready ? 'GOLEM INCOMING!' : `GOLEM ${Math.floor(pct * 100)}%`}</span>
+    <span id="golemLabel">{ready ? (h.autoGolem ? 'GOLEM INCOMING!' : 'TAP TO SEND GOLEM') : `GOLEM ${Math.floor(pct * 100)}%`}</span>
   </div>
+  {#if h.objectiveText}
+    <div id="runObjective" class:done={h.objectiveDone}>
+      QUEST: {h.objectiveText} <b>{h.objectiveDone ? 'DONE!' : h.objectiveProgress}</b>
+    </div>
+  {/if}
 </div>
 
 <div id="bossBar" class:hidden={!h.bossActive}>

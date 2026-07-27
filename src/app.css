@@ -351,11 +351,12 @@
   #progressWrap { position: absolute; left: 10px; right: 10px; top: calc(44px + env(safe-area-inset-top));
     height: 8px; background: rgba(0,0,0,0.5); border: 2px solid #000; }
   #hudProgress { height: 100%; width: 0%; background: #7dff5a; }
-  #powerChips { position: absolute; left: 0; right: 0; top: calc(62px + env(safe-area-inset-top));
-    text-align: center; font-weight: 900; font-size: 13px; color: #ffd94d; text-shadow: 2px 2px 0 #000; }
+  #powerChips { position: absolute; left: 0; right: 0; top: calc(80px + env(safe-area-inset-top));
+    min-height: 14px; line-height: 14px; text-align: center; font-weight: 900; font-size: 13px;
+    color: #ffd94d; text-shadow: 2px 2px 0 #000; }
 
-  /* golem charge: a slim meter under the progress bar. It fires itself when full,
-     so nothing sits over the play area and there is no key to learn. */
+  /* Golem charge stays a slim meter under the progress bar. The fixed rows below
+     it keep power text, the objective, and the boss bar from colliding. */
   #golemMeter { position: absolute; left: 50%; transform: translateX(-50%); width: 62%;
     top: calc(58px + env(safe-area-inset-top));
     height: 16px; background: rgba(0,0,0,0.5); border: 2px solid #000; overflow: hidden; }
@@ -365,8 +366,13 @@
   @keyframes pulse { from { filter: brightness(1); } to { filter: brightness(1.55); } }
   #golemLabel { position: absolute; inset: 0; text-align: center; font-size: 10px; font-weight: 900;
     line-height: 16px; color: #fff; text-shadow: 1px 1px 0 #000; letter-spacing: 1px; white-space: nowrap; }
+  #runObjective { position: absolute; left: 50%; transform: translateX(-50%); top: calc(100px + env(safe-area-inset-top));
+    max-width: calc(100% - 24px); padding: 4px 8px; background: rgba(0,0,0,0.62); border: 2px solid #5d4a25;
+    color: #ffd94d; text-align: center; font-size: 10px; font-weight: 900; text-shadow: 1px 1px 0 #000;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #runObjective.done { color: #7dff7d; border-color: #2f7a3f; }
 
-  #bossBar { position: absolute; left: 12px; right: 12px; top: calc(78px + env(safe-area-inset-top));
+  #bossBar { position: absolute; left: 12px; right: 12px; top: calc(128px + env(safe-area-inset-top));
     z-index: 6; pointer-events: none; text-align: center; }
   #bossName { font-weight: 900; font-size: 15px; color: #ff8d7a; text-shadow: 2px 2px 0 #000; letter-spacing: 2px; }
   #bossTrack { height: 12px; background: rgba(0,0,0,0.6); border: 2px solid #000; margin-top: 3px; }
@@ -406,6 +412,12 @@
   #resultTitle.win { color: #7dff5a; }
   #resultTitle.lose { color: #ff8d7a; }
   #resultTitle { font-size: 24px; font-weight: 900; text-shadow: 3px 3px 0 rgba(0,0,0,0.8); text-align: center; }
+  #masteryCallout { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border: 2px solid #ffd94d; background: rgba(77,58,12,0.55); color: #fff; text-align: left; }
+  #masteryCallout strong { flex: 0 0 46px; font-size: 34px; line-height: 1; color: #ffd94d; text-align: center;
+    text-shadow: 2px 2px 0 #000; }
+  #masteryCallout span { font-size: 14px; font-weight: 900; }
+  #masteryCallout small { display: block; margin-top: 3px; color: #d9d2e3; font-size: 11px; font-weight: 700; }
   #resultStats { width: 100%; display: flex; flex-direction: column; gap: 6px; }
   .statRow { display: flex; justify-content: space-between; color: #cfc9d8; font-size: 14px; font-weight: 700;
     background: rgba(0,0,0,0.35); padding: 7px 10px; border: 1px solid #000; }

@@ -64,9 +64,24 @@ export const CombatMixin = {
     const n = Math.min(this.crowd.length, TUNE.maxShooters);
     const dmgScale = Math.max(1, Math.round(this.crowd.length / TUNE.maxShooters));
     const dmg = dmgScale * powerMul;
-    // aim assist: kid-friendly — arrows curve toward live targets ahead
-    const targets = this.enemies.filter(e => !e.dead && e.z > this.playerZ + 1.5 && e.z < this.playerZ + TUNE.arrowRange);
-    if (this.boss && !this.boss.entering) targets.push(this.boss);
+    // Aim assist stays generous, but only inside the lane the player is choosing.
+    // A wide crowd can no longer silently restore whole-track auto targeting.
+    const inCone = (target) => {
+      const dz = target.z - this.playerZ;
+      const halfW = Math.min(TUNE.aimConeMax, TUNE.aimConeNear + dz * TUNE.aimConePerZ);
+      return Math.abs(target.x - this.playerX) <= halfW;
+    };
+    const targets = this.enemies.filter(e => !e.dead
+      && e.z > this.playerZ + 1.5
+      && e.z < this.playerZ + TUNE.arrowRange
+      && inCone(e));
+    if (this.boss && !this.boss.entering) {
+      if (this.boss.guarded) {
+        targets.push(...this.crystals.filter(c => !c.dead && inCone(c)));
+      } else if (inCone(this.boss)) {
+        targets.push(this.boss);
+      }
+    }
     const aim = (x, z) => {
       let best = null, bd = 1e9;
       for (const e of targets) {
@@ -123,6 +138,7 @@ export const CombatMixin = {
 
   applyGate(gt) {
     gt.used = true;
+    this.noteGate?.(this.gateGood(gt), gt.risk);
     // multiply/divide act on the WHOLE army worth, not just the rendered runners
     const n = this.worth();
     if (gt.op === 'add') { this.addRunners(gt.val); Audio.sfx('gate_good'); }
@@ -179,16 +195,26 @@ export const CombatMixin = {
       if (p.kind !== 'chest' || p.dead || Math.abs(p.z - a.z) > 0.6) continue;
       if (Math.abs(a.x - p.x) < 0.6) { p.hp--; a.dead = true; if (p.hp <= 0) this.openChest(p); return; }
     }
+    // Crystals sit around and sometimes directly in front of the boss. Resolve
+    // their smaller hitboxes first so the guarded boss cannot swallow the shot.
+    for (const crystal of this.crystals || []) {
+      if (crystal.dead || Math.abs(crystal.z - a.z) >= 0.9) continue;
+      if (Math.abs(crystal.x - a.x) < 0.8) {
+        a.dead = true;
+        crystal.hp -= a.dmg;
+        if (crystal.hp <= 0) this.crystalDown(crystal);
+        return;
+      }
+    }
     const b = this.boss;
     if (b && !b.entering && !this.bossDead && Math.abs(b.z - a.z) < 2.0 && Math.abs(a.x - b.x) < 2.6) {
       a.dead = true;
       // a phase change shields her briefly, so a burst cannot skip a whole stage,
       // and her crystals guard her outright until they are down
-      if (b.shielded > 0 || b.guarded) { b.flash = 0.08; Audio.sfx('hit', 70); return; }
-      b.hp -= a.dmg; b.flash = 0.08;
-      this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerHit);
+      if (this.damageBoss(a.dmg)) {
+        this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerHit);
+      }
       Audio.sfx('hit', 70);
-      if (b.hp <= 0) this.bossDefeated();
     }
   },
 
@@ -298,6 +324,7 @@ export const CombatMixin = {
         .filter(g => Math.abs(px - g.x) < g.halfW + TUNE.gateHitMargin)
         .sort((a, b) => Math.abs(px - a.x) - Math.abs(px - b.x))[0];
       if (hit) this.applyGate(hit);
+      else this.noteGate?.(null);
       pair.forEach(g => { g.used = true; });
     }
     for (const gt of this.gates) gt.pulse = Math.max(0, gt.pulse - dt);
@@ -395,9 +422,8 @@ export const CombatMixin = {
       }
       const b = this.boss;
       if (b && !b.entering && Math.abs(b.z - s.z) < 2 && Math.abs(b.x - s.x) < 2.4) {
-        b.hp -= 60; b.flash = 0.12; s.dead = true;
+        this.damageBoss(60); b.flash = 0.12; s.dead = true;
         this.explode(s.x, s.z, 1.8, 0, false);
-        if (b.hp <= 0) this.bossDefeated();
       }
       if (s.z > this.playerZ + TUNE.golemRange) s.dead = true;
     }
@@ -415,6 +441,9 @@ export const CombatMixin = {
           this.killRunners(w.kills, w.x, this.playerZ);
           Audio.sfx('hurt', 100);
           this.cam.shake = Math.min(1, this.cam.shake + 0.3);
+        } else if (w.threatened) {
+          const edge = Math.abs(Math.abs(this.playerX - w.x) - (w.halfW + 0.4));
+          this.noteDodge?.(edge <= 0.75);
         }
       }
     }

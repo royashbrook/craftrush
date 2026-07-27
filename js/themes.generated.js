@@ -1264,6 +1264,11 @@ export const THEMES = {
       "name": "Obsidian Hunt",
       "biome": "plains",
       "blurb": "Mine obsidian on the run. You need ten to frame a portal.",
+      "objective": {
+       "kind": "finishCrowd",
+       "target": 12,
+       "text": "Bring 12 runners to the boss"
+      },
       "repeatable": true,
       "grants": {
        "obsidian": 4
@@ -1278,6 +1283,11 @@ export const THEMES = {
        "obsidian": 10
       },
       "blurb": "Light the frame and step through.",
+      "objective": {
+       "kind": "goodGates",
+       "target": 3,
+       "text": "Pick 3 growing gates"
+      },
       "consumes": {
        "obsidian": 10
       }
@@ -1289,6 +1299,11 @@ export const THEMES = {
       "biome": "nether_fortress",
       "structure": true,
       "blurb": "Blazes guard the halls. Bring back their rods.",
+      "objective": {
+       "kind": "goodGates",
+       "target": 3,
+       "text": "Pick 3 growing gates"
+      },
       "repeatable": true,
       "grants": {
        "blazeRods": 2
@@ -1304,6 +1319,11 @@ export const THEMES = {
        "blazeRods": 6
       },
       "blurb": "Rods become eyes, and eyes find the portal room.",
+      "objective": {
+       "kind": "finishCrowd",
+       "target": 18,
+       "text": "Bring 18 runners to the boss"
+      },
       "consumes": {
        "blazeRods": 6
       },
@@ -1322,6 +1342,11 @@ export const THEMES = {
       },
       "phases": 3,
       "crystals": true,
+      "objective": {
+       "kind": "dodges",
+       "target": 2,
+       "text": "Dodge 2 dragon attacks"
+      },
       "blurb": "Break the crystals that heal her, then bring her down."
      },
      {
@@ -1331,6 +1356,11 @@ export const THEMES = {
       "biome": "end_city",
       "structure": true,
       "blurb": "Out past the island: a ship, and wings worth taking.",
+      "objective": {
+       "kind": "goodGates",
+       "target": 3,
+       "text": "Pick 3 growing gates"
+      },
       "grants": {
        "elytra": 1
       }
@@ -1345,6 +1375,11 @@ export const THEMES = {
        "elytra": 1
       },
       "blurb": "Back to the Nether for blackstone and armor trims.",
+      "objective": {
+       "kind": "dodges",
+       "target": 1,
+       "text": "Dodge a boss attack"
+      },
       "grants": {
        "trims": 2,
        "witherSkulls": 1
@@ -1356,6 +1391,11 @@ export const THEMES = {
       "name": "Skull Hunt",
       "biome": "nether_fortress",
       "blurb": "Wither skeletons, and the skulls you need to summon.",
+      "objective": {
+       "kind": "combo",
+       "target": 3,
+       "text": "Make 3 smart choices in a row"
+      },
       "repeatable": true,
       "grants": {
        "witherSkulls": 1
@@ -1371,6 +1411,11 @@ export const THEMES = {
        "witherSkulls": 3
       },
       "phases": 3,
+      "objective": {
+       "kind": "dodges",
+       "target": 2,
+       "text": "Dodge 2 Wither attacks"
+      },
       "consumes": {
        "witherSkulls": 3
       },
@@ -3480,6 +3525,11 @@ export const THEMES = {
       "name": "Obsidian Hunt",
       "biome": "plains",
       "blurb": "Mine obsidian on the run. You need ten to frame a portal.",
+      "objective": {
+       "kind": "finishCrowd",
+       "target": 12,
+       "text": "Bring 12 runners to the boss"
+      },
       "repeatable": true,
       "grants": {
        "obsidian": 4
@@ -3494,6 +3544,11 @@ export const THEMES = {
        "obsidian": 10
       },
       "blurb": "Light the frame and step through.",
+      "objective": {
+       "kind": "goodGates",
+       "target": 3,
+       "text": "Pick 3 growing gates"
+      },
       "consumes": {
        "obsidian": 10
       }
@@ -3505,6 +3560,11 @@ export const THEMES = {
       "biome": "nether_fortress",
       "structure": true,
       "blurb": "Blazes guard the halls. Bring back their rods.",
+      "objective": {
+       "kind": "goodGates",
+       "target": 3,
+       "text": "Pick 3 growing gates"
+      },
       "repeatable": true,
       "grants": {
        "blazeRods": 2
@@ -3520,6 +3580,11 @@ export const THEMES = {
        "blazeRods": 6
       },
       "blurb": "Rods become eyes, and eyes find the portal room.",
+      "objective": {
+       "kind": "finishCrowd",
+       "target": 18,
+       "text": "Bring 18 runners to the boss"
+      },
       "consumes": {
        "blazeRods": 6
       },
@@ -3538,6 +3603,11 @@ export const THEMES = {
       },
       "phases": 3,
       "crystals": true,
+      "objective": {
+       "kind": "dodges",
+       "target": 2,
+       "text": "Dodge 2 dragon attacks"
+      },
       "blurb": "Break the crystals that heal her, then bring her down."
      },
      {
@@ -3547,6 +3617,11 @@ export const THEMES = {
       "biome": "end_city",
       "structure": true,
       "blurb": "Out past the island: a ship, and wings worth taking.",
+      "objective": {
+       "kind": "goodGates",
+       "target": 3,
+       "text": "Pick 3 growing gates"
+      },
       "grants": {
        "elytra": 1
       }
@@ -3561,6 +3636,11 @@ export const THEMES = {
        "elytra": 1
       },
       "blurb": "Back to the Nether for blackstone and armor trims.",
+      "objective": {
+       "kind": "dodges",
+       "target": 1,
+       "text": "Dodge a boss attack"
+      },
       "grants": {
        "trims": 2,
        "witherSkulls": 1
@@ -3572,6 +3652,11 @@ export const THEMES = {
       "name": "Skull Hunt",
       "biome": "nether_fortress",
       "blurb": "Wither skeletons, and the skulls you need to summon.",
+      "objective": {
+       "kind": "combo",
+       "target": 3,
+       "text": "Make 3 smart choices in a row"
+      },
       "repeatable": true,
       "grants": {
        "witherSkulls": 1
@@ -3587,6 +3672,11 @@ export const THEMES = {
        "witherSkulls": 3
       },
       "phases": 3,
+      "objective": {
+       "kind": "dodges",
+       "target": 2,
+       "text": "Dodge 2 Wither attacks"
+      },
       "consumes": {
        "witherSkulls": 3
       },

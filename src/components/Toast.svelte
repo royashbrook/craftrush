@@ -8,7 +8,9 @@
 <script>
   import { nav } from '../lib/store.svelte.js';
 
-  const text = $derived(nav.toast === 'steer' ? 'DRAG ANYWHERE TO STEER!' : 'GOLEM CHARGED — HERE IT COMES!');
+  const text = $derived(nav.toast === 'steer'
+    ? 'DRAG ANYWHERE TO STEER!'
+    : 'GOLEM READY: TAP OR PRESS SPACE!');
 </script>
 
 <div id="toast" class:hidden={!nav.toast}>{nav.toast ? text : ''}</div>

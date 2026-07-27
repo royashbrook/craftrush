@@ -71,6 +71,12 @@ export interface Chapter {
   consumes?: Record<string, number>;
   /** paid out on completing it */
   grants?: Record<string, number>;
+  /** optional run goal shown in the HUD and graded with the result */
+  objective?: {
+    kind: 'goodGates' | 'dodges' | 'combo' | 'finishCrowd';
+    target: number;
+    text: string;
+  };
   /** a gathering chapter you come back to, rather than a milestone */
   repeatable?: boolean;
 }

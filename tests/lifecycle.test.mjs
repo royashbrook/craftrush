@@ -16,6 +16,9 @@ class Events {
   count() {
     return [...this.listeners.values()].reduce((n, set) => n + set.size, 0);
   }
+  dispatch(type, event = {}) {
+    for (const fn of this.listeners.get(type) || []) fn(event);
+  }
 }
 
 function fakeCtx() {
@@ -58,6 +61,48 @@ test('Game.destroy removes input listeners and pending callbacks, and is idempot
 
   assert.equal(canvas.count(), 5);
   assert.equal(browserWindow.count(), 2);
+  game.state = 'run';
+  game.save.speed = 'normal';
+  game.redstone = 100;
+  canvas.dispatch('pointerdown', { pointerId: 1, clientX: 100 });
+  canvas.dispatch('pointerup', { pointerId: 1, clientX: 100 });
+  assert.equal(game.summons.length, 1, 'a tap releases a ready golem');
+
+  game.redstone = 100;
+  canvas.dispatch('pointerdown', { pointerId: 2, clientX: 100 });
+  canvas.dispatch('pointermove', { pointerId: 2, pointerType: 'touch', clientX: 120 });
+  canvas.dispatch('pointerup', { pointerId: 2, clientX: 120 });
+  assert.equal(game.summons.length, 1, 'a steering drag does not release another golem');
+
+  game.redstone = 100;
+  canvas.dispatch('pointerdown', { pointerId: 3, clientX: 100, clientY: 100 });
+  canvas.dispatch('pointerup', { pointerId: 3, clientX: 100, clientY: 120 });
+  assert.equal(game.summons.length, 1, 'vertical travel is not mistaken for a tap');
+
+  let interactivePrevented = false;
+  browserWindow.dispatch('keydown', {
+    code: 'Space',
+    repeat: false,
+    target: { tagName: 'TEXTAREA' },
+    preventDefault: () => { interactivePrevented = true; },
+  });
+  assert.equal(interactivePrevented, false);
+  assert.equal(game.summons.length, 1, 'Space remains available to interactive controls');
+
+  browserWindow.dispatch('keydown', {
+    code: 'Space', repeat: false, preventDefault: noop,
+  });
+  assert.equal(game.summons.length, 2, 'Space releases the charged golem');
+
+  game.state = 'menu';
+  game.redstone = 100;
+  let menuPrevented = false;
+  browserWindow.dispatch('keydown', {
+    code: 'Space', repeat: false, preventDefault: () => { menuPrevented = true; },
+  });
+  assert.equal(menuPrevented, false);
+  assert.equal(game.summons.length, 2, 'Space outside a run is left to the screen');
+
   let timerRan = false;
   game._later(() => { timerRan = true; }, 10);
   game.destroy();

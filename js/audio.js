@@ -58,6 +58,7 @@ const SFX = {
   powerup()  { [440, 554, 659, 880].forEach((f, i) => tone({ f, type: 'triangle', dur: 0.1, vol: 0.16, delay: i * 0.06 })); },
   apple()    { tone({ f: 660, f2: 990, type: 'triangle', dur: 0.18, vol: 0.2 }); },
   hurt()     { tone({ f: 220, f2: 110, type: 'sawtooth', dur: 0.15, vol: 0.18 }); },
+  near_miss(){ tone({ f: 880, f2: 1320, type: 'triangle', dur: 0.11, vol: 0.13 }); },
   arrow_in() { tone({ f: 520, f2: 260, type: 'triangle', dur: 0.1, vol: 0.12 }); },
   boss_roar(){ tone({ f: 70, f2: 45, type: 'sawtooth', dur: 0.9, vol: 0.45 }); noise({ dur: 0.6, vol: 0.2, freq: 250, delay: 0.15 }); },
   fanfare()  { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone({ f, type: 'square', dur: 0.16, vol: 0.18, delay: i * 0.13 })); },

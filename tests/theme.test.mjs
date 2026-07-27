@@ -52,6 +52,16 @@ test('every chapter runs somewhere the theme defines', () => {
   for (const c of CAMPAIGN) assert.ok(places.has(c.biome), `${c.id} runs in ${c.biome}`);
 });
 
+test('campaign run objectives are short, valid, and optional', () => {
+  const kinds = new Set(['goodGates', 'dodges', 'combo', 'finishCrowd']);
+  for (const chapter of CAMPAIGN) {
+    if (!chapter.objective) continue;
+    assert.ok(kinds.has(chapter.objective.kind), `${chapter.id} has a known objective`);
+    assert.ok(chapter.objective.target > 0, `${chapter.id} has a reachable target`);
+    assert.ok(chapter.objective.text.length <= 34, `${chapter.id} objective fits the HUD`);
+  }
+});
+
 test('the mine tiles the theme ships are shaped the way the digger expects', () => {
   for (const [id, t] of Object.entries(TILES)) {
     assert.equal(typeof t.color, 'string', `${id} has a colour`);

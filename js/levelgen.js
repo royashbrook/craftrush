@@ -19,7 +19,8 @@ export const LevelMixin = {
       if (sinceGate >= 2 || roll < 0.3) {
         // ---- gate pair ----
         sinceGate = 0;
-        const goodGood = rng() < Math.max(0.3, 0.9 - L * 0.07);
+        const goodGood = L === 1 || rng() < 0.2;
+        const riskReward = L >= 3 && !goodGood && rng() < 0.24;
         const boost = this.mut.gateBoost ? 1 : 0;
         const mk = (good) => {
           if (good) {
@@ -29,11 +30,27 @@ export const LevelMixin = {
           if (rng() < 0.4) return { op: 'div', val: 2 };
           return { op: 'sub', val: irnd(2, 2 + Math.ceil(L * 1.3)) };
         };
-        const a = mk(true);
         const right = rng() < 0.5;
-        // wider gate pair: a bigger target and, more importantly, a bigger sign
-        ev.push({ z, type: 'gate', x: right ? 2.4 : -2.4, halfW: 2.4, ...a });
-        ev.push({ z, type: 'gate', x: right ? -2.4 : 2.4, halfW: 2.4, ...(goodGood ? mk(true) : mk(false)) });
+        const halfW = L === 1 ? TUNE.tutorialGateHalfW : TUNE.gateHalfW;
+        const firstX = right ? 2.4 : -2.4;
+        const secondX = -firstX;
+        if (riskReward) {
+          // A visible choice with a real follow-through: the multiplier is
+          // stronger, but its lane is blocked just beyond the gate. Take the
+          // smaller add and stay safe, or take the reward and cross back.
+          ev.push({ z, type: 'gate', x: firstX, halfW, op: 'add', val: 3 + Math.min(4, Math.floor(L / 4)) });
+          ev.push({ z, type: 'gate', x: secondX, halfW, op: 'mul', val: L >= 8 ? 3 : 2, risk: true });
+          for (const off of [-0.8, 0.2, 1.2]) {
+            ev.push({ z: z + 12, type: 'obstacle', x: secondX + off });
+          }
+          // This pair includes a second decision after the gate: cross away
+          // from the blocked reward lane. Reserve a full beat before another
+          // row asks for input.
+          z += 12;
+        } else {
+          ev.push({ z, type: 'gate', x: firstX, halfW, ...mk(true) });
+          ev.push({ z, type: 'gate', x: secondX, halfW, ...(goodGood ? mk(true) : mk(false)) });
+        }
       } else if (roll < 0.52) {
         // ---- enemy cluster ----
         const n = Math.min(10, irnd(2, 3 + Math.ceil(L * 0.8)));
@@ -120,7 +137,7 @@ export const LevelMixin = {
     while (this.eventIdx < this.events.length && this.events[this.eventIdx].z < this.playerZ + TUNE.spawnAhead) {
       const e = this.events[this.eventIdx++];
       if (e.type === 'gate') {
-        this.gates.push({ x: e.x, z: e.z, halfW: e.halfW, op: e.op, val: e.val, hits: 0, used: false, pulse: 0 });
+        this.gates.push({ x: e.x, z: e.z, halfW: e.halfW, op: e.op, val: e.val, risk: !!e.risk, hits: 0, used: false, pulse: 0 });
       } else if (e.type === 'enemy') {
         this.spawnEnemy(e.id, e.x, e.z);
       } else if (e.type === 'obstacle') {

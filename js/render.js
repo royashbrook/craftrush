@@ -61,7 +61,9 @@ export const RenderMixin = {
         ctx.globalAlpha = 1;
         // kid-readable: big label, and never smaller than a comfortable minimum
         outlineText(ctx, this.gateLabel(gt), p.sx, y0 + hPx * 0.46, Math.max(20, p.s * 1.15), good ? '#eaf6ff' : '#ffe3dc');
-        if (this.mode === 'shooter' && !good) {
+        if (gt.risk) {
+          outlineText(ctx, 'DANGER AHEAD', p.sx, y0 + hPx * 0.86, Math.max(10, p.s * 0.34), '#ffd94d');
+        } else if (this.mode === 'shooter' && !good) {
           outlineText(ctx, 'SHOOT ME!', p.sx, y0 + hPx * 0.86, Math.max(11, p.s * 0.38), '#ffd94d');
         }
       });
