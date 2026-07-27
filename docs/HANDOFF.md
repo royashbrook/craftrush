@@ -14,8 +14,8 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.0**, tag `v1.0`, deployed builds count up from it
-(`v1.0.6` and so on). `main` is the deployed branch.
+Current release: **v1.1**, tag `v1.1`, deployed builds count up from it
+(`v1.1.1` and so on). `main` is the deployed branch.
 
 ## The two repo deploy, which is easy to miss
 
@@ -44,8 +44,8 @@ status.
 ```sh
 npm install          # also installs the git hooks, see Conventions
 npm run dev          # vite dev server, no service worker
-npm test             # 123 node tests
-npm run test:e2e     # 56 playwright tests, four browsers, against the dev server
+npm test             # node unit and engine-integration tests
+npm run test:e2e     # playwright, four browser/device projects, against dev
 npm run test:build   # the same suite against the BUILT output. Do not skip this.
 npm run art          # rebuild themes + atlas after editing art or theme data
 npm run build        # production build into build/
@@ -156,18 +156,17 @@ Comments explain why, not what. Match the density around you.
 
 ## What is open
 
-Only three, and none are urgent.
+The researched product roadmap lives in `docs/NEXT.md` and is tracked by issues
+#74 through #81. They cover settlement safety, post-port cleanup, gameplay
+agency, boss skill, visible mastery, the shop, offline playtesting and the
+content decision after that playtest.
 
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker
   and Aseprite exports have. At 512x212 none of that earns its complexity. When
   it does, adopt an existing format rather than growing ours.
-- **#72 Sourcemaps do not reach production.** They build but 404 live, dropped
-  somewhere in the site's copy. Worth fixing: a real stack off a sourcemap is
-  what finally cracked the v1.0 launch failure.
-- **#73** is this document.
-
-The v1.0 milestone is closed, seven issues.
+- **#72 Sourcemaps do not reach production.** Closed after production verification:
+  the map returns, parses, and embeds all source bodies.
 
 Ideas raised but not filed, because they may not be wanted: a save editor (the
 rescue page's paste box already does it, and a friendly emerald editor is also a

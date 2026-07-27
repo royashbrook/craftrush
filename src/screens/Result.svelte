@@ -1,52 +1,25 @@
 <!--
   The end-of-run screen: what you got, and where to go next.
 
-  Banking the payout, advancing the level, and marking a campaign chapter done
-  are all side effects of a run ENDING, not of this screen being drawn. The
-  engine hands us one result object per run (`nav.result`), so applying those
-  effects is guarded on that object's identity — the effect fires once when a
-  new result arrives and never again for the same object, no matter how many
-  times this component re-renders. Without that guard, re-rendering (or a stray
-  remount) could bank the reward, or complete a chapter, twice.
+  A result is already settled before this component sees it. Drawing or
+  remounting this screen therefore cannot touch the save.
 -->
 <script>
-  import { save, nav, commit, go, toast } from '../lib/store.svelte.js';
+  import { nav, go, toast } from '../lib/store.svelte.js';
   import { Audio } from '../../js/audio.js';
-  import { completeChapter, recordExpedition, writeBackup } from '../../js/config.js';
   import Sprite from '../lib/Sprite.svelte';
 
   let { game } = $props();
 
-  let view = $state(null);
-  let appliedFor = null; // the result object we've already banked — not reactive on purpose
+  const view = $derived(nav.result ? resultView(nav.result) : null);
 
-  $effect(() => {
-    const r = nav.result;
-    if (!r || r === appliedFor) return;
-    appliedFor = r;
-    view = applyResult(r);
-  });
-
-  // Mirrors the old showResult exactly: same payout,
-  // same level advance, same chapter completion. Returns what the markup needs
-  // instead of poking the DOM.
-  function applyResult(r) {
+  function resultView(r) {
     const isExp = !!r.expedition;
-
-    // expedition streak: the multiplier + streak bonus apply only to the FIRST
-    // completion of today's expedition. Replays are practice for base emeralds.
-    let streakBonus = 0, streak = 0, expFirst = false;
-    if (isExp && r.win) {
-      const rec = recordExpedition(save);
-      streak = rec.streak;
-      expFirst = rec.first;
-      if (rec.first) {
-        streakBonus = 20 * Math.min(rec.streak, 10);
-        save.stats.expeditions = (save.stats.expeditions || 0) + 1;
-      }
-    }
-    // strip the expedition multiplier on a replay (already cleared today)
-    const earned = (isExp && !expFirst) ? Math.round(r.emeralds / (r.emeraldMul || 1)) : r.emeralds;
+    const settled = r.settlement || {};
+    const earned = settled.earned ?? r.emeralds;
+    const streakBonus = settled.streakBonus || 0;
+    const streak = settled.streak || 0;
+    const expFirst = !!settled.expeditionFirst;
 
     const rows = [
       ...(isExp ? [[r.expedition.name, r.win ? 'CLEARED!' : 'failed']] : []),
@@ -60,24 +33,6 @@
       ...(r.mode === 'shooter' ? [[' Mobs blasted', `${r.kills}`]] : []),
       ...(isExp ? [] : [[' ' + r.biome, r.win ? 'CLEARED!' : 'try again!']]),
     ];
-
-    // bank it
-    const banked = earned + streakBonus;
-    save.emeralds += banked;
-    save.stats.totalEmeralds = (save.stats.totalEmeralds || 0) + banked;
-    if (r.win && !isExp) {
-      save.level += 1;
-      save.bestLevel = Math.max(save.bestLevel, save.level);
-    }
-    save.bestCrowd = Math.max(save.bestCrowd, r.bestCrowd);
-    commit();
-    // expeditions never advance the campaign — this only ever fires for a
-    // normal win, and only once per result thanks to the guard above.
-    if (r.win && r.chapter) {
-      completeChapter(save, r.chapter.id);
-      commit();
-    }
-    if (r.win) writeBackup(save);
 
     return {
       title: r.win ? (isExp ? 'EXPEDITION DONE!' : 'VICTORY!') : 'CROWD WIPED OUT',

@@ -12,7 +12,7 @@
     townById, townHasRoom, townPop, villagerCost, worldIncomeRate,
   } from '../../js/config.js';
 
-  let { game } = $props();
+  let { game, now = Date.now() } = $props();
 
   const world = $derived(save.world);
   const townId = $derived(world.town);
@@ -22,7 +22,7 @@
 
   const rate = $derived(worldIncomeRate(world));
   const here = $derived(homeIncomeRate(crew));
-  const pending = $derived(pendingIdleWorld(world, save.home.lastCollect, Date.now()));
+  const pending = $derived(pendingIdleWorld(world, save.home.lastCollect, now));
 
   const ownedVillagers = $derived(VILLAGERS.filter((v) => crew[v.id] > 0));
 

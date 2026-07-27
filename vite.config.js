@@ -38,7 +38,7 @@ const walk = (dir, out = [], root = dir) => {
  * `files` cover the themes for nothing. That was the point of the move, so the
  * copy lives here rather than the themes being hand-listed in the worker.
  */
-const isRuntime = (p) => !p.split(/[\\/]/).includes('art');
+const isRuntime = (p) => /(^|\/)atlas\.(png|json)$/.test(p.split(/[\\]/).join('/'));
 
 let synced = false;
 function syncThemes(force = false) {

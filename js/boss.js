@@ -223,7 +223,7 @@ export const BossMixin = {
     this.explode(b.x, b.z, 3, 0, true);
     // firework bursts + emerald fountain
     for (let i = 0; i < 5; i++) {
-      setTimeout(() => {
+      this._later(() => {
         if (this.state !== 'boss') return;
         this.burst(b.x + (Math.random() - 0.5) * 4, 2.5 + Math.random() * 2, b.z - 1, ['#ff5545', '#ffd94d', '#2eff70', '#7dcfff', '#c76bff'], 18, 7);
         Audio.sfx('boom');
@@ -233,6 +233,6 @@ export const BossMixin = {
     for (let i = 0; i < bonus; i++) {
       this.pickups.push({ kind: 'emerald', x: (Math.random() * 2 - 1) * 2.5, z: this.playerZ + 3 + Math.random() * 4, t: Math.random() });
     }
-    setTimeout(() => { if (this.state === 'boss') this.endRun(true); }, 1900);
+    this._later(() => { if (this.state === 'boss') this.endRun(true); }, 1900);
   },
 };

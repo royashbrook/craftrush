@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 // Browser smoke tests. These load the real page, so they catch anything the
 // node harness can't: DOM wiring, canvas rendering, input, console errors.
@@ -242,4 +244,37 @@ test('the rescue page pulls in nothing at runtime', async ({ page }) => {
   await page.goto('/rescue.html');
   await page.waitForTimeout(500);
   expect(extra, 'the rescue page loaded something external').toEqual([]);
+});
+
+test('real-time village and mine notices update without navigation', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+
+  await page.evaluate(() => {
+    const town = CR.save.world.towns[CR.save.world.town];
+    town.villagers.farmer = 10000;
+    CR.save.home.lastCollect = Date.now();
+    CR.save.mine.energy = 59;
+    CR.save.mine.energyTs = Date.now() - 19_900;
+    CR.commit();
+  });
+
+  await expect(page.locator('#navDotHome')).toBeHidden();
+  await expect(page.locator('#navDotMine')).toBeHidden();
+  await expect(page.locator('#navDotHome')).toBeVisible({ timeout: 2500 });
+  await expect(page.locator('#navDotMine')).toBeVisible({ timeout: 2500 });
+
+  await page.click('.navTab[data-tab="home"]');
+  await expect(page.locator('#homeWelcome')).toBeVisible();
+});
+
+test('runtime themes ship only their atlas files', async ({ request }) => {
+  const atlas = await request.get('/themes/craft/atlas.json');
+  expect(atlas.ok()).toBe(true);
+  if (process.env.PW_TARGET === 'build') {
+    for (const theme of ['craft', 'neon']) {
+      expect(readdirSync(join(process.cwd(), 'build', 'themes', theme)).sort())
+        .toEqual(['atlas.json', 'atlas.png']);
+    }
+  }
 });
