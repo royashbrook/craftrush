@@ -3,15 +3,25 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Craft Rush — a blocky Minecraft-style crowd-runner PWA.",
+  "description": "Craft Rush \u2014 a blocky Minecraft-style crowd-runner PWA.",
   "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "art": "node tools/pack-atlas.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:e2e": "playwright test",
-    "build": "node tools/build.mjs",
-    "sprites": "node tools/validate_sprites.mjs js/sprites/*.js",
-    "dev": "python3 tools/devserver.py 8300"
+    "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0"
+    "@playwright/test": "^1.48.0",
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.70.1",
+    "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "@types/node": "^26.1.1",
+    "svelte": "^5.56.8",
+    "svelte-check": "^4.7.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.5"
   }
 }

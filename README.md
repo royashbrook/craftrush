@@ -18,17 +18,22 @@ git-less checkout.)
 
 ## Develop
 
-No dependencies to install. Node 18+ only.
-
 ```sh
-node --test tests/*.test.mjs      # unit + headless integration tests (25, no deps)
-node tools/build.mjs              # build dist/ with a generated SW precache
-node tools/validate_sprites.mjs js/sprites/*.js   # validate sprite packs
-python3 tools/devserver.py 8300   # no-cache dev server for iterating on modules
+npm install        # once
+npm run dev        # vite dev server, no service worker, always fresh
+npm test           # unit + headless integration (121 tests)
+npm run test:e2e   # browser e2e (playwright)
+npm run art        # rebuild the atlas after editing themes/<id>/art/*.png
+npm run build      # build/, a prerendered page plus a service worker
+npm run preview    # serve the built output exactly as it deploys
+npm run check      # svelte-check over the components and typed modules
 ```
 
+Play a different theme with `?theme=neon` in the browser, or
+`CRAFTRUSH_THEME=neon` for the node tools and tests.
+
 Two test layers:
-- **Unit + integration** (`tests/*.test.mjs`, zero dependencies) — pure logic
+- **Unit + integration** (`tests/*.test.mjs`) — pure logic
   plus a headless harness that drives the real `Game` class through full runs
   with a stubbed canvas, so cross-module regressions surface without a browser.
 - **Browser e2e** (Playwright, dev-only). One-time setup then run:
@@ -102,8 +107,16 @@ systems switch off cleanly.
 
 Everything visual is data:
 
-- `js/sprites/*.js` — pixel matrices (see `docs/SPRITE_SPEC.md`). Swap a pack,
-  reskin the game. Validate with `node tools/validate_sprites.mjs js/sprites/x.js`.
+- `themes/<id>/` — what the game looks like and what is in it. Biomes, skins,
+  cosmetics, mobs, the campaign and the mine tiles, all as JSON, plus the art.
+  The engine reads a theme; it does not contain one. `?theme=neon` in the
+  browser or `CRAFTRUSH_THEME=neon` in node picks a different one.
+- `themes/<id>/art/*.png` — one file per sprite, frames left to right. Open any
+  of them in an image editor, then run `node tools/pack-atlas.mjs`.
+  `art/sprites.json` carries what a PNG cannot: anchor, frame count, and the
+  base palette the colour variants are derived from.
+- `themes/<id>/atlas.png` + `atlas.json` — build output. Nothing edits these by
+  hand.
 - `js/config.js` — biomes (palettes, enemy rosters, bosses, scenery), skins
   (palette swaps + head sprite), enemy behavior stats, tuning.
 - Levels are procedurally generated from the level number (seeded), difficulty

@@ -1,0 +1,27 @@
+{
+  "extends": "./.svelte-kit/tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+
+    // The engine is JavaScript and stays JavaScript. Files opt IN to checking
+    // with a `// @ts-check` pragma at the top, so types spread file by file
+    // instead of arriving as nine thousand lines of noise nobody reads.
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+
+    "strict": true,
+    "noImplicitAny": false,
+    "noUncheckedIndexedAccess": false,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["js/**/*", "tools/**/*", "types/**/*", "src/**/*", "vite.config.js", "svelte.config.js"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -8,7 +8,7 @@ test('boots to the menu with no console errors', async ({ page }) => {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
 
-  await page.goto('/index.html');
+  await page.goto('/');
   await expect(page.locator('#btnPlayShooter')).toBeVisible();
   await expect(page.locator('#menu')).toBeVisible();
   // the app shell is always present outside a run
@@ -28,7 +28,7 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
 
-  await page.goto('/index.html');
+  await page.goto('/');
   await page.click('#btnPlayShooter');
   await expect(page.locator('#hud')).toBeVisible();
   await expect(page.locator('#btnPause')).toBeVisible();
@@ -44,7 +44,7 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
 });
 
 test('pause and resume work', async ({ page }) => {
-  await page.goto('/index.html');
+  await page.goto('/');
   await page.click('#btnPlayShooter');
   await page.click('#btnPause');
   await expect(page.locator('#pause')).toBeVisible();
@@ -57,7 +57,7 @@ test('every bottom-nav tab opens a screen with real content', async ({ page }) =
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
 
-  await page.goto('/index.html');
+  await page.goto('/');
   for (const [tab, screen] of [['shop', '#shop'], ['home', '#home'], ['mine', '#mine']]) {
     await page.click(`.navTab[data-tab="${tab}"]`);
     await expect(page.locator(screen)).toBeVisible();
@@ -75,7 +75,7 @@ test('every bottom-nav tab opens a screen with real content', async ({ page }) =
 });
 
 test('the bottom-left tab becomes BACK inside a stack and walks back out', async ({ page }) => {
-  await page.goto('/index.html');
+  await page.goto('/');
   await page.click('.navTab[data-tab="world"]');
   await expect(page.locator('#tabPlayLabel')).toHaveText('Play');   // world is a tab root
   await page.click('#btnTownAction');                               // VISIT the town's house
@@ -87,7 +87,7 @@ test('the bottom-left tab becomes BACK inside a stack and walks back out', async
 });
 
 test('the HUD chips stay readable over a dark biome sky', async ({ page }) => {
-  await page.goto('/index.html');
+  await page.goto('/');
   await page.locator('#btnPlayShooter').click();
   await expect(page.locator('#hud')).toBeVisible();
   // black text on a near-black chip is invisible; every chip must carry real contrast
@@ -100,16 +100,48 @@ test('the HUD chips stay readable over a dark biome sky', async ({ page }) => {
 });
 
 test('the menu still fits once the whole quest is finished', async ({ page }) => {
-  await page.goto('/index.html');
+  await page.goto('/');
   await page.locator('#btnPlayShooter').waitFor();
   // the finished state adds the replay button, which is where the menu used to spill
+  // finishing the quest is now just a save change: the menu re-derives itself,
+  // which is the whole point of the port. No refresh call to make.
+  await page.evaluate(() => {
+    CR.save.campaign.done = ['mine_obsidian', 'portal', 'fortress', 'stronghold', 'dragon',
+      'endcity', 'bastion', 'skulls', 'wither', 'credits'];
+  });
+  await expect(page.locator('#btnQuestReplay')).toBeVisible();
   const overflow = await page.evaluate(() => {
-    CR.game.save.campaign = { done: ['mine_obsidian', 'portal', 'fortress', 'stronghold', 'dragon',
-      'endcity', 'bastion', 'skulls', 'wither', 'credits'] };
-    CR.ui.refreshQuest();
     const p = document.querySelector('#menu .panel');
     return p.scrollHeight - p.clientHeight;
   });
   expect(overflow).toBeLessThanOrEqual(1);
-  await expect(page.locator('#btnQuestReplay')).toBeVisible();
+});
+
+test('the browser actually loaded the art', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#btnPlayShooter')).toBeVisible();
+  // a missing atlas degrades to magenta placeholders rather than crashing, so
+  // without this the suite would pass on a build that shipped no art at all
+  const ready = await page.evaluate(() => import('/js/assets.js').then((m) => m.assetsReady()));
+  expect(ready).toBe(true);
+});
+
+test('the system back gesture walks the screen stack instead of leaving the game', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+
+  await page.click('.navTab[data-tab="world"]');
+  await page.click('#btnTownAction');                 // into a house
+  await expect(page.locator('#playroom')).toBeVisible();
+
+  await page.goBack();
+  await expect(page.locator('#world')).toBeVisible();  // up one, not out of the app
+  await page.goBack();
+  await expect(page.locator('#menu')).toBeVisible();
+
+  // mid-run, back means "wait, stop" rather than "go somewhere"
+  await page.click('#btnPlayShooter');
+  await expect(page.locator('#hud')).toBeVisible();
+  await page.goBack();
+  await expect(page.locator('#pause')).toBeVisible();
 });

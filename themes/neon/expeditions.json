@@ -1,0 +1,115 @@
+[
+ {
+  "id": "blaze_rush",
+  "name": "Blaze Rush",
+  "icon": "head_piglin",
+  "biome": "nether",
+  "mode": "shooter",
+  "desc": "Nether raid — double emeralds and extra speed.",
+  "mut": {
+   "emeraldMul": 2,
+   "speedMul": 1.15
+  }
+ },
+ {
+  "id": "creeper_storm",
+  "name": "Creeper Storm",
+  "icon": "head_creeper",
+  "mode": "shooter",
+  "desc": "Creepers everywhere. Grab the TNT and blast them!",
+  "mut": {
+   "enemies": [
+    "creeper",
+    "creeper",
+    "spider"
+   ],
+   "tntCommon": true,
+   "emeraldMul": 1.5
+  }
+ },
+ {
+  "id": "giant_march",
+  "name": "Giant March",
+  "icon": "iron_golem",
+  "mode": "shooter",
+  "desc": "Start with a Giga Steve, but the mobs hit harder.",
+  "mut": {
+   "startWorth": 60,
+   "enemyHpMul": 1.4,
+   "emeraldMul": 1.5
+  }
+ },
+ {
+  "id": "golden_hour",
+  "name": "Golden Hour",
+  "icon": "golden_apple",
+  "mode": "shooter",
+  "desc": "Golden apples rain down. Triple emeralds!",
+  "mut": {
+   "emeraldMul": 3,
+   "appleCommon": true
+  }
+ },
+ {
+  "id": "endless_night",
+  "name": "Endless Night",
+  "icon": "boss_warden",
+  "biome": "deepdark",
+  "mode": "shooter",
+  "desc": "The Deep Dark calls. Face the Warden.",
+  "mut": {
+   "emeraldMul": 2
+  }
+ },
+ {
+  "id": "bone_brigade",
+  "name": "Bone Brigade",
+  "icon": "head_skeleton",
+  "mode": "shooter",
+  "desc": "Skeletons only. Dodge the arrow storm!",
+  "mut": {
+   "enemies": [
+    "skeleton",
+    "stray",
+    "skeleton"
+   ],
+   "emeraldMul": 1.5
+  }
+ },
+ {
+  "id": "gate_frenzy",
+  "name": "Gate Frenzy",
+  "icon": "emerald",
+  "mode": "gates",
+  "desc": "No bows — pure gates. Grow a giant army!",
+  "mut": {
+   "gateBoost": true,
+   "emeraldMul": 2
+  }
+ },
+ {
+  "id": "frozen_stampede",
+  "name": "Frozen Stampede",
+  "icon": "head_skeleton",
+  "biome": "snow",
+  "mode": "shooter",
+  "desc": "Icy sprint — everything is faster. Hold on!",
+  "mut": {
+   "speedMul": 1.3,
+   "emeraldMul": 2
+  }
+ },
+ {
+  "id": "swamp_things",
+  "name": "Swamp Things",
+  "icon": "head_zombie",
+  "biome": "swamp",
+  "mode": "gates",
+  "desc": "Witch country, gates only. Choose wisely.",
+  "mut": {
+   "gateBoost": true,
+   "enemyHpMul": 1.3,
+   "emeraldMul": 2
+  }
+ }
+]

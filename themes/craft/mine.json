@@ -1,0 +1,166 @@
+{
+ "tiles": {
+  "air": {
+   "id": "air",
+   "solid": false,
+   "color": "#1a1420"
+  },
+  "dirt": {
+   "id": "dirt",
+   "hp": 1,
+   "tier": 0,
+   "value": 0,
+   "color": "#7a5236",
+   "color2": "#6b4830"
+  },
+  "stone": {
+   "id": "stone",
+   "hp": 2,
+   "tier": 0,
+   "value": 0,
+   "color": "#8a8a92",
+   "color2": "#7a7a82"
+  },
+  "deepslate": {
+   "id": "deepslate",
+   "hp": 4,
+   "tier": 2,
+   "value": 0,
+   "color": "#3c3c44",
+   "color2": "#33333a"
+  },
+  "gravel": {
+   "id": "gravel",
+   "hp": 1,
+   "tier": 0,
+   "value": 0,
+   "color": "#8f8478",
+   "color2": "#7d7368",
+   "falls": true
+  },
+  "coal": {
+   "id": "coal",
+   "hp": 2,
+   "tier": 0,
+   "value": 2,
+   "color": "#2e2e33",
+   "ore": true
+  },
+  "copper": {
+   "id": "copper",
+   "hp": 3,
+   "tier": 1,
+   "value": 4,
+   "color": "#c8703c",
+   "ore": true
+  },
+  "iron": {
+   "id": "iron",
+   "hp": 3,
+   "tier": 1,
+   "value": 7,
+   "color": "#d8b89a",
+   "ore": true
+  },
+  "lapis": {
+   "id": "lapis",
+   "hp": 3,
+   "tier": 1,
+   "value": 12,
+   "color": "#2b52c8",
+   "ore": true
+  },
+  "gold": {
+   "id": "gold",
+   "hp": 4,
+   "tier": 2,
+   "value": 20,
+   "color": "#f2c541",
+   "ore": true
+  },
+  "redstone": {
+   "id": "redstone",
+   "hp": 4,
+   "tier": 2,
+   "value": 26,
+   "color": "#c22b2b",
+   "ore": true
+  },
+  "diamond": {
+   "id": "diamond",
+   "hp": 5,
+   "tier": 3,
+   "value": 60,
+   "color": "#4fe3e0",
+   "ore": true
+  },
+  "emeraldore": {
+   "id": "emeraldore",
+   "hp": 5,
+   "tier": 3,
+   "value": 90,
+   "color": "#2ecc5e",
+   "ore": true
+  },
+  "obsidian": {
+   "id": "obsidian",
+   "hp": 9,
+   "tier": 4,
+   "value": 40,
+   "color": "#1c1428",
+   "color2": "#160f20"
+  },
+  "lava": {
+   "id": "lava",
+   "hp": 0,
+   "tier": 9,
+   "value": 0,
+   "color": "#ff7a2a",
+   "hazard": true
+  }
+ },
+ "pickaxes": [
+  {
+   "id": "wood",
+   "name": "Wooden",
+   "dmg": 1,
+   "tier": 0,
+   "cost": 0
+  },
+  {
+   "id": "stone",
+   "name": "Stone",
+   "dmg": 2,
+   "tier": 1,
+   "cost": 200
+  },
+  {
+   "id": "iron",
+   "name": "Iron",
+   "dmg": 4,
+   "tier": 2,
+   "cost": 1000
+  },
+  {
+   "id": "gold",
+   "name": "Gold",
+   "dmg": 7,
+   "tier": 2,
+   "cost": 4000
+  },
+  {
+   "id": "diamond",
+   "name": "Diamond",
+   "dmg": 12,
+   "tier": 3,
+   "cost": 15000
+  },
+  {
+   "id": "netherite",
+   "name": "Netherite",
+   "dmg": 20,
+   "tier": 4,
+   "cost": 50000
+  }
+ ]
+}

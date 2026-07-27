@@ -1,0 +1,150 @@
+{
+ "resources": {
+  "obsidian": {
+   "label": "Obsidian"
+  },
+  "blazeRods": {
+   "label": "Blaze Rods"
+  },
+  "enderEyes": {
+   "label": "Ender Eyes"
+  },
+  "elytra": {
+   "label": "Elytra"
+  },
+  "trims": {
+   "label": "Armor Trims"
+  },
+  "witherSkulls": {
+   "label": "Wither Skulls"
+  }
+ },
+ "chapters": [
+  {
+   "id": "mine_obsidian",
+   "icon": "ui_pickaxe",
+   "name": "Obsidian Hunt",
+   "biome": "plains",
+   "blurb": "Mine obsidian on the run. You need ten to frame a portal.",
+   "repeatable": true,
+   "grants": {
+    "obsidian": 4
+   }
+  },
+  {
+   "id": "portal",
+   "icon": "ui_door",
+   "name": "The Nether Portal",
+   "biome": "nether",
+   "requires": {
+    "obsidian": 10
+   },
+   "blurb": "Light the frame and step through.",
+   "consumes": {
+    "obsidian": 10
+   }
+  },
+  {
+   "id": "fortress",
+   "icon": "ui_bow",
+   "name": "Nether Fortress",
+   "biome": "nether_fortress",
+   "structure": true,
+   "blurb": "Blazes guard the halls. Bring back their rods.",
+   "repeatable": true,
+   "grants": {
+    "blazeRods": 2
+   }
+  },
+  {
+   "id": "stronghold",
+   "icon": "ui_world",
+   "name": "The Stronghold",
+   "biome": "stronghold",
+   "structure": true,
+   "requires": {
+    "blazeRods": 6
+   },
+   "blurb": "Rods become eyes, and eyes find the portal room.",
+   "consumes": {
+    "blazeRods": 6
+   },
+   "grants": {
+    "enderEyes": 12
+   }
+  },
+  {
+   "id": "dragon",
+   "icon": "ui_trophy",
+   "name": "The Ender Dragon",
+   "biome": "end",
+   "boss": "boss_dragon",
+   "requires": {
+    "enderEyes": 12
+   },
+   "phases": 3,
+   "crystals": true,
+   "blurb": "Break the crystals that heal her, then bring her down."
+  },
+  {
+   "id": "endcity",
+   "icon": "ui_world",
+   "name": "End City",
+   "biome": "end_city",
+   "structure": true,
+   "blurb": "Out past the island: a ship, and wings worth taking.",
+   "grants": {
+    "elytra": 1
+   }
+  },
+  {
+   "id": "bastion",
+   "icon": "ui_house",
+   "name": "Bastion Remnant",
+   "biome": "bastion",
+   "structure": true,
+   "requires": {
+    "elytra": 1
+   },
+   "blurb": "Back to the Nether for blackstone and armor trims.",
+   "grants": {
+    "trims": 2,
+    "witherSkulls": 1
+   }
+  },
+  {
+   "id": "skulls",
+   "icon": "ui_bow",
+   "name": "Skull Hunt",
+   "biome": "nether_fortress",
+   "blurb": "Wither skeletons, and the skulls you need to summon.",
+   "repeatable": true,
+   "grants": {
+    "witherSkulls": 1
+   }
+  },
+  {
+   "id": "wither",
+   "icon": "ui_trophy",
+   "name": "The Wither",
+   "biome": "nether",
+   "boss": "boss_wither",
+   "requires": {
+    "witherSkulls": 3
+   },
+   "phases": 3,
+   "consumes": {
+    "witherSkulls": 3
+   },
+   "blurb": "Three skulls, three heads, three phases."
+  },
+  {
+   "id": "credits",
+   "icon": "ui_person",
+   "name": "The Long Walk Home",
+   "biome": "plains",
+   "credits": true,
+   "blurb": "Everything you built, on the way home."
+  }
+ ]
+}

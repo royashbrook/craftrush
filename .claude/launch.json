@@ -3,8 +3,13 @@
   "configurations": [
     {
       "name": "craftrush",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8123", "--bind", "127.0.0.1"],
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "8123",
+        "--strictPort"
+      ],
       "port": 8123
     }
   ]

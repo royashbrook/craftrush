@@ -8,8 +8,8 @@ export default defineConfig({
   fullyParallel: true,
   reporter: 'list',
   webServer: {
-    command: 'python3 tools/devserver.py 8399',
-    url: 'http://127.0.0.1:8399/index.html',
+    command: 'npx vite dev --port 8399 --strictPort',
+    url: 'http://127.0.0.1:8399/',
     reuseExistingServer: true,
     stdout: 'ignore',
   },

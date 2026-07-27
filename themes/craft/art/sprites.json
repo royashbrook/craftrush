@@ -1,0 +1,1852 @@
+{
+ "runner_back": {
+  "w": 12,
+  "h": 18,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "h": "#4a2f1b",
+   "s": "#d8a077",
+   "t": "#00afaf",
+   "T": "#008f8f",
+   "l": "#3d55b8",
+   "L": "#2e4090",
+   "b": "#6e6e6e"
+  }
+ },
+ "runner_body_front": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "s": "#d8a077",
+   "t": "#00afaf",
+   "T": "#008f8f",
+   "l": "#3d55b8",
+   "L": "#2e4090",
+   "b": "#6e6e6e"
+  }
+ },
+ "head_villager": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "s": "#a8763f",
+   "n": "#8a5f30",
+   "w": "#4a3420",
+   "k": "#241a10",
+   "m": "#7a5228"
+  }
+ },
+ "villager_body": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "r": "#7a5a3a",
+   "R": "#5f4528",
+   "a": "#9a7a4a",
+   "s": "#a8763f"
+  }
+ },
+ "pm_torso": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "t": "#00afaf",
+   "T": "#008f8f",
+   "s": "#d8a077"
+  }
+ },
+ "pm_arm": {
+  "w": 3,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "t": "#00afaf",
+   "T": "#008f8f",
+   "s": "#d8a077"
+  }
+ },
+ "pm_leg": {
+  "w": 3,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "l": "#3d55b8",
+   "L": "#2e4090",
+   "b": "#6e6e6e"
+  }
+ },
+ "hat_wizard": {
+  "w": 13,
+  "h": 11,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "p": "#5b3aa6",
+   "P": "#3a2472",
+   "s": "#f7d84b",
+   "y": "#ffe873",
+   "O": "#241546"
+  }
+ },
+ "hat_top": {
+  "w": 12,
+  "h": 10,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#1a1a1a",
+   "d": "#0a0a0a",
+   "h": "#3a3a3a",
+   "r": "#d8382e",
+   "R": "#a02820"
+  }
+ },
+ "hat_party": {
+  "w": 11,
+  "h": 11,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "p": "#ff5fa2",
+   "c": "#3fd6e0",
+   "y": "#ffe14d",
+   "o": "#7a2f5a",
+   "w": "#fff7fb"
+  }
+ },
+ "hat_flower": {
+  "w": 13,
+  "h": 6,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "p": "#ef6aa4",
+   "y": "#f5d13f",
+   "r": "#e0463b",
+   "g": "#5cb24c",
+   "G": "#357a2c"
+  }
+ },
+ "hat_propeller": {
+  "w": 11,
+  "h": 9,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "r": "#e8493c",
+   "b": "#3b7dd8",
+   "D": "#7a2b23",
+   "s": "#c9ccd4",
+   "w": "#ffffff"
+  }
+ },
+ "hat_cowboy": {
+  "w": 14,
+  "h": 7,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "d": "#4a2f14",
+   "b": "#8a5a2b",
+   "l": "#a9764a",
+   "t": "#d9b380"
+  }
+ },
+ "hat_cat": {
+  "w": 13,
+  "h": 6,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "d": "#241f28",
+   "f": "#4b4453",
+   "p": "#f4a9c6",
+   "P": "#dd80a5"
+  }
+ },
+ "hat_chef": {
+  "w": 12,
+  "h": 10,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "w": "#ffffff",
+   "e": "#e9edf4",
+   "s": "#c2c8d5",
+   "o": "#8f95a4"
+  }
+ },
+ "enderman": {
+  "w": 14,
+  "h": 28,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#1c1c1c",
+   "K": "#0e0e0e",
+   "p": "#c76bff",
+   "P": "#8b3fd6"
+  }
+ },
+ "cape": {
+  "w": 8,
+  "h": 9,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "c": "#c8322a",
+   "C": "#8f1f14"
+  }
+ },
+ "hat_crown": {
+  "w": 10,
+  "h": 5,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "g": "#f3c53f",
+   "G": "#c29222",
+   "r": "#e04a3f"
+  }
+ },
+ "hat_pumpkin": {
+  "w": 10,
+  "h": 7,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "o": "#e8871e",
+   "O": "#b5620f",
+   "s": "#4f7a1e"
+  }
+ },
+ "hat_slime": {
+  "w": 10,
+  "h": 6,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "g": "#7ee06a",
+   "G": "#4fb83f"
+  }
+ },
+ "hat_tnt": {
+  "w": 10,
+  "h": 5,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "r": "#c8322a",
+   "R": "#8f1f14",
+   "w": "#e8e0d8",
+   "k": "#1a1a1a"
+  }
+ },
+ "hat_santa": {
+  "w": 10,
+  "h": 7,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "r": "#c8322a",
+   "R": "#8f1f14",
+   "w": "#ffffff"
+  }
+ },
+ "helm_gold_trim": {
+  "w": 12,
+  "h": 10,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "c": "#4aede0",
+   "C": "#2a9d94",
+   "g": "#f3c53f",
+   "G": "#c29222",
+   "k": "#173d38"
+  }
+ },
+ "helm_diamond_trim": {
+  "w": 12,
+  "h": 10,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "h": "#6a6a72",
+   "H": "#2e2e36",
+   "b": "#7ef0e8",
+   "T": "#3fb8ae",
+   "k": "#1a1a1a"
+  }
+ },
+ "parrot": {
+  "w": 10,
+  "h": 10,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "r": "#e0362b",
+   "b": "#3fa9ff",
+   "o": "#e8871e",
+   "k": "#0c0c0c",
+   "g": "#2eff70"
+  }
+ },
+ "blaze_rod": {
+  "w": 8,
+  "h": 16,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "g": "#f5c542",
+   "G": "#b8860b",
+   "o": "#ff8c1a",
+   "k": "#5a3a08"
+  }
+ },
+ "powerup_sword": {
+  "w": 14,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "d": "#3fd6e0",
+   "D": "#2a9aa8",
+   "h": "#8a5a3a",
+   "H": "#5f3a22",
+   "g": "#c9c9c9"
+  }
+ },
+ "powerup_axe": {
+  "w": 14,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "i": "#c9c9c9",
+   "I": "#8f8f8f",
+   "h": "#8a5a3a",
+   "H": "#5f3a22"
+  }
+ },
+ "head_fallback": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "h": "#4a2f1b",
+   "s": "#d8a077",
+   "e": "#ffffff",
+   "p": "#3d55b8",
+   "m": "#8a5a3a"
+  }
+ },
+ "creeper": {
+  "w": 16,
+  "h": 24,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "a": "#66d94f",
+   "g": "#4fbf3c",
+   "G": "#3da52e",
+   "d": "#2b7d20",
+   "m": "#1e4f16",
+   "k": "#0f1a0c"
+  }
+ },
+ "zombie": {
+  "w": 16,
+  "h": 24,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "s": "#7fc95e",
+   "S": "#5aa03d",
+   "d": "#3a7a28",
+   "e": "#1fa08f",
+   "E": "#157a6c",
+   "p": "#6a4fb0",
+   "P": "#4c3690",
+   "b": "#2e2e2e",
+   "k": "#0c0c0c"
+  }
+ },
+ "husk": {
+  "w": 16,
+  "h": 24,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "s": "#d9b877",
+   "S": "#b8934f",
+   "d": "#7a5c2e",
+   "e": "#c9a15f",
+   "E": "#a67f3f",
+   "p": "#8a6a3a",
+   "P": "#6b4f26",
+   "b": "#4a3820",
+   "k": "#0c0c0c"
+  }
+ },
+ "skeleton": {
+  "w": 16,
+  "h": 24,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "s": "#e8e4d8",
+   "S": "#c9c3b0",
+   "d": "#9a9484",
+   "k": "#0c0c0c",
+   "w": "#7a4a24",
+   "W": "#5c3717"
+  }
+ },
+ "stray": {
+  "w": 16,
+  "h": 24,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "s": "#dcebf0",
+   "S": "#b8ccd6",
+   "d": "#7d939c",
+   "k": "#0c0c0c",
+   "c": "#8a8f94",
+   "C": "#5f6469"
+  }
+ },
+ "spider": {
+  "w": 22,
+  "h": 12,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "b": "#26262c",
+   "B": "#141418",
+   "h": "#3c3c46",
+   "g": "#9a9aa4",
+   "G": "#6a6a74",
+   "r": "#ff4433",
+   "R": "#b8231a",
+   "k": "#0c0c0c"
+  }
+ },
+ "slime": {
+  "w": 16,
+  "h": 14,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "g": "#7ee06a",
+   "G": "#4fb83f",
+   "d": "#2e7d24",
+   "k": "#0c0c0c",
+   "h": "#c9f5b8"
+  }
+ },
+ "witch": {
+  "w": 16,
+  "h": 26,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "n": "#3a2d4a",
+   "N": "#241a30",
+   "y": "#d8c040",
+   "f": "#8fae6e",
+   "F": "#6e8f52",
+   "k": "#0c0c0c",
+   "r": "#7a3a28",
+   "p": "#6a3fa0",
+   "P": "#4c2c80",
+   "s": "#3a2d4a"
+  }
+ },
+ "blaze": {
+  "w": 16,
+  "h": 24,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "y": "#ffe066",
+   "Y": "#ffb020",
+   "o": "#e8720c",
+   "k": "#0c0c0c",
+   "d": "#a8600a",
+   "D": "#6b3f08"
+  }
+ },
+ "zombified_piglin": {
+  "w": 16,
+  "h": 24,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "p": "#e8a8a0",
+   "P": "#c47870",
+   "g": "#7fae5e",
+   "G": "#5c8a3e",
+   "d": "#4a3428",
+   "k": "#0c0c0c",
+   "y": "#e0c040",
+   "Y": "#b8942a",
+   "c": "#7a6a55",
+   "C": "#5c4f3f",
+   "l": "#7a5c3a",
+   "L": "#563e26",
+   "b": "#2e2418"
+  }
+ },
+ "magma_cube": {
+  "w": 16,
+  "h": 14,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "m": "#3a1010",
+   "M": "#240a0a",
+   "o": "#ff8a1e",
+   "O": "#ff4d1e",
+   "k": "#0c0c0c"
+  }
+ },
+ "phantom": {
+  "w": 24,
+  "h": 12,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "b": "#5a7086",
+   "B": "#3a4a5c",
+   "h": "#7e94aa",
+   "e": "#52ff7a",
+   "k": "#0c0c0c"
+  }
+ },
+ "boss_slime": {
+  "w": 36,
+  "h": 30,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "a": "#8fe878",
+   "g": "#5ecb46",
+   "G": "#3da52e",
+   "d": "#256b1c",
+   "m": "#173a10",
+   "k": "#0a0d09",
+   "y": "#ffd84a",
+   "Y": "#c9922a"
+  }
+ },
+ "boss_ravager": {
+  "w": 40,
+  "h": 30,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "b": "#9c8570",
+   "B": "#7a6754",
+   "D": "#4a3d31",
+   "n": "#d9c9a3",
+   "N": "#a68f5e",
+   "p": "#5c4630",
+   "P": "#3a2c1c",
+   "k": "#100b08",
+   "w": "#f5efe0"
+  }
+ },
+ "boss_wither": {
+  "w": 36,
+  "h": 34,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "s": "#e8e4d8",
+   "S": "#b7b0a0",
+   "J": "#3a3730",
+   "m": "#161514",
+   "M": "#2b2825",
+   "k": "#0a0908",
+   "c": "#7fe8ff",
+   "j": "#57534a"
+  }
+ },
+ "boss_dragon": {
+  "w": 48,
+  "h": 30,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "b": "#211d29",
+   "B": "#3a3350",
+   "D": "#0d0b12",
+   "w": "#4a3a5c",
+   "W": "#2e2438",
+   "h": "#a79fc0",
+   "p": "#c65bf0",
+   "k": "#08070c"
+  }
+ },
+ "boss_warden": {
+  "w": 34,
+  "h": 38,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#0a1416",
+   "d": "#16303a",
+   "t": "#20454f",
+   "h": "#2c5a66",
+   "r": "#0f2228",
+   "c": "#2fd6d6",
+   "C": "#aeffff"
+  }
+ },
+ "oak_tree": {
+  "w": 24,
+  "h": 32,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "a": "#7fd957",
+   "g": "#4fa832",
+   "G": "#3d8a26",
+   "d": "#276318",
+   "b": "#8a5a2b",
+   "B": "#6b4423",
+   "k": "#4a2f18"
+  }
+ },
+ "birch_tree": {
+  "w": 24,
+  "h": 32,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "a": "#c6e86b",
+   "g": "#9fcf4f",
+   "G": "#7fb23a",
+   "d": "#4f7a22",
+   "w": "#f2f2e6",
+   "n": "#d8d8c8",
+   "k": "#2a2a22"
+  }
+ },
+ "spruce_tree": {
+  "w": 20,
+  "h": 36,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "a": "#4f9a4a",
+   "g": "#2f6b34",
+   "G": "#1f4d24",
+   "d": "#123018",
+   "b": "#6b4423",
+   "k": "#4a2f18"
+  }
+ },
+ "snowy_spruce": {
+  "w": 20,
+  "h": 36,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "a": "#4f9a4a",
+   "g": "#2f6b34",
+   "G": "#1f4d24",
+   "d": "#123018",
+   "b": "#6b4423",
+   "k": "#4a2f18",
+   "s": "#f2f7fa",
+   "S": "#cfe0e8"
+  }
+ },
+ "cactus": {
+  "w": 12,
+  "h": 24,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "g": "#4a9c3f",
+   "G": "#357a2d",
+   "a": "#6fc95c",
+   "d": "#1f4a1a",
+   "s": "#e8e8c8"
+  }
+ },
+ "dead_bush": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "b": "#8a5a2b",
+   "B": "#6b4423",
+   "k": "#3a2412"
+  }
+ },
+ "red_mushroom": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "r": "#d1382a",
+   "R": "#952417",
+   "h": "#ef6a52",
+   "w": "#f5f0e0",
+   "W": "#d8d8d0",
+   "s": "#f0e6c8",
+   "S": "#cbb88f",
+   "k": "#5a140d",
+   "d": "#3a0c08"
+  }
+ },
+ "crimson_fungus": {
+  "w": 16,
+  "h": 20,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "r": "#7a1f2b",
+   "R": "#4d1119",
+   "h": "#a83347",
+   "o": "#ff8c3c",
+   "O": "#cc5f22",
+   "s": "#caa0a8",
+   "S": "#8a6268",
+   "k": "#2a0a10",
+   "d": "#200609"
+  }
+ },
+ "warped_fungus": {
+  "w": 16,
+  "h": 20,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "r": "#1f8a72",
+   "R": "#12594a",
+   "h": "#52c9a8",
+   "o": "#ff8c3c",
+   "O": "#cc5f22",
+   "s": "#6f9d92",
+   "S": "#4a6b62",
+   "k": "#0a2a22",
+   "d": "#06140f"
+  }
+ },
+ "end_pillar": {
+  "w": 12,
+  "h": 36,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "c": "#2b1a33",
+   "C": "#1a0f20",
+   "h": "#3f2a4a",
+   "k": "#10081a",
+   "p": "#ff6fd8",
+   "P": "#c73fae",
+   "w": "#ffd6f5"
+  }
+ },
+ "fence": {
+  "w": 16,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "b": "#8a5a2b",
+   "B": "#6b4423",
+   "h": "#a97a44",
+   "k": "#4a2f18"
+  }
+ },
+ "flowers": {
+  "w": 12,
+  "h": 8,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "g": "#3d8a26",
+   "G": "#2b6318",
+   "e": "#3d8a26",
+   "r": "#d1382a",
+   "k": "#3a0c08",
+   "y": "#f0c419"
+  }
+ },
+ "pumpkin": {
+  "w": 14,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "o": "#e07a1e",
+   "O": "#a85510",
+   "h": "#f5a441",
+   "d": "#5c2f08",
+   "e": "#4a7a2e",
+   "E": "#2f5a1a"
+  }
+ },
+ "hay_bale": {
+  "w": 16,
+  "h": 14,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "y": "#d9a441",
+   "Y": "#b8842e",
+   "h": "#f0c469",
+   "s": "#6b4423",
+   "S": "#4a2f18",
+   "d": "#6b4423"
+  }
+ },
+ "village_house": {
+  "w": 36,
+  "h": 32,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "r": "#7a3226",
+   "R": "#4f1f18",
+   "h": "#a8523f",
+   "e": "#c9924f",
+   "d": "#2b0f0a",
+   "w": "#c9a15a",
+   "W": "#a8823e",
+   "p": "#7a5a2e",
+   "c": "#8a8a8a",
+   "C": "#5c5c5c",
+   "l": "#adadad",
+   "o": "#6b4423",
+   "O": "#4a2f18",
+   "n": "#d9b23c",
+   "f": "#6b4423",
+   "g": "#a8d8e8",
+   "G": "#6fb3cc"
+  }
+ },
+ "basalt_pillar": {
+  "w": 12,
+  "h": 30,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "b": "#4a4a52",
+   "B": "#2e2e34",
+   "h": "#6a6a74",
+   "k": "#1a1a1e",
+   "t": "#7a7a86"
+  }
+ },
+ "cloud": {
+  "w": 24,
+  "h": 10,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "w": "#f7f9fc",
+   "h": "#ffffff",
+   "s": "#cdd6e0",
+   "S": "#a9b6c4",
+   "d": "#b7c2cf"
+  }
+ },
+ "nether_brick_pillar": {
+  "w": 12,
+  "h": 30,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "d": "#3a1218",
+   "b": "#4e1a22",
+   "m": "#2a0d12",
+   "g": "#6e2028"
+  }
+ },
+ "sculk_sensor": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#0a1416",
+   "d": "#16303a",
+   "v": "#0f2228",
+   "c": "#2fd6d6",
+   "C": "#aeffff"
+  }
+ },
+ "sculk_shrieker": {
+  "w": 16,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#0a1416",
+   "d": "#16303a",
+   "t": "#20454f",
+   "c": "#2fd6d6",
+   "C": "#aeffff"
+  }
+ },
+ "deepslate_pillar": {
+  "w": 12,
+  "h": 34,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#0a1416",
+   "d": "#1b2b30",
+   "t": "#2a3d42",
+   "c": "#2fd6d6",
+   "v": "#0f2228"
+  }
+ },
+ "stone_brick_pillar": {
+  "w": 24,
+  "h": 32,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "h": "#b5b5aa",
+   "s": "#84847a",
+   "S": "#5c5c54",
+   "m": "#3a3a34",
+   "k": "#242420",
+   "o": "#6f8f4a",
+   "O": "#4a6633"
+  }
+ },
+ "purpur_pillar": {
+  "w": 24,
+  "h": 32,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "h": "#e8d4f5",
+   "p": "#c9a3e0",
+   "P": "#9a6fc2",
+   "b": "#7a4fa0",
+   "k": "#3a2650",
+   "y": "#fff6c8"
+  }
+ },
+ "blackstone_pillar": {
+  "w": 24,
+  "h": 32,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "g": "#8a8a92",
+   "k": "#232228",
+   "d": "#100f14",
+   "f": "#d9b23c",
+   "F": "#f7d766"
+  }
+ },
+ "emerald": {
+  "w": 12,
+  "h": 14,
+  "frames": 2,
+  "anchor": "center",
+  "palette": {
+   "k": "#063D20",
+   "E": "#8FFFC0",
+   "e": "#17C964",
+   "g": "#0FA355",
+   "G": "#0C8A47",
+   "d": "#0A6636",
+   "w": "#FFFFFF"
+  }
+ },
+ "golden_apple": {
+  "w": 12,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#4a3510",
+   "G": "#fff2a8",
+   "g": "#f2c94c",
+   "d": "#9c6b0e",
+   "s": "#5c3a1e",
+   "l": "#4fbf3c",
+   "w": "#ffffff"
+  }
+ },
+ "tnt_block": {
+  "w": 14,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#5c0f0f",
+   "r": "#cc2b2b",
+   "R": "#e2453d",
+   "d": "#8a1c1c",
+   "w": "#f2ede0",
+   "b": "#141414"
+  }
+ },
+ "heart": {
+  "w": 12,
+  "h": 11,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#5c0f14",
+   "r": "#e0293b",
+   "R": "#ff7a86",
+   "d": "#a3121f"
+  }
+ },
+ "arrow": {
+  "w": 6,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#3a3a3a",
+   "g": "#c4c4c4",
+   "s": "#7a4a26",
+   "S": "#a06835",
+   "f": "#f0f0f0",
+   "F": "#b0b0b0"
+  }
+ },
+ "fireball": {
+  "w": 10,
+  "h": 10,
+  "frames": 2,
+  "anchor": "center",
+  "palette": {
+   "d": "#7a1f00",
+   "O": "#e85d00",
+   "o": "#ff7b1a",
+   "y": "#ffd23d",
+   "Y": "#fff2b0"
+  }
+ },
+ "xp_orb": {
+  "w": 8,
+  "h": 8,
+  "frames": 2,
+  "anchor": "center",
+  "palette": {
+   "d": "#4a5e0a",
+   "o": "#a4d92c",
+   "y": "#d9f24a",
+   "Y": "#f4ffb0"
+  }
+ },
+ "potion": {
+  "w": 10,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2b1a35",
+   "c": "#7a4a26",
+   "C": "#5c3616",
+   "p": "#8a3fc9",
+   "P": "#c68bf5",
+   "d": "#5a1f8f",
+   "w": "#ffffff"
+  }
+ },
+ "powerup_triple": {
+  "w": 14,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "s": "#3d6d99",
+   "S": "#5c94c9",
+   "h": "#ffe066",
+   "d": "#1f3a52"
+  }
+ },
+ "powerup_rapid": {
+  "w": 14,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#3a3a3a",
+   "g": "#c4c4c4",
+   "s": "#7a4a26",
+   "S": "#a06835",
+   "f": "#f0f0f0",
+   "F": "#b0b0b0",
+   "y": "#ffd23d",
+   "Y": "#fff6c2"
+  }
+ },
+ "powerup_power": {
+  "w": 14,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#3a3a3a",
+   "g": "#c4c4c4",
+   "s": "#7a4a26",
+   "S": "#a06835",
+   "f": "#f0f0f0",
+   "F": "#b0b0b0",
+   "r": "#e2453d",
+   "R": "#ff8079"
+  }
+ },
+ "chest": {
+  "w": 16,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2b1a0d",
+   "b": "#8a5a2e",
+   "B": "#b07a3e",
+   "d": "#5c3a1a",
+   "g": "#e8c14a",
+   "G": "#fff0a0",
+   "o": "#8a6110"
+  }
+ },
+ "iron_golem": {
+  "w": 22,
+  "h": 30,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#2b2f33",
+   "i": "#9aa0a6",
+   "I": "#c7ccd1",
+   "d": "#5c6166",
+   "e": "#141414",
+   "r": "#c62828",
+   "v": "#4a7c2e"
+  }
+ },
+ "wolf": {
+  "w": 18,
+  "h": 14,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#2b2b2e",
+   "g": "#8a8f94",
+   "G": "#e4e7ea",
+   "d": "#5a5f66",
+   "r": "#c62828",
+   "e": "#141414"
+  }
+ },
+ "snow_golem": {
+  "w": 14,
+  "h": 24,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": {
+   "S": "#4f6b8a",
+   "w": "#eef3f7",
+   "W": "#ffffff",
+   "n": "#c7d6e3",
+   "o": "#e8842a",
+   "O": "#ffb15c",
+   "p": "#8a4a12",
+   "k": "#1a1006",
+   "b": "#5c3a1e"
+  }
+ },
+ "head_steve": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "h": "#4a2f1b",
+   "s": "#d8a077",
+   "e": "#ffffff",
+   "p": "#2a5fd0",
+   "m": "#8a5a3a"
+  }
+ },
+ "head_alex": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "h": "#cc6b1f",
+   "s": "#f0c9a0",
+   "e": "#ffffff",
+   "p": "#2e9e4f",
+   "m": "#a06840"
+  }
+ },
+ "head_zombie": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "g": "#3d8a3d",
+   "G": "#2a5f2a",
+   "k": "#0a1408",
+   "m": "#1a2e10"
+  }
+ },
+ "head_skeleton": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "b": "#e8e4d4",
+   "B": "#b5b0a0",
+   "k": "#0a0a0a"
+  }
+ },
+ "head_enderman": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#0a0a0d",
+   "K": "#1a1420",
+   "p": "#b23dff",
+   "P": "#e8b8ff"
+  }
+ },
+ "head_piglin": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "h": "#e8c14a",
+   "s": "#e08a9a",
+   "S": "#c96a7a",
+   "e": "#2a1010",
+   "t": "#f5f0e0",
+   "m": "#3a1a10"
+  }
+ },
+ "head_creeper": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "a": "#66d94f",
+   "g": "#4fbf3c",
+   "G": "#3da52e",
+   "k": "#0f1a0c"
+  }
+ },
+ "room_window": {
+  "w": 16,
+  "h": 14,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "d": "#5c3a1e",
+   "w": "#a9743f",
+   "l": "#c9975c",
+   "s": "#4cc2ff",
+   "b": "#a8e2ff",
+   "c": "#ffffff"
+  }
+ },
+ "room_door": {
+  "w": 14,
+  "h": 22,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#2b1a0e",
+   "f": "#6b4726",
+   "d": "#7a5228",
+   "w": "#a97c4a",
+   "l": "#c69760",
+   "g": "#ffd257"
+  }
+ },
+ "room_rug": {
+  "w": 22,
+  "h": 8,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "d": "#5b3326",
+   "y": "#e6a437",
+   "c": "#f4e3c0",
+   "r": "#c8402f",
+   "f": "#d9c49a"
+  }
+ },
+ "room_shelf": {
+  "w": 16,
+  "h": 10,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "w": "#b5854f",
+   "d": "#4a2f18",
+   "r": "#c9453d",
+   "b": "#3f7fd0",
+   "y": "#e8c34a",
+   "g": "#4caf50"
+  }
+ },
+ "room_lamp": {
+  "w": 10,
+  "h": 20,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#2e2418",
+   "p": "#6b5a3f",
+   "c": "#fff3c9",
+   "y": "#f2c75c",
+   "w": "#ffdf8a"
+  }
+ },
+ "crafting_table": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "h": "#dba14e",
+   "b": "#c2893c",
+   "B": "#9e6c2f",
+   "d": "#6e4824",
+   "g": "#3f2712",
+   "k": "#2a1b0d"
+  }
+ },
+ "torch": {
+  "w": 6,
+  "h": 14,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "o": "#e8871e",
+   "y": "#ffe14d",
+   "b": "#8a5a2b",
+   "d": "#5a3a1c"
+  }
+ },
+ "potted_plant": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "g": "#5cbf4a",
+   "k": "#3a8a37",
+   "o": "#c96a3a",
+   "d": "#8f4322",
+   "r": "#e08a52"
+  }
+ },
+ "painting": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#3a2412",
+   "w": "#a9712e",
+   "b": "#4fb8ee",
+   "g": "#3fbf4a",
+   "y": "#ffd23f"
+  }
+ },
+ "bed": {
+  "w": 14,
+  "h": 9,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#3a2416",
+   "w": "#a9722e",
+   "r": "#d83b3b",
+   "m": "#a82828",
+   "p": "#f5f0e6"
+  }
+ },
+ "cake": {
+  "w": 12,
+  "h": 8,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#6b3a2a",
+   "r": "#e0402f",
+   "d": "#a3241a",
+   "w": "#fbf1da",
+   "c": "#e6d3aa"
+  }
+ },
+ "ui_back": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "w": "#f5f7fb",
+   "g": "#a9b3c4",
+   "k": "#232a36"
+  }
+ },
+ "ui_play": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "g": "#5ce663",
+   "G": "#2b8a3e",
+   "k": "#12331a"
+  }
+ },
+ "ui_world": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#14293f",
+   "b": "#4fb0e8",
+   "B": "#2a76ac",
+   "g": "#68c65a",
+   "G": "#37913f"
+  }
+ },
+ "ui_pickaxe": {
+  "w": 13,
+  "h": 13,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2b2118",
+   "g": "#d4dae2",
+   "G": "#8a94a3",
+   "w": "#b07a3c",
+   "W": "#6e4a24"
+  }
+ },
+ "ui_person": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2b1d12",
+   "s": "#e0a878",
+   "S": "#b5794e",
+   "t": "#2fa8a8",
+   "T": "#1c7175"
+  }
+ },
+ "ui_trophy": {
+  "w": 13,
+  "h": 13,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "g": "#ffd94d",
+   "G": "#c9a02c",
+   "k": "#3a2408",
+   "b": "#7a4a1e"
+  }
+ },
+ "ui_gear": {
+  "w": 13,
+  "h": 13,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2f2f38",
+   "g": "#b0b4bd",
+   "G": "#767b86",
+   "h": "#e4e7ee"
+  }
+ },
+ "ui_info": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "b": "#4aa8f0",
+   "B": "#2a6fc0",
+   "k": "#10294f",
+   "w": "#ffffff"
+  }
+ },
+ "ui_house": {
+  "w": 13,
+  "h": 13,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2e1c10",
+   "r": "#d94b3f",
+   "R": "#a02f27",
+   "w": "#c9954f",
+   "W": "#96662f"
+  }
+ },
+ "ui_bow": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2b1a0e",
+   "b": "#a9743f",
+   "B": "#6b431f",
+   "s": "#f2ead6"
+  }
+ },
+ "ui_door": {
+  "w": 11,
+  "h": 13,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2b1a0c",
+   "w": "#a97c4a",
+   "W": "#6f4a26",
+   "g": "#ffd94d",
+   "G": "#c08a1e"
+  }
+ },
+ "ui_sound_on": {
+  "w": 13,
+  "h": 11,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "w": "#f4f4f4",
+   "g": "#a0a8b4",
+   "k": "#241f2e"
+  }
+ },
+ "ui_sound_off": {
+  "w": 14,
+  "h": 13,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2b2018",
+   "s": "#d7dde6",
+   "d": "#94a1b0",
+   "r": "#e8483c",
+   "R": "#9c2b22"
+  }
+ },
+ "ui_camera": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#1c1c22",
+   "d": "#3d424e",
+   "g": "#6b7280",
+   "b": "#3d9be9",
+   "w": "#bfe4ff"
+  }
+ },
+ "ui_trash": {
+  "w": 12,
+  "h": 13,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#33383f",
+   "g": "#a8b0b8",
+   "G": "#6e767f",
+   "w": "#c9d1d9"
+  }
+ },
+ "ui_bag": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#3a2413",
+   "b": "#a9743f",
+   "B": "#7a4f28",
+   "t": "#f2c14e"
+  }
+ },
+ "ui_sofa": {
+  "w": 13,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#3a1b14",
+   "h": "#d97a58",
+   "r": "#b4472f",
+   "R": "#7d2c1e",
+   "w": "#4a2b1c"
+  }
+ },
+ "ui_palette": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#3a2416",
+   "t": "#d9a86c",
+   "r": "#e0452f",
+   "g": "#4cc24c",
+   "b": "#3f7fe0"
+  }
+ },
+ "ui_lock": {
+  "w": 12,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#2a1e12",
+   "s": "#c8d0da",
+   "S": "#8792a3",
+   "g": "#f2c033",
+   "G": "#a97416"
+  }
+ },
+ "ui_pause": {
+  "w": 13,
+  "h": 12,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "w": "#ffffff",
+   "s": "#c3cfdd",
+   "k": "#2a3446"
+  }
+ },
+ "head_knight": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "p": "#c8302f",
+   "m": "#9aa1ad",
+   "h": "#c9cfd9",
+   "v": "#1d2027",
+   "s": "#e0a884",
+   "d": "#5a606c"
+  }
+ },
+ "head_wizard_c": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "p": "#5b2a9a",
+   "d": "#3a1560",
+   "s": "#f0c9a4",
+   "w": "#ffffff",
+   "e": "#2a2a3a"
+  }
+ },
+ "head_chef_c": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "c": "#ffffff",
+   "b": "#e2e2e2",
+   "s": "#d8a077",
+   "e": "#2a1a10",
+   "m": "#3b2415"
+  }
+ },
+ "head_ninja": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "n": "#1e2a4a",
+   "d": "#101833",
+   "s": "#d8a077",
+   "e": "#ffffff",
+   "p": "#16203a"
+  }
+ },
+ "head_pirate": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "r": "#c0392b",
+   "d": "#8e2b22",
+   "s": "#d8a077",
+   "g": "#2a2a2a",
+   "b": "#101010",
+   "e": "#ffffff",
+   "k": "#1a1a1a",
+   "w": "#3a2418"
+  }
+ },
+ "head_pillager": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "g": "#7a8f63",
+   "d": "#20241a",
+   "e": "#e6e6d2",
+   "b": "#1a1a14",
+   "n": "#6a7c54"
+  }
+ },
+ "head_witch_c": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "k": "#1a1420",
+   "h": "#3b2038",
+   "g": "#7ac46a",
+   "n": "#5c9c4e",
+   "w": "#2b1a12",
+   "e": "#22142c",
+   "m": "#3a2030"
+  }
+ },
+ "head_slime": {
+  "w": 8,
+  "h": 8,
+  "frames": 1,
+  "anchor": "center",
+  "palette": {
+   "g": "#5be36a",
+   "l": "#96f7a4",
+   "d": "#37a349",
+   "e": "#16341c"
+  }
+ },
+ "pet_cat": {
+  "w": 16,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "k": "#2b1a12",
+   "o": "#e08a3c",
+   "l": "#f5c47a",
+   "d": "#a85f22",
+   "w": "#f7e3c4",
+   "g": "#4c9a4f"
+  }
+ },
+ "pet_fox": {
+  "w": 16,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "d": "#2b1a12",
+   "o": "#e0842f",
+   "w": "#f7f0e2",
+   "b": "#4a3020"
+  }
+ },
+ "pet_bee": {
+  "w": 16,
+  "h": 13,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "o": "#241a08",
+   "y": "#ffcf2e",
+   "l": "#ffe89a",
+   "k": "#4a3312",
+   "w": "#f2fbff",
+   "W": "#bfe3f5",
+   "e": "#ffffff",
+   "g": "#d8dee6"
+  }
+ },
+ "pet_axolotl": {
+  "w": 16,
+  "h": 13,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "o": "#4a2a3a",
+   "p": "#f2a0bd",
+   "l": "#ffd2e2",
+   "g": "#ff7fae",
+   "w": "#ffffff",
+   "e": "#33202c"
+  }
+ },
+ "pet_chicken": {
+  "w": 16,
+  "h": 13,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "K": "#2b2118",
+   "W": "#ffffff",
+   "G": "#d8dce4",
+   "R": "#d94434",
+   "O": "#f5a623"
+  }
+ },
+ "pet_pig": {
+  "w": 16,
+  "h": 12,
+  "frames": 1,
+  "anchor": "bottom",
+  "palette": {
+   "o": "#3a2028",
+   "p": "#f4a3bc",
+   "h": "#ffd0de",
+   "s": "#d1738f"
+  }
+ }
+}

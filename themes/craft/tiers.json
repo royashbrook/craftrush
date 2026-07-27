@@ -1,0 +1,34 @@
+{
+ "maxRunners": 96,
+ "units": [
+  {
+   "name": "MEGA STEVE",
+   "worth": 10,
+   "scale": 1.35,
+   "max": 12,
+   "boots": "#f3c53f",
+   "weight": 3,
+   "color": "#ffd94d"
+  },
+  {
+   "name": "GIGA STEVE",
+   "worth": 100,
+   "scale": 1.7,
+   "max": 10,
+   "boots": "#ff8c1a",
+   "weight": 6,
+   "color": "#ff8c1a"
+  },
+  {
+   "name": "ULTRA STEVE",
+   "worth": 1000,
+   "scale": 2.15,
+   "max": 6,
+   "boots": "#c76bff",
+   "weight": 10,
+   "color": "#c76bff"
+  }
+ ],
+ "gradWorth": 5000,
+ "starMult": 3
+}

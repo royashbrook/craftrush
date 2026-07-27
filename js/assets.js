@@ -1,89 +1,137 @@
-// Sprite registry + baker. Packs are plain pixel-matrix data (see docs/SPRITE_SPEC.md);
-// here they get baked to offscreen canvases once, including hit-flash variants and
-// palette-swapped variants (skins). Missing packs degrade to a magenta placeholder
-// so the game always boots.
-import { CORE } from './sprites/core.js';
+// @ts-check
+// Sprite registry. The art is assets/atlas.png plus a manifest saying where
+// each sprite lives in it; both are built from art/ by tools/pack-atlas.mjs.
+//
+// At load the atlas is sliced into per-frame canvases, including the white
+// hit-flash silhouettes, which are derived from each sprite's own alpha. A
+// sprite the atlas does not carry degrades to a magenta placeholder so the
+// game always boots rather than dying on one missing name.
+import { contentKey } from './atlaskey.js';
+import { THEME_ATLAS } from './theme.js';
 
-const DEFS = {};        // id -> def
-const BAKED = new Map(); // cacheKey -> { frames:[canvas], flash:[canvas], w, h, anchor }
+/** @typedef {import('../types/craftrush.js').AtlasManifest} AtlasManifest */
+/** @typedef {{frames: HTMLCanvasElement[], flash: HTMLCanvasElement[], w: number, h: number, anchor: string}} Sprite */
 
-const PACK_FILES = [
-  ['./sprites/hostiles.js', 'HOSTILES'],
-  ['./sprites/bosses.js', 'BOSSES'],
-  ['./sprites/scenery.js', 'SCENERY'],
-  ['./sprites/items.js', 'ITEMS'],
-  ['./sprites/decor.js', 'DECOR'],
-  ['./sprites/ui.js', 'UIICONS'],
-  ['./sprites/shop.js', 'SHOP'],
-];
+/** @type {{sprites: Map<string, Sprite>, ids: Set<string>} | null} */
+let ATLAS = null;       // once loaded and sliced
+/** @type {Sprite | null} */
+let PLACEHOLDER = null;
 
-export const missingPacks = [];
+/** A 2d context, or a loud failure. Canvas creation not returning one means
+ *  something is very wrong, and a null-check at every call site hides it. */
+function ctx2d(c) {
+  const g = c.getContext('2d');
+  if (!g) throw new Error('no 2d canvas context');
+  return g;
+}
 
-export async function initAssets() {
-  registerPack(CORE);
-  for (const [path, name] of PACK_FILES) {
-    try {
-      const mod = await import(path);
-      if (!mod[name]) throw new Error(`no export ${name}`);
-      registerPack(mod[name]);
-    } catch (e) {
-      console.warn(`[assets] pack ${path} unavailable:`, e.message);
-      missingPacks.push(path);
-    }
+/** True once the art is loaded. */
+export function assetsReady() { return !!ATLAS; }
+
+export async function initAssets({ atlas = THEME_ATLAS } = {}) {
+  try {
+    await loadAtlas(atlas);
+  } catch (e) {
+    // a missing atlas means every sprite draws as the magenta placeholder,
+    // which is ugly and obvious. Better than a blank screen and no clue why.
+    console.warn('[assets] the art did not load, everything will draw as placeholder:', String(e));
   }
 }
 
-function registerPack(pack) {
-  for (const [id, def] of Object.entries(pack)) DEFS[id] = def;
-}
-
-export function hasSprite(id) { return !!DEFS[id]; }
-
-function bake(def, paletteOverride) {
-  const pal = paletteOverride ? { ...def.palette, ...paletteOverride } : def.palette;
-  const frames = [], flash = [];
-  for (const rows of def.frames) {
-    const c = document.createElement('canvas');
-    c.width = def.w; c.height = def.h;
-    const g = c.getContext('2d');
-    const f = document.createElement('canvas');
-    f.width = def.w; f.height = def.h;
-    const fg = f.getContext('2d');
-    for (let y = 0; y < def.h; y++) {
-      const row = rows[y];
-      for (let x = 0; x < def.w; x++) {
-        const ch = row[x];
-        if (ch === '.') continue;
-        g.fillStyle = pal[ch] || '#ff00ff';
-        g.fillRect(x, y, 1, 1);
-        fg.fillStyle = '#ffffff';
-        fg.fillRect(x, y, 1, 1);
-      }
-    }
-    frames.push(c); flash.push(f);
+async function loadAtlas(atlas) {
+  const manifest = await (await fetch(`${atlas}/atlas.json`)).json();
+  const img = await new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = () => rej(new Error(`${atlas}/${manifest.atlas} did not load`));
+    i.src = `${atlas}/${manifest.atlas}`;
+  });
+  const [aw, ah] = manifest.size;
+  if (img.width !== aw || img.height !== ah) {
+    throw new Error(`atlas is ${img.width}x${img.height}, manifest says ${aw}x${ah}`);
   }
-  return { frames, flash, w: def.w, h: def.h, anchor: def.anchor || 'bottom' };
+
+  const sprites = new Map();
+  for (const [key, e] of Object.entries(manifest.sprites)) {
+    const frames = [], flash = [];
+    for (const [sx, sy] of e.frames) {
+      const c = document.createElement('canvas');
+      c.width = e.w; c.height = e.h;
+      const g = ctx2d(c);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(img, sx, sy, e.w, e.h, 0, 0, e.w, e.h);
+      frames.push(c);
+      flash.push(whiteOut(c));
+    }
+    sprites.set(key, { frames, flash, w: e.w, h: e.h, anchor: e.anchor });
+  }
+  ATLAS = { sprites, ids: new Set(Object.values(manifest.sprites).map((e) => e.id)) };
 }
+
+/** The hit flash is the sprite's own shape in solid white. */
+function whiteOut(src) {
+  const f = document.createElement('canvas');
+  f.width = src.width; f.height = src.height;
+  const g = ctx2d(f);
+  g.imageSmoothingEnabled = false;
+  g.drawImage(src, 0, 0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, f.width, f.height);
+  return f;
+}
+
+export function hasSprite(id) { return !!ATLAS && ATLAS.ids.has(id); }
 
 function placeholder() {
-  const def = {
-    w: 8, h: 8, anchor: 'bottom',
-    palette: { m: '#ff00ff', k: '#1a1a1a' },
-    frames: [[ 'mmkkmmkk', 'mmkkmmkk', 'kkmmkkmm', 'kkmmkkmm', 'mmkkmmkk', 'mmkkmmkk', 'kkmmkkmm', 'kkmmkkmm' ]],
-  };
-  return bake(def);
+  if (PLACEHOLDER) return PLACEHOLDER;
+  const c = document.createElement('canvas');
+  c.width = 8; c.height = 8;
+  const g = ctx2d(c);
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      g.fillStyle = ((x >> 1) + (y >> 1)) % 2 ? '#ff00ff' : '#1a1a1a';
+      g.fillRect(x, y, 1, 1);
+    }
+  }
+  PLACEHOLDER = { frames: [c], flash: [whiteOut(c)], w: 8, h: 8, anchor: 'bottom' };
+  return PLACEHOLDER;
 }
 
+/**
+ * Fetch a sprite, optionally in a different palette.
+ *
+ * `paletteOverride` selects which pre-drawn variant to hand back: the variants
+ * are baked into the atlas by tools/pack-atlas.mjs. It stays in the signature
+ * because it is the seam a runtime tint or recolour would hook into, and
+ * threading it back through every call site later would be the expensive part.
+ * `palKey` is only used in warnings now and may be omitted.
+ */
 export function getSprite(id, paletteOverride, palKey) {
-  const key = palKey ? `${id}|${palKey}` : id;
-  let b = BAKED.get(key);
-  if (!b) {
-    const def = DEFS[id];
-    b = def ? bake(def, paletteOverride) : placeholder();
-    BAKED.set(key, b);
+  if (!ATLAS) return placeholder();
+  const hit = ATLAS.sprites.get(contentKey(id, paletteOverride));
+  if (hit) return hit;
+  // an unbaked palette falls back to the sprite as drawn rather than to
+  // magenta, so a theme with a stray colour still reads
+  const plain = ATLAS.sprites.get(id);
+  if (plain) {
+    if (paletteOverride) warnUnbaked(id, palKey);
+    return plain;
   }
-  return b;
+  warnMissing(id);
+  return placeholder();
 }
+
+const warned = new Set();
+function warnOnce(k, msg) {
+  if (warned.has(k)) return;
+  warned.add(k);
+  console.warn(msg);
+}
+const warnUnbaked = (id, palKey) => warnOnce(`p:${id}|${palKey}`,
+  `[assets] ${id} was asked for in a palette the atlas does not carry (${palKey}). Re-run tools/pack-atlas.mjs.`);
+const warnMissing = (id) => warnOnce(`m:${id}`,
+  `[assets] no art named ${id}. Add art/${id}.png and re-run tools/pack-atlas.mjs.`);
 
 // Draw a sprite as a billboard in screen space.
 // x, y: screen anchor point (bottom-center or center). hPx: target on-screen height.

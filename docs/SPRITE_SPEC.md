@@ -1,178 +1,139 @@
-# CRAFT RUSH — Sprite Pack Spec
+# CRAFT RUSH — Sprite Spec
 
-Pixel-art sprite data for a Minecraft-inspired crowd-runner game. Original art only —
-"in the style of" blocky voxel mobs, NOT copies of Mojang textures.
+Original pixel art only, "in the style of" blocky voxel mobs, NOT copies of
+Mojang textures.
 
-## File format
+The art lives in `art/`: one PNG per sprite, plus one JSON file holding what a
+PNG cannot say. `tools/pack-atlas.mjs` packs them into a texture atlas the game
+loads. This is the ordinary sprite-sheet-plus-manifest arrangement every 2D
+engine uses; see "Prior art" at the bottom.
 
-Each pack is an ES module at `js/sprites/<pack>.js` exporting ONE const object.
-Export names: `HOSTILES`, `BOSSES`, `SCENERY`, `ITEMS` (one per file).
+Before v1.0 the art was pixel matrices written as JavaScript string arrays. That
+is gone. It is still in git history if you want to look, at the `v0.2` tag.
 
-```js
-export const HOSTILES = {
-  creeper: {
-    w: 16, h: 24,            // pixel grid size (max 64x64)
-    anchor: 'bottom',        // 'bottom' = feet on ground (mobs/scenery), 'center' = items/floating
-    palette: { g:'#4fbf3c', G:'#3da52e', k:'#0f1a0c' },   // single-char keys -> hex
-    frames: [
-      [ "................", /* exactly h rows, each exactly w chars */ ],
-      [ /* optional frame 2 for walk/idle animation */ ],
-    ],
-  },
-  // ...more sprites
-};
+## Layout
+
+```
+art/
+  oak_tree.png      one sprite, frames laid out left to right
+  cape.png
+  ...
+  sprites.json      anchor, frame count and base palette for every sprite
+assets/
+  atlas.png         BUILD OUTPUT, do not edit
+  atlas.json        BUILD OUTPUT, do not edit
 ```
 
-## Hard rules (validator enforces)
+## Changing how something looks
 
-- Every row string length === `w`. Every frame has exactly `h` rows.
-- Every non-`.` char must exist in `palette`. `.` = transparent.
-- All frames of a sprite share w/h.
-- `anchor` is `'bottom'` or `'center'`.
-- Pure data module. No imports, no functions, no comments containing backticks.
-- Validate before finishing: `node tools/validate_sprites.mjs js/sprites/<file>.js` must print `OK`.
+1. Open `art/<id>.png` in any image editor
+2. Draw
+3. `node tools/pack-atlas.mjs`
 
-## Style guide (quality bar)
+That is the whole loop. The atlas and its manifest are rebuilt from `art/`, and
+the game loads the atlas.
 
-- Blocky voxel look: big cubic head, chunky limbs, straight edges. No anti-aliasing, no gradients.
-- 2–4 shades per hue. Texture via mottling: sprinkle mid/dark shade pixels ~15% like Minecraft grass noise.
-- Outline with the DARKEST shade of the sprite's own hue, not pure black. Pure near-black only for eyes/mouth.
-- Faces are the identity: eyes/mouth must read at small size. When in doubt, bigger eyes.
-- Silhouette first: sprite must be recognizable as a filled black shape.
-- Mobs are FRONT view (they face the camera; player runs toward them).
-- 2 frames wherever the mob walks/hops/flaps (alternate leg lengths, squash+stretch for slimes, wing up/down).
-- Kid-friendly cartoon: cute-menacing, not scary. Round-ish proportions, oversized heads.
+## Adding a new sprite
 
-## Reference art — this is the bar (include verbatim in HOSTILES as `creeper`)
+1. Draw `art/<id>.png`. If it animates, put the frames side by side in one row,
+   all the same width.
+2. Add an entry to `art/sprites.json`:
 
-```js
-creeper: {
-  w: 16, h: 24, anchor: 'bottom',
-  palette: { a:'#66d94f', g:'#4fbf3c', G:'#3da52e', d:'#2b7d20', m:'#1e4f16', k:'#0f1a0c' },
-  frames: [
-    [
-      "...gaggGggagg...",
-      "...agGggaggGg...",
-      "...ggggGggggG...",
-      "...gkkggggkkg...",
-      "...GkkagagkkG...",
-      "...gggkkkkggg...",
-      "...gGgkkkkgGg...",
-      "...ggkkggkkgg...",
-      "...agkkggkkGg...",
-      "...ggkggggkgg...",
-      "....gGgaggGg....",
-      "....GgggGgga....",
-      "....gaGggagG....",
-      "....ggggGggg....",
-      "....aGgaggGg....",
-      "....gggGgagg....",
-      "....Ggagggga....",
-      "....gGggagGg....",
-      "..gGgGg..gGgGg..",
-      "..GgggG..GgggG..",
-      "..gGgag..gaGgg..",
-      "..dGdgd..dgdGd..",
-      "..mdmdm..mdmdm..",
-      "..mmmmm..mmmmm..",
-    ],
-    [
-      "...gaggGggagg...",
-      "...agGggaggGg...",
-      "...ggggGggggG...",
-      "...gkkggggkkg...",
-      "...GkkagagkkG...",
-      "...gggkkkkggg...",
-      "...gGgkkkkgGg...",
-      "...ggkkggkkgg...",
-      "...agkkggkkGg...",
-      "...ggkggggkgg...",
-      "....gGgaggGg....",
-      "....GgggGgga....",
-      "....gaGggagG....",
-      "....ggggGggg....",
-      "....aGgaggGg....",
-      "....gggGgagg....",
-      "....Ggagggga....",
-      "....gGggagGg....",
-      "..gGgGg.........",
-      "..GgggG..gGgGg..",
-      "..gGgag..GgggG..",
-      "..dGdgd..gaGgg..",
-      "..mdmdm..dgdGd..",
-      "..mmmmm..mdmdm..",
-    ],
-  ],
-},
+```json
+"my_sprite": {
+  "w": 16,
+  "h": 24,
+  "frames": 2,
+  "anchor": "bottom",
+  "palette": { "a": "#7fd957", "b": "#4fa832" }
+}
 ```
 
-## Pack manifests (required sprite ids, sizes are guidance ±4px)
+3. `node tools/pack-atlas.mjs`
 
-### `js/sprites/hostiles.js` → `export const HOSTILES`
-Front-view enemies, `anchor:'bottom'`, 2 frames each (walk/hop/flap):
-- `creeper` 16x24 — verbatim reference above
-- `zombie` 16x24 — green skin, teal shirt, purple pants, arms raised forward (classic zombie reach)
-- `husk` 16x24 — sand-tan zombie variant
-- `skeleton` 16x24 — bone white/gray, holds small brown bow to one side, dark eye sockets
-- `stray` 16x24 — pale blue-white skeleton variant, ragged gray cloak
-- `spider` 22x12 — wide, black/dark-gray, 3 visible legs per side, row of red eyes
-- `slime` 16x14 — translucent-look green cube blob, simple dot eyes + mouth, frame2 = squashed wider/shorter
-- `witch` 16x26 — purple robe, tall dark hat with buckle, green-tinged face, warty nose
-- `blaze` 16x24 — yellow/orange glowing head, floating dark-gold rod segments below, frame2 rods rotated
-- `zombified_piglin` 16x24 — pink/rotted-green split skin, gold accents
-- `magma_cube` 16x14 — dark red/black cube blob, orange glowing seams, frame2 stretched taller showing orange gaps
-- `phantom` 24x12 — blue-gray winged manta shape, green eyes, frame2 wings angled
+`w` and `h` are the size of ONE frame. The PNG must be `w * frames` wide and `h`
+tall; the packer refuses it otherwise rather than packing something crooked.
 
-### `js/sprites/bosses.js` → `export const BOSSES`
-Big front-view bosses, `anchor:'bottom'`, 2 frames each, extra detail welcome:
-- `boss_slime` 36x30 — giant king slime, crown optional, angry brows
-- `boss_ravager` 40x30 — huge gray-brown bull/rhino beast, dark saddle plate, horns, heavy jaw
-- `boss_wither` 36x34 — three dark skulls (center big, two small on shoulders), black spine ribs, blue-ish glow eyes
-- `boss_dragon` 48x30 — black dragon: head center with purple eyes, two spread wings, frame2 wings down
+`anchor` is `bottom` for anything standing on the ground, `center` for anything
+floating (heads, icons, pickups).
 
-### `js/sprites/scenery.js` → `export const SCENERY`
-Trackside decoration billboards, front view, `anchor:'bottom'`, 1 frame (2 only if it obviously animates):
-- `oak_tree` 24x32 — brown trunk, leafy green blob canopy
-- `birch_tree` 24x32 — white/black-flecked trunk, lighter leaves
-- `spruce_tree` 20x36 — dark green triangle tiers
-- `snowy_spruce` 20x36 — spruce with white snow caps on tiers
-- `cactus` 12x24 — green column, 2 arms, darker vertical ribs
-- `dead_bush` 12x12 — sparse brown twigs
-- `red_mushroom` 16x16 — red cap white spots, pale stem
-- `crimson_fungus` 16x20 — nether: dark red cap, orange glow specks
-- `warped_fungus` 16x20 — nether: teal cap, orange specks
-- `end_pillar` 12x36 — dark purple-black obsidian column, small glowing pink crystal on top
-- `fence` 16x12 — brown wood: 2 posts + 2 horizontal rails
-- `flowers` 12x8 — small patch: one red poppy + one yellow dandelion + green stems
-- `pumpkin` 14x12 — orange ridged pumpkin, no face
-- `hay_bale` 16x14 — yellow/tan bale with brown cross straps
-- `village_house` 36x32 — tiny cottage: cobble base, oak plank walls, dark roof, door + window
-- `basalt_pillar` 12x30 — gray-black fluted column
-- `cloud` 24x10 — flat white blocky cloud, `anchor:'center'`
+## The palette field
 
-### `js/sprites/items.js` → `export const ITEMS`
-Pickups/icons `anchor:'center'` unless noted; allies bottom-anchored:
-- `emerald` 12x14, 2 frames — green faceted gem, frame2 has white sparkle pixel moved
-- `golden_apple` 12x14 — gold apple, brown stem, leaf, white shine pixel
-- `tnt_block` 14x14 — red block, white middle band, black "TNT"-suggestion marks
-- `heart` 12x11 — classic red pixel heart, lighter top-left shine
-- `arrow` 6x14 — vertical arrow: gray tip up, brown shaft, white/gray fletching
-- `fireball` 10x10, 2 frames — orange/yellow ball with flicker
-- `xp_orb` 8x8, 2 frames — green-yellow glowing orb
-- `potion` 10x14 — glass bottle, purple liquid, cork
-- `powerup_triple` 14x14 — icon: three small arrows fanned
-- `powerup_rapid` 14x14 — icon: arrow + yellow speed lines
-- `powerup_power` 14x14 — icon: arrow + red up-chevron
-- `chest` 16x14 — brown chest, dark lid seam, gold latch
-- `iron_golem` 22x30, 2 frames, anchor bottom — gray iron body, long arms, red vine accent, small head
-- `wolf` 18x14, 2 frames, anchor bottom — gray/white wolf, side-ish 3/4 view ok, red collar
-- `snow_golem` 14x24, 2 frames, anchor bottom — two snowballs + carved pumpkin head, stick arms
-- `head_steve` 8x8 — face: brown hair, tan skin, blue eyes
-- `head_alex` 8x8 — orange hair, pale skin, green eyes
-- `head_zombie` 8x8 — green skin, dark eyes
-- `head_skeleton` 8x8 — white/gray skull, dark sockets
-- `head_enderman` 8x8 — black head, purple glowing eyes
-- `head_piglin` 8x8 — pink skin, gold/blond hair, tusk pixels
-- `head_creeper` 8x8 — green mottle + creeper face
+`palette` maps a single character to the colour it draws. Nothing reads
+characters out of an image. They exist so colour VARIANTS can be described.
 
-Heads are shop avatars: fill the full 8x8 (no transparent border), face reads clearly.
+A cape in the shop is defined as:
+
+```js
+{ id: 'cape_red', name: 'Hero Red', cost: 80, colors: { c: '#c8322a', C: '#8f1f14' } }
+```
+
+That says "whatever colour `c` was becomes `#c8322a`". The packer looks `c` up in
+`art/cape.png`'s base palette, finds the colour, and replaces every pixel of it.
+Skins, villager robes and town houses all work the same way.
+
+Two rules follow:
+
+- **Do not use one colour for two characters** in a sprite that gets recoloured.
+  The swap cannot tell them apart, so the packer throws rather than guess.
+- **If you redraw a sprite, keep its palette in `sprites.json` matching what you
+  actually drew.** Otherwise the variants hunt for colours that are not there.
+  They fail quietly by simply not swapping, so give it a look afterwards.
+
+For a sprite nothing recolours, the palette is only documentation. Keep it
+honest anyway.
+
+## Which variants get built
+
+`js/variants.js` decides, from the game data: every skin, every giant tier,
+every cape, every villager, every town. Add a skin to `config.js` and its
+variant shows up in the atlas on the next pack with nothing else to update.
+
+## How the game asks for one
+
+```js
+getSprite('oak_tree')                                // as drawn
+getSprite('cape', { c: '#c8322a', C: '#8f1f14' })    // the red variant
+```
+
+`js/atlaskey.js` turns the id and the palette into the name of a region in the
+atlas. Two call sites asking for the same colours get the same region, so a
+variant is stored once no matter how many screens want it.
+
+## Checking your work
+
+```bash
+node tools/pack-atlas.mjs      # refuses bad sizes, overlaps, ambiguous recolours
+node --test tests/*.test.mjs   # asserts every biome's art exists
+npx playwright test            # asserts the browser actually loaded the atlas
+```
+
+`tools/preview.html` shows every sprite in the atlas at 4x with its name, which
+is the fastest way to spot something that packed wrong.
+
+## Prior art
+
+None of the shape here is invented. A folder of images packed into one texture
+with a JSON manifest of named regions is how 2D games have shipped art for
+decades. TexturePacker, Aseprite's sprite-sheet export, libGDX `TextureAtlas`,
+Unity's Sprite Atlas and the free-tex-packer output that Phaser and PixiJS read
+are all the same idea with different field names.
+
+What our manifest does NOT yet carry, and those formats do:
+
+- **trim**, packing a sprite's opaque bounds and recording the original size and
+  offset. Real space win on sprites with a lot of empty margin.
+- **rotation**, turning a sprite ninety degrees to fit a gap.
+- **animation tags**, naming frame ranges and per-frame durations, rather than
+  the engine deciding what frame 0 and 1 mean.
+- **multiple pages**, once one sheet outgrows a sensible texture size.
+
+At 512x212 none of those earn their complexity yet. When they do, the move is to
+adopt an existing format rather than grow ours, so an artist can export straight
+from Aseprite and skip the packing step entirely. That is issue #64.
+
+The one genuinely bespoke part is generating colour variants at pack time from
+the game data. Most engines tint at runtime in a shader instead. Ours exists
+because it is the honest translation of the palette-swap the matrices used to
+do, and because a baked variant can later be hand-redrawn into something better
+than a recolour, which a runtime tint cannot.

@@ -1,0 +1,366 @@
+{
+ "cape": [
+  {
+   "id": "none",
+   "name": "No Cape",
+   "cost": 0
+  },
+  {
+   "id": "cape_red",
+   "name": "Neon Hero Red",
+   "cost": 80,
+   "colors": {
+    "c": "#ff2d95",
+    "C": "#b3005f"
+   }
+  },
+  {
+   "id": "cape_emerald",
+   "name": "Neon Emerald",
+   "cost": 200,
+   "colors": {
+    "c": "#39ff14",
+    "C": "#1f9e08"
+   }
+  },
+  {
+   "id": "cape_ice",
+   "name": "Neon Frost",
+   "cost": 400,
+   "colors": {
+    "c": "#00f0ff",
+    "C": "#0090a8"
+   }
+  },
+  {
+   "id": "cape_ender",
+   "name": "Ender",
+   "cost": 800,
+   "colors": {
+    "c": "#8b3fd6",
+    "C": "#5c2496"
+   }
+  },
+  {
+   "id": "cape_gold",
+   "name": "Royal Gold",
+   "cost": 1400,
+   "colors": {
+    "c": "#f3c53f",
+    "C": "#c29222"
+   }
+  },
+  {
+   "id": "cape_elytra",
+   "name": "Elytra",
+   "cost": 0,
+   "quest": "elytra",
+   "colors": {
+    "c": "#cfc8dc",
+    "C": "#6d6880"
+   }
+  },
+  {
+   "id": "cape_forest",
+   "name": "Forest",
+   "cost": 150,
+   "colors": {
+    "c": "#3f8f45",
+    "C": "#276030"
+   }
+  },
+  {
+   "id": "cape_ocean",
+   "name": "Ocean Wave",
+   "cost": 300,
+   "colors": {
+    "c": "#2f8fd0",
+    "C": "#1c5f92"
+   }
+  },
+  {
+   "id": "cape_candy",
+   "name": "Candy",
+   "cost": 500,
+   "colors": {
+    "c": "#f57ab6",
+    "C": "#c04a86"
+   }
+  },
+  {
+   "id": "cape_checker",
+   "name": "Checkered",
+   "cost": 650,
+   "colors": {
+    "c": "#e8e8e8",
+    "C": "#2b2b2b"
+   }
+  },
+  {
+   "id": "cape_lava",
+   "name": "Lava Flow",
+   "cost": 1000,
+   "colors": {
+    "c": "#ff7a2a",
+    "C": "#b02a10"
+   }
+  },
+  {
+   "id": "cape_storm",
+   "name": "Lightning",
+   "cost": 1200,
+   "colors": {
+    "c": "#ffe14d",
+    "C": "#4a4468"
+   }
+  },
+  {
+   "id": "cape_phantom",
+   "name": "Phantom",
+   "cost": 1700,
+   "colors": {
+    "c": "#7fb0a8",
+    "C": "#3d5f60"
+   }
+  },
+  {
+   "id": "cape_dragon",
+   "name": "Dragon Wing",
+   "cost": 2000,
+   "colors": {
+    "c": "#4a3a68",
+    "C": "#241a38"
+   }
+  },
+  {
+   "id": "cape_rainbow",
+   "name": "Rainbow",
+   "cost": 2500,
+   "rainbow": true,
+   "colors": {
+    "c": "#ff5545",
+    "C": "#3fa9ff"
+   }
+  },
+  {
+   "id": "cape_galaxy",
+   "name": "Galaxy",
+   "cost": 3200,
+   "rainbow": true,
+   "colors": {
+    "c": "#6a4fd0",
+    "C": "#1b1040"
+   }
+  },
+  {
+   "id": "cape_aurora",
+   "name": "Aurora",
+   "cost": 4000,
+   "rainbow": true,
+   "colors": {
+    "c": "#4ff0c0",
+    "C": "#3f6fd0"
+   }
+  }
+ ],
+ "hat": [
+  {
+   "id": "none",
+   "name": "No Hat",
+   "cost": 0
+  },
+  {
+   "id": "hat_pumpkin",
+   "name": "Pumpkin",
+   "cost": 120,
+   "sprite": "hat_pumpkin"
+  },
+  {
+   "id": "hat_party",
+   "name": "Party Hat",
+   "cost": 160,
+   "sprite": "hat_party"
+  },
+  {
+   "id": "hat_flower",
+   "name": "Flower Crown",
+   "cost": 220,
+   "sprite": "hat_flower"
+  },
+  {
+   "id": "hat_cat",
+   "name": "Cat Ears",
+   "cost": 260,
+   "sprite": "hat_cat"
+  },
+  {
+   "id": "hat_slime",
+   "name": "Slime Blob",
+   "cost": 300,
+   "sprite": "hat_slime"
+  },
+  {
+   "id": "hat_cowboy",
+   "name": "Cowboy Hat",
+   "cost": 380,
+   "sprite": "hat_cowboy"
+  },
+  {
+   "id": "hat_chef",
+   "name": "Chef Toque",
+   "cost": 440,
+   "sprite": "hat_chef"
+  },
+  {
+   "id": "hat_crown",
+   "name": "Crown",
+   "cost": 550,
+   "sprite": "hat_crown"
+  },
+  {
+   "id": "hat_propeller",
+   "name": "Propeller Beanie",
+   "cost": 700,
+   "sprite": "hat_propeller"
+  },
+  {
+   "id": "hat_top",
+   "name": "Top Hat",
+   "cost": 850,
+   "sprite": "hat_top"
+  },
+  {
+   "id": "hat_tnt",
+   "name": "TNT Cap",
+   "cost": 900,
+   "sprite": "hat_tnt"
+  },
+  {
+   "id": "hat_wizard",
+   "name": "Wizard Hat",
+   "cost": 1200,
+   "sprite": "hat_wizard"
+  },
+  {
+   "id": "hat_santa",
+   "name": "Santa",
+   "cost": 1500,
+   "sprite": "hat_santa"
+  },
+  {
+   "id": "helm_gold_trim",
+   "name": "Gold Trim Helm",
+   "cost": 0,
+   "quest": "trims",
+   "sprite": "helm_gold_trim"
+  },
+  {
+   "id": "helm_diamond_trim",
+   "name": "Diamond Trim Helm",
+   "cost": 0,
+   "quest": "trims",
+   "sprite": "helm_diamond_trim"
+  }
+ ],
+ "trail": [
+  {
+   "id": "none",
+   "name": "No Trail",
+   "cost": 0
+  },
+  {
+   "id": "trail_emerald",
+   "name": "Emerald",
+   "cost": 150,
+   "colors": [
+    "#2eff70",
+    "#1fcf58"
+   ]
+  },
+  {
+   "id": "trail_fire",
+   "name": "Fire",
+   "cost": 400,
+   "colors": [
+    "#ffb63c",
+    "#ff5e2e"
+   ]
+  },
+  {
+   "id": "trail_ender",
+   "name": "Ender",
+   "cost": 800,
+   "colors": [
+    "#c76bff",
+    "#8b3fd6"
+   ]
+  },
+  {
+   "id": "trail_rainbow",
+   "name": "Rainbow",
+   "cost": 1600,
+   "rainbow": true,
+   "colors": [
+    "#ff5545",
+    "#ffd94d",
+    "#2eff70",
+    "#3fa9ff"
+   ]
+  }
+ ],
+ "pet": [
+  {
+   "id": "none",
+   "name": "No Pet",
+   "cost": 0
+  },
+  {
+   "id": "pet_wolf",
+   "name": "Wolf",
+   "cost": 500,
+   "sprite": "wolf"
+  },
+  {
+   "id": "pet_chicken",
+   "name": "Chicken",
+   "cost": 220,
+   "sprite": "pet_chicken"
+  },
+  {
+   "id": "pet_pig",
+   "name": "Pig",
+   "cost": 320,
+   "sprite": "pet_pig"
+  },
+  {
+   "id": "pet_cat",
+   "name": "Cat",
+   "cost": 450,
+   "sprite": "pet_cat"
+  },
+  {
+   "id": "pet_parrot",
+   "name": "Parrot",
+   "cost": 1200,
+   "sprite": "parrot"
+  },
+  {
+   "id": "pet_fox",
+   "name": "Fox",
+   "cost": 1600,
+   "sprite": "pet_fox"
+  },
+  {
+   "id": "pet_bee",
+   "name": "Bee",
+   "cost": 2100,
+   "sprite": "pet_bee"
+  },
+  {
+   "id": "pet_axolotl",
+   "name": "Axolotl",
+   "cost": 2800,
+   "sprite": "pet_axolotl"
+  }
+ ]
+}

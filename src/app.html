@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#17141d">
+<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest">
+<link rel="icon" href="%sveltekit.assets%/icons/icon-192.png">
+<link rel="apple-touch-icon" href="%sveltekit.assets%/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+%sveltekit.head%
+</head>
+<body data-sveltekit-preload-data="off">
+<!--
+  The viewport meta above deliberately has NO viewport-fit=cover. With it, iOS
+  pins the 844pt viewport at the top of a 912pt screen and orphans the strip at
+  the bottom, so the nav floats above the home indicator. Without it the same
+  viewport sits at the bottom and the page bottom IS the screen bottom. That
+  took three wrong fixes to find, so please do not add it back.
+-->
+<div style="display: contents">%sveltekit.body%</div>
+</body>
+</html>
