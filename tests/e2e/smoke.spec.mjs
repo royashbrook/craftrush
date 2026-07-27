@@ -200,3 +200,46 @@ test('the settings screen links to the rescue page', async ({ page }) => {
   // a real page load, not a client-side navigation into a route that does not exist
   expect(await page.locator('#btnRescue').getAttribute('rel')).toBe('external');
 });
+
+// Moving a save between the installed app and the browser, which on iPhone keep
+// separate storage. The code carries a LINK, not the save alone, because iOS has
+// no BarcodeDetector — but its Camera app opens links from a QR natively.
+test('a save survives a round trip through a QR link', async ({ browser }) => {
+  const SAVE = JSON.stringify({ emeralds: 31337, level: 12, unlocked: ['steve', 'alex'] });
+
+  const from = await browser.newContext();
+  await from.addInitScript((s) => localStorage.setItem('craftrush_save_v1', s), SAVE);
+  const a = await from.newPage();
+  await a.goto('/rescue.html');
+  await a.click('#showQr');
+  await expect(a.locator('#qrWrap')).toBeVisible();
+  const link = await a.inputValue('#qrLink');
+  expect(link).toContain('#save=');
+
+  // a second device, empty, opening what the camera scanned
+  const to = await browser.newContext();
+  const b = await to.newPage();
+  b.on('dialog', (d) => d.accept());
+  await b.goto(link);
+  await expect(b.locator('#incoming')).toBeVisible();
+  await expect(b.locator('#incomingWhat')).toContainText('31337 emeralds');
+  // the save must not be left sitting in the address bar
+  expect(b.url()).not.toContain('save=');
+
+  await b.click('#restore');
+  await expect(b.locator('#msg2')).toContainText('Restored');
+  expect(await b.evaluate(() => localStorage.getItem('craftrush_save_v1'))).toBe(SAVE);
+
+  await from.close();
+  await to.close();
+});
+
+test('the rescue page pulls in nothing at runtime', async ({ page }) => {
+  // its whole value is that it cannot fail the way the app failed, so it must
+  // not fetch a module, a chunk or a library
+  const extra = [];
+  page.on('request', (r) => { if (!r.url().includes('/rescue.html')) extra.push(r.url()); });
+  await page.goto('/rescue.html');
+  await page.waitForTimeout(500);
+  expect(extra, 'the rescue page loaded something external').toEqual([]);
+});

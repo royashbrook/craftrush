@@ -4,6 +4,8 @@
   destroys a kid's progress, and that is not something a stray tap should do.
 -->
 <script>
+  import QRCode from 'qrcode';
+  import { encodeSave, saveLink } from '../../js/savecode.js';
   import { save } from '../lib/store.svelte.js';
   import { Audio } from '../../js/audio.js';
   import {
@@ -18,6 +20,32 @@
   // this screen and re-reads them, which is all the refresh this needs
   let backups = $state(listBackups());
   let importText = $state('');
+  let qrShown = $state(false);
+  let qrMsg = $state('');
+
+  /**
+   * The QR carries a LINK to the rescue page with the save in the fragment, not
+   * the save alone. iOS has no BarcodeDetector, so the game cannot scan a code
+   * itself on the device where this matters most — but the Camera app reads a QR
+   * natively and offers to open a link. Nothing to install, no camera permission,
+   * and the fragment never reaches a server.
+   */
+  async function showQr() {
+    Audio.sfx('click');
+    qrMsg = 'Building…';
+    try {
+      const raw = localStorage.getItem('craftrush_save_v1');
+      if (!raw) { qrMsg = 'No save to share yet.'; return; }
+      const link = saveLink(await encodeSave(raw));
+      await QRCode.toCanvas(document.getElementById('saveQr'), link,
+        { errorCorrectionLevel: 'L', margin: 2, width: 260 });
+      qrShown = true;
+      qrMsg = 'Scan this with the other device.';
+    } catch (e) {
+      qrShown = false;
+      qrMsg = `Too big for a QR code — use COPY CODE instead. (${e.message})`;
+    }
+  }
   let setMsg = $state('');
   let showExport = $state(false);
   let exportEl = $state(null);
@@ -120,6 +148,16 @@
     <button class="mcbtn small rowBtn" id="btnForceUpdate" onclick={forceUpdate}><Sprite name="ui_gear" />GET LATEST VERSION</button>
 
     <div class="setLabel">Reloads the app files. Your save is NOT touched.</div>
+
+    <div class="setLabel">Move your progress to another device:</div>
+    <button class="mcbtn small rowBtn" id="btnShowQr" onclick={showQr}>
+      <Sprite name="ui_world" />SHOW SAVE AS QR CODE
+    </button>
+    <div class="setMsg">{qrMsg}</div>
+    <canvas id="saveQr" class="saveQr" class:hidden={!qrShown}></canvas>
+    <div class="setLabel" class:hidden={!qrShown}>
+      Point another device's camera at this. On iPhone the normal Camera app reads it.
+    </div>
 
     <!-- Reachable from INSIDE the app on purpose. An installed app has no
          address bar, and on iOS its storage is separate from the browser's, so
