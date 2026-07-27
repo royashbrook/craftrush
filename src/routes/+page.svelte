@@ -17,6 +17,7 @@
   import { persistSave, THEME_ERROR } from '../../js/config.js';
   import { finishRunSettlement } from '../../js/settlement.js';
   import { checkAchievements } from '../../js/achievements.js';
+  import { updateReloadIsSafe } from '../../js/pwa-safety.js';
   import { Game } from '../../js/game.js';
   import { Audio } from '../../js/audio.js';
   import { save, nav, toast, commit, togglePause, initHistory } from '../lib/store.svelte.js';
@@ -32,6 +33,35 @@
   onMount(() => {
     let stop = () => {};
     let cancelled = false;
+    let updateWaiting = false;
+    let reloadingForUpdate = false;
+    const reloadUpdatedAppIfSafe = () => {
+      if (!updateWaiting || reloadingForUpdate || !updateReloadIsSafe(nav)) return;
+      reloadingForUpdate = true;
+      location.reload();
+    };
+
+    // Listen before asset loading starts. A fast worker can claim the page while
+    // boot is awaiting the atlas; attaching afterward loses that update event.
+    let onControllerChange = null;
+    if (!dev && 'serviceWorker' in navigator
+        && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      let hadController = !!navigator.serviceWorker.controller;
+      onControllerChange = () => {
+        // First install should not bounce a page the player just opened. Once
+        // that worker claims it, though, later deploys in this same long-lived
+        // page are real updates and must follow the normal safe-reload path.
+        if (!hadController) {
+          hadController = true;
+          return;
+        }
+        updateWaiting = true;
+        reloadUpdatedAppIfSafe();
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+      navigator.serviceWorker.register(`${base}/service-worker.js`, { type: 'module' }).catch(() => {});
+    }
+
     (async () => {
       // the theme failing is the one error that used to render a blank page,
       // because it happens while modules are still evaluating
@@ -122,6 +152,7 @@
         last = now;
         if (!g.paused && !window.CR.paused) g.update(dt);
         g.render();
+        reloadUpdatedAppIfSafe();
         raf = requestAnimationFrame(frame);
       };
       raf = requestAnimationFrame(frame);
@@ -130,24 +161,6 @@
       // of "I edited it and nothing changed", and vite already serves fresh
       // modules. In production this is registered by hand rather than by
       // SvelteKit, so that rule lives in one visible place.
-      let onControllerChange = null;
-      if (!dev && 'serviceWorker' in navigator
-          && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-        navigator.serviceWorker.register(`${base}/service-worker.js`, { type: 'module' }).catch(() => {});
-        // A new deploy activates immediately, but THIS page keeps running the JS
-        // it booted with. Whether a worker was already driving the page has to be
-        // captured NOW: by the time controllerchange fires there is always one,
-        // so checking it then would reload on a first install too.
-        const hadController = !!navigator.serviceWorker.controller;
-        let reloading = false;
-        onControllerChange = () => {
-          if (reloading || !hadController) return;
-          reloading = true;
-          location.reload();
-        };
-        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
-      }
-
       stop = () => {
         cancelAnimationFrame(raf);
         g.destroy();
@@ -158,7 +171,6 @@
         window.removeEventListener('orientationchange', fit);
         window.visualViewport?.removeEventListener('resize', fit);
         window.visualViewport?.removeEventListener('scroll', fit);
-        if (onControllerChange) navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
         if (window.CR?.game === g) delete window.CR;
       };
     })().catch((e) => {
@@ -166,7 +178,11 @@
       failed = e.message;
       console.error(e);
     });
-    return () => { cancelled = true; stop(); };
+    return () => {
+      cancelled = true;
+      stop();
+      if (onControllerChange) navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
+    };
   });
 </script>
 

@@ -4,10 +4,16 @@
   destroys a kid's progress, and that is not something a stray tap should do.
 -->
 <script>
+  import { tick } from 'svelte';
   import QRCode from 'qrcode';
   import { encodeSave, saveLink } from '../../js/savecode.js';
-  import { save } from '../lib/store.svelte.js';
+  import { save, nav } from '../lib/store.svelte.js';
   import { Audio } from '../../js/audio.js';
+  import {
+    ownsCraftRushCache,
+    ownsCraftRushRegistration,
+    updateReloadIsSafe,
+  } from '../../js/pwa-safety.js';
   import {
     VERSION, dayStamp, exportSave, importSave, resetSave, listBackups, restoreBackup,
   } from '../../js/config.js';
@@ -22,6 +28,14 @@
   let importText = $state('');
   let qrShown = $state(false);
   let qrMsg = $state('');
+  let updateMsg = $state('');
+  let updateStatusEl = $state(null);
+
+  async function showUpdateMessage(text) {
+    updateMsg = text;
+    await tick();
+    updateStatusEl?.scrollIntoView({ block: 'nearest' });
+  }
 
   /**
    * The QR carries a LINK to the rescue page with the save in the fragment, not
@@ -88,6 +102,10 @@
 
   function loadCode() {
     Audio.sfx('click');
+    let hasCurrent = false;
+    try { hasCurrent = localStorage.getItem('craftrush_save_v1') !== null; } catch { /* import will report failure */ }
+    if (hasCurrent
+        && !confirm('Replace this device’s save? Your current save will be kept as a one-step rollback on the rescue page.')) return;
     const merged = importSave(importText);
     if (merged) {
       setMsg = 'Loaded! Restarting…';
@@ -99,17 +117,29 @@
 
   async function forceUpdate() {
     Audio.sfx('click');
-    setMsg = 'Getting the latest version…';
+    if (!updateReloadIsSafe(nav)) {
+      await showUpdateMessage('Finish or give up the current run before updating.');
+      return;
+    }
+    await showUpdateMessage('Getting the latest version…');
     try {
       if (window.caches) {
         const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
+        await Promise.all(keys.filter(ownsCraftRushCache).map((k) => caches.delete(k)));
       }
       if (navigator.serviceWorker) {
         const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
+        await Promise.all(regs
+          .filter((r) => ownsCraftRushRegistration(r, location.href))
+          .map((r) => r.unregister()));
       }
     } catch { /* clearing is best effort; the reload below still helps */ }
+    // Cache and registration work is asynchronous. The player may have started
+    // a run while it was in flight, so the entry guard alone is not enough.
+    if (!updateReloadIsSafe(nav)) {
+      await showUpdateMessage('Latest files are ready. Finish or give up the current run before reloading.');
+      return;
+    }
     location.reload();
   }
 
@@ -145,7 +175,19 @@
     <div class="setLabel">Paste a code to restore your game:</div>
     <textarea id="saveImport" class="saveBox" placeholder="paste your code here" bind:value={importText}></textarea>
     <button class="mcbtn small rowBtn" id="btnLoadSave" onclick={loadCode}><Sprite name="ui_back" />LOAD CODE</button>
-    <button class="mcbtn small rowBtn" id="btnForceUpdate" onclick={forceUpdate}><Sprite name="ui_gear" />GET LATEST VERSION</button>
+    <button
+      class="mcbtn small rowBtn"
+      id="btnForceUpdate"
+      aria-describedby="updateMsg"
+      onclick={forceUpdate}
+    ><Sprite name="ui_gear" />GET LATEST VERSION</button>
+    <div
+      id="updateMsg"
+      class="setMsg"
+      role="status"
+      aria-live="polite"
+      bind:this={updateStatusEl}
+    >{updateMsg}</div>
 
     <div class="setLabel">Reloads the app files. Your save is NOT touched.</div>
 

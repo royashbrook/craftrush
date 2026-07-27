@@ -9,8 +9,8 @@
 // debugging on someone's phone.
 //
 // So the path stays, and what lives here now deletes itself. On the next update
-// check an old install picks this up, drops every cache, unregisters, and
-// reloads into the current app, which then registers the real worker.
+// check an old install picks this up, drops only Craft Rush's legacy caches,
+// and unregisters. The page keeps running until its next safe navigation.
 //
 // Do not delete this file, and do not rename service-worker.js again without
 // leaving something like it behind.
@@ -19,13 +19,10 @@ self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    for (const key of await caches.keys()) await caches.delete(key);
-    await self.registration.unregister();
-    // reload whatever windows this was still driving, so the player sees the
-    // current game rather than whatever half-state they were stuck in
-    for (const client of await self.clients.matchAll({ type: 'window' })) {
-      client.navigate(client.url);
+    for (const key of await caches.keys()) {
+      if (key.startsWith('craftrush-')) await caches.delete(key);
     }
+    await self.registration.unregister();
   })());
 });
 

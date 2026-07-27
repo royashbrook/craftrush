@@ -14,9 +14,11 @@ headless matrix now separates the two players cleanly:
 | Gate Dash | 0/19 | 19/19 |
 
 v1.3 delivered #79 as a five-category dressing room with a three-column phone
-grid and separate select, buy, claim, equip, and remove actions. Shared-origin
-PWA/save hardening remains #82. Issue #81 intentionally waits for observations
-from the production playtest described in `docs/PLAYTEST.md`.
+grid and separate select, buy, claim, equip, and remove actions. v1.4 delivered
+#82: shared-origin cache and worker ownership, schema-checked restore with a
+byte-exact rollback, and update reloads deferred through active runs. Issue #81
+intentionally waits for observations from the production playtest described in
+`docs/PLAYTEST.md`.
 
 ## Product direction
 

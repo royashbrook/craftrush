@@ -4,6 +4,7 @@
 // here, so a full reskin = new sprite packs + new tables. No engine changes.
 import { Audio } from './audio.js';
 import { hash2 } from './engine.js';
+import { saveSchemaError } from './pwa-safety.js';
 
 // Build version shown in the UI. Tag the next feature milestone in git; Vite
 // appends the number of commits since it as the patch.
@@ -304,12 +305,36 @@ export function styleById(id, townId) {
 export function migrateWorld(save) {
   const w = save.world && typeof save.world === 'object' ? save.world : (save.world = {});
   if (!w.towns || typeof w.towns !== 'object') w.towns = {};
+  const normalizeHouse = (storedHouse, town) => {
+    const house = storedHouse && typeof storedHouse === 'object' && !Array.isArray(storedHouse)
+      ? storedHouse
+      : makeHouse(town.id);
+    if (typeof house.style !== 'string') house.style = town.style.id;
+    if (!Array.isArray(house.decor)) house.decor = [];
+    house.decor = house.decor.filter((d) =>
+      d && typeof d === 'object' && typeof d.item === 'string');
+    if (!Array.isArray(house.people)) house.people = [];
+    house.people = house.people.filter((p) =>
+      p && typeof p === 'object' && typeof p.skin === 'string');
+    for (const person of house.people) {
+      if (!person.cosmetics || typeof person.cosmetics !== 'object' || Array.isArray(person.cosmetics)) {
+        person.cosmetics = { cape: 'none', hat: 'none' };
+      }
+    }
+    return house;
+  };
   for (const t of TOWNS) {
-    const rec = w.towns[t.id] || (w.towns[t.id] = { unlocked: t.cost === 0, houses: [] });
+    const stored = w.towns[t.id];
+    const rec = stored && typeof stored === 'object' && !Array.isArray(stored)
+      ? stored
+      : (w.towns[t.id] = { unlocked: t.cost === 0, houses: [] });
     if (!Array.isArray(rec.houses)) rec.houses = [];
     if (!rec.villagers || typeof rec.villagers !== 'object') rec.villagers = {};
     for (const v of VILLAGERS) if (typeof rec.villagers[v.id] !== 'number') rec.villagers[v.id] = 0;
     if (rec.unlocked && !rec.houses.length) rec.houses.push(makeHouse(t.id));
+    for (let i = 0; i < rec.houses.length; i++) {
+      rec.houses[i] = normalizeHouse(rec.houses[i], t);
+    }
   }
   // legacy flat playroom -> plains house 0 (only once; the flat keys are dropped)
   const legacy = Array.isArray(save.playmates) || Array.isArray(save.decor);
@@ -318,6 +343,7 @@ export function migrateWorld(save) {
     if (Array.isArray(save.playmates) && save.playmates.length) h.people = save.playmates;
     if (Array.isArray(save.decor) && save.decor.length) h.decor = save.decor;
     if (save.roomTier) h.style = save.roomTier;
+    w.towns.plains.houses[0] = normalizeHouse(h, townById('plains'));
     delete save.playmates; delete save.decor; delete save.roomTier;
   }
   // the old single global village becomes the starter town's crew
@@ -327,10 +353,20 @@ export function migrateWorld(save) {
     w._villagersMoved = true;
     delete save.home.villagers;
   }
-  if (!w.towns[w.town]) w.town = 'plains';
+  // An unknown record can exist in a save from a removed theme or malformed
+  // import. Only known towns were normalized above, so never point a screen at
+  // an arbitrary record merely because it happens to exist.
+  if (!TOWNS.some((town) => town.id === w.town)) w.town = 'plains';
   const houses = w.towns[w.town].houses;
   if (typeof w.house !== 'number' || w.house < 0 || w.house >= houses.length) w.house = 0;
   if (w.carry === undefined) w.carry = null;
+  else if (w.carry !== null
+      && (!w.carry || typeof w.carry !== 'object' || Array.isArray(w.carry)
+        || typeof w.carry.skin !== 'string')) w.carry = null;
+  else if (w.carry && (!w.carry.cosmetics || typeof w.carry.cosmetics !== 'object'
+      || Array.isArray(w.carry.cosmetics))) {
+    w.carry.cosmetics = { cape: 'none', hat: 'none' };
+  }
   return w;
 }
 
@@ -533,6 +569,16 @@ export function recordExpedition(save, key = dayKey()) {
 }
 
 const SAVE_KEY = 'craftrush_save_v1';
+const PRE_RESTORE_KEY = 'craftrush_pre_restore_v1';
+
+function normalizeUnlockedSkins(save) {
+  const unlocked = Array.isArray(save.unlocked)
+    ? save.unlocked.filter((id) => typeof id === 'string')
+    : [];
+  const known = new Set(SKINS.map((skin) => skin.id));
+  if (!unlocked.some((id) => known.has(id))) unlocked.unshift(SKINS[0]?.id || 'steve');
+  save.unlocked = [...new Set(unlocked)];
+}
 
 export function loadSave() {
   const def = { emeralds: 0, level: 1, bestLevel: 1, mode: 'shooter', skin: 'steve',
@@ -560,6 +606,7 @@ export function loadSave() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) save = { ...def, ...JSON.parse(raw) };
   } catch { save = def; }
+  normalizeUnlockedSkins(save);
   migrateWorld(save); // build/repair the world, folding in any legacy flat playroom
   return save;
 }
@@ -588,9 +635,30 @@ export function importSave(code) {
   try {
     const raw = String(code).trim().replace(/^CR1\|/, '');
     const obj = JSON.parse(decodeURIComponent(escape(atob(raw))));
-    if (!obj || typeof obj !== 'object' || typeof obj.level !== 'number') return null;
+    if (saveSchemaError(obj)) return null;
     const merged = { ...loadSave(), ...obj }; // fill any missing fields with defaults
-    localStorage.setItem(SAVE_KEY, JSON.stringify(merged));
+    normalizeUnlockedSkins(merged);
+    migrateWorld(merged);
+    const incoming = JSON.stringify(merged);
+    const current = localStorage.getItem(SAVE_KEY);
+    if (current !== null) {
+      localStorage.setItem(PRE_RESTORE_KEY, JSON.stringify({ ts: Date.now(), raw: current }));
+      const rollbackRaw = localStorage.getItem(PRE_RESTORE_KEY);
+      if (!rollbackRaw) return null;
+      const rollback = JSON.parse(rollbackRaw);
+      if (rollback?.raw !== current) return null;
+    }
+    try {
+      localStorage.setItem(SAVE_KEY, incoming);
+      if (localStorage.getItem(SAVE_KEY) !== incoming) throw new Error('save write could not be verified');
+    } catch {
+      // If a browser reports a failed or partial replacement, put the exact
+      // prior bytes back before reporting failure.
+      if (current !== null) {
+        try { localStorage.setItem(SAVE_KEY, current); } catch { /* rollback slot still holds it */ }
+      }
+      return null;
+    }
     return merged;
   } catch { return null; }
 }

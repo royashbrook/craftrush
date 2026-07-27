@@ -1,0 +1,229 @@
+// Shared-origin and save-boundary rules. Keep this module browser-agnostic so
+// the app, rescue bundle, service worker, and node tests all enforce the same
+// narrow ownership rules.
+
+export const CRAFTRUSH_CACHE_PREFIX = 'craftrush-';
+
+export function ownsCraftRushCache(name) {
+  return typeof name === 'string' && name.startsWith(CRAFTRUSH_CACHE_PREFIX);
+}
+
+/**
+ * The deployed game lives below /craftrush/. Derive a deeper mount when there
+ * is one, but never interpret a root-hosted test page as authority over every
+ * service worker on that origin.
+ */
+export function craftRushScopePath(pageHref) {
+  try {
+    const path = new URL('./', pageHref).pathname;
+    return path === '/' ? '/craftrush/' : path;
+  } catch {
+    return '/craftrush/';
+  }
+}
+
+export function ownsCraftRushRegistration(registration, pageHref) {
+  try {
+    const page = new URL(pageHref);
+    const scope = new URL(registration.scope, page);
+    const root = craftRushScopePath(page.href);
+    return scope.origin === page.origin
+      && (scope.pathname === root || scope.pathname.startsWith(root));
+  } catch {
+    return false;
+  }
+}
+
+const record = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
+const stringArray = (value) => Array.isArray(value) && value.every((item) => typeof item === 'string');
+const finiteAtLeast = (value, min) => typeof value === 'number' && Number.isFinite(value) && value >= min;
+function friendSchemaError(friend, path) {
+  if (!record(friend) || typeof friend.skin !== 'string') return `${path} must be a friend`;
+  if ('cosmetics' in friend && !record(friend.cosmetics)) return `${path}.cosmetics must be an object`;
+  for (const category of ['cape', 'hat']) {
+    if (friend.cosmetics && category in friend.cosmetics
+        && typeof friend.cosmetics[category] !== 'string') {
+      return `${path}.cosmetics.${category} must be text`;
+    }
+  }
+  for (const coordinate of ['x', 'y']) {
+    if (coordinate in friend
+        && (typeof friend[coordinate] !== 'number' || !Number.isFinite(friend[coordinate]))) {
+      return `${path}.${coordinate} must be a number`;
+    }
+  }
+  return '';
+}
+
+/**
+ * Accept old and partial saves, which the normal loader fills with defaults,
+ * while rejecting values that would overwrite those defaults with structures
+ * the game cannot use.
+ */
+export function saveSchemaError(save) {
+  if (!record(save)) return 'the save must be a JSON object';
+  if (!Number.isInteger(save.level) || save.level < 1) return 'level must be a positive whole number';
+  if ('emeralds' in save && !finiteAtLeast(save.emeralds, 0)) return 'emeralds must be a non-negative number';
+  for (const key of ['bestLevel', 'bestCrowd']) {
+    if (key in save && !finiteAtLeast(save[key], 0)) return `${key} must be a non-negative number`;
+  }
+
+  for (const key of ['skin', 'camera', 'speed']) {
+    if (key in save && typeof save[key] !== 'string') return `${key} must be text`;
+  }
+  if ('mode' in save && !['shooter', 'gates'].includes(save.mode)) return 'mode must be shooter or gates';
+  for (const key of ['sound', 'music', 'sfx', 'tutorialSeen']) {
+    if (key in save && typeof save[key] !== 'boolean') return `${key} must be true or false`;
+  }
+  for (const key of ['unlocked', 'cosmeticsOwned', 'achievements', 'roomTiersOwned', 'settledRunIds']) {
+    if (key in save && !stringArray(save[key])) return `${key} must be a list of names`;
+  }
+  if ('playmates' in save) {
+    if (!Array.isArray(save.playmates)) return 'playmates must be a list';
+    for (const [index, person] of save.playmates.entries()) {
+      const error = friendSchemaError(person, `playmates[${index}]`);
+      if (error) return error;
+    }
+  }
+  if ('decor' in save) {
+    if (!Array.isArray(save.decor)) return 'decor must be a list';
+    for (const item of save.decor) {
+      if (!record(item) || typeof item.item !== 'string') {
+        return 'decor must contain placed items';
+      }
+    }
+  }
+  if ('roomTier' in save && typeof save.roomTier !== 'string') return 'roomTier must be text';
+  for (const key of ['cosmetics', 'stats', 'expedition', 'inventory', 'campaign', 'home', 'mine', 'decorOwned']) {
+    if (key in save && !record(save[key])) return `${key} must be an object`;
+  }
+  if ('world' in save && save.world !== null && !record(save.world)) return 'world must be an object';
+  if (save.campaign && 'done' in save.campaign && !stringArray(save.campaign.done)) {
+    return 'campaign.done must be a list of chapter names';
+  }
+  if (save.cosmetics) {
+    for (const key of ['cape', 'hat', 'trail', 'pet']) {
+      if (key in save.cosmetics && typeof save.cosmetics[key] !== 'string') {
+        return `cosmetics.${key} must be text`;
+      }
+    }
+  }
+  if (save.inventory) {
+    for (const [key, value] of Object.entries(save.inventory)) {
+      if (!finiteAtLeast(value, 0)) return `inventory.${key} must be a non-negative number`;
+    }
+  }
+  if (save.stats) {
+    for (const [key, value] of Object.entries(save.stats)) {
+      if (key === 'bossWins') {
+        if (!record(value)) return 'stats.bossWins must be an object';
+        for (const [boss, wins] of Object.entries(value)) {
+          if (!finiteAtLeast(wins, 0)) return `stats.bossWins.${boss} must be a non-negative number`;
+        }
+      } else if (!finiteAtLeast(value, 0)) {
+        return `stats.${key} must be a non-negative number`;
+      }
+    }
+  }
+  if (save.expedition) {
+    if ('lastDay' in save.expedition
+        && save.expedition.lastDay !== null
+        && typeof save.expedition.lastDay !== 'string') return 'expedition.lastDay must be text or null';
+    if ('streak' in save.expedition && !finiteAtLeast(save.expedition.streak, 0)) {
+      return 'expedition.streak must be a non-negative number';
+    }
+  }
+  if (save.home) {
+    if ('lastCollect' in save.home && !finiteAtLeast(save.home.lastCollect, 0)) {
+      return 'home.lastCollect must be a non-negative number';
+    }
+    if ('villagers' in save.home && !record(save.home.villagers)) return 'home.villagers must be an object';
+    for (const [villager, count] of Object.entries(save.home.villagers || {})) {
+      if (!finiteAtLeast(count, 0)) return `home.villagers.${villager} must be a non-negative number`;
+    }
+  }
+  if (save.mine) {
+    for (const key of ['depth', 'energy', 'energyTs']) {
+      if (key in save.mine && !finiteAtLeast(save.mine[key], 0)) {
+        return `mine.${key} must be a non-negative number`;
+      }
+    }
+    if ('pickaxe' in save.mine && typeof save.mine.pickaxe !== 'string') return 'mine.pickaxe must be text';
+    if ('dug' in save.mine && !stringArray(save.mine.dug)) return 'mine.dug must be a list of tile names';
+    for (const key of ['mx', 'my']) {
+      if (key in save.mine && (typeof save.mine[key] !== 'number' || !Number.isFinite(save.mine[key]))) {
+        return `mine.${key} must be a number`;
+      }
+    }
+    if ('inv' in save.mine && !record(save.mine.inv)) return 'mine.inv must be an object';
+    for (const [ore, count] of Object.entries(save.mine.inv || {})) {
+      if (!finiteAtLeast(count, 0)) return `mine.inv.${ore} must be a non-negative number`;
+    }
+  }
+  for (const [decor, count] of Object.entries(save.decorOwned || {})) {
+    if (!finiteAtLeast(count, 0)) return `decorOwned.${decor} must be a non-negative number`;
+  }
+  if (save.world) {
+    if ('towns' in save.world && !record(save.world.towns)) return 'world.towns must be an object';
+    if ('town' in save.world && typeof save.world.town !== 'string') return 'world.town must be text';
+    if ('house' in save.world && (!Number.isInteger(save.world.house) || save.world.house < 0)) {
+      return 'world.house must be a non-negative whole number';
+    }
+    if ('carry' in save.world && save.world.carry !== null) {
+      const error = friendSchemaError(save.world.carry, 'world.carry');
+      if (error) return error;
+    }
+    for (const [town, value] of Object.entries(save.world.towns || {})) {
+      if (!record(value)) return `world.towns.${town} must be an object`;
+      if ('unlocked' in value && typeof value.unlocked !== 'boolean') {
+        return `world.towns.${town}.unlocked must be true or false`;
+      }
+      if ('houses' in value && !Array.isArray(value.houses)) return `world.towns.${town}.houses must be a list`;
+      if ('villagers' in value && !record(value.villagers)) {
+        return `world.towns.${town}.villagers must be an object`;
+      }
+      for (const [villager, count] of Object.entries(value.villagers || {})) {
+        if (!finiteAtLeast(count, 0)) {
+          return `world.towns.${town}.villagers.${villager} must be a non-negative number`;
+        }
+      }
+      for (const house of value.houses || []) {
+        if (!record(house)) return `world.towns.${town}.houses must contain objects`;
+        if (typeof house.style !== 'string') {
+          return `world.towns.${town}.house style must be text`;
+        }
+        if (!Array.isArray(house.decor)) {
+          return `world.towns.${town}.house decor must be a list`;
+        }
+        if (!Array.isArray(house.people)) {
+          return `world.towns.${town}.house people must be a list`;
+        }
+        for (const decor of house.decor) {
+          if (!record(decor) || typeof decor.item !== 'string') {
+            return `world.towns.${town}.house decor must contain placed items`;
+          }
+        }
+        for (const [index, person] of house.people.entries()) {
+          const error = friendSchemaError(person, `world.towns.${town}.house people[${index}]`);
+          if (error) return error;
+        }
+      }
+    }
+  }
+  return '';
+}
+
+export function parsePlayableSave(json) {
+  let save;
+  try {
+    save = JSON.parse(json);
+  } catch {
+    return { save: null, error: 'not valid JSON' };
+  }
+  const error = saveSchemaError(save);
+  return error ? { save: null, error } : { save, error: '' };
+}
+
+export function updateReloadIsSafe(nav) {
+  return !nav.playing && !nav.result;
+}
