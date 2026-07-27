@@ -20,6 +20,7 @@
     const streakBonus = settled.streakBonus || 0;
     const streak = settled.streak || 0;
     const expFirst = !!settled.expeditionFirst;
+    const mastery = r.mastery || null;
 
     const rows = [
       ...(isExp ? [[r.expedition.name, r.win ? 'CLEARED!' : 'failed']] : []),
@@ -29,6 +30,7 @@
       ...(streakBonus > 0 ? [[`Day ${streak} streak`, `+${streakBonus}`]] : []),
       ...(r.rods > 0 ? [['Blaze rods', `+${r.rods}`]] : []),
       ...(isExp && !expFirst && r.win ? [['↻ Replay', 'base reward only']] : []),
+      ...(mastery?.objective ? [['Quest goal', mastery.objective.done ? 'DONE!' : `${mastery.objective.current}/${mastery.objective.target}`]] : []),
       ['Biggest crowd', `${r.bestCrowd}`],
       ...(r.mode === 'shooter' ? [[' Mobs blasted', `${r.kills}`]] : []),
       ...(isExp ? [] : [[' ' + r.biome, r.win ? 'CLEARED!' : 'try again!']]),
@@ -38,6 +40,7 @@
       title: r.win ? (isExp ? 'EXPEDITION DONE!' : 'VICTORY!') : 'CROWD WIPED OUT',
       titleClass: r.win ? 'win' : 'lose',
       rows,
+      mastery,
       // expeditions never advance the campaign — NEXT only shows for a normal win
       showNext: r.win && !isExp,
     };
@@ -62,6 +65,12 @@
   <div id="result" class="overlay">
     <div class="panel">
       <div id="resultTitle" class={view.titleClass}>{view.title}</div>
+      {#if view.mastery}
+        <div id="masteryCallout">
+          <strong>{view.mastery.grade}</strong>
+          <span>{view.mastery.label}<small>{view.mastery.praise}</small></span>
+        </div>
+      {/if}
       <div id="resultStats">
         {#each view.rows as [k, v]}
           <div class="statRow"><span>{@html k}</span><b>{@html v}</b></div>

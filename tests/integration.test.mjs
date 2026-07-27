@@ -174,8 +174,13 @@ for (const mode of ['shooter', 'gates']) {
     assert.ok(g.crystals.length >= 4, 'the crystals are up');
 
     const b = g.boss, hp0 = b.hp;
-    for (let i = 0; i < 180; i++) g.update(1 / 60);
-    assert.ok(b.hp >= hp0, `she healed or held, never dropped (${hp0} -> ${b.hp})`);
+    let guardedLow = b.hp;
+    for (let i = 0; i < 180; i++) {
+      g.update(1 / 60);
+      if (b.guarded) guardedLow = Math.min(guardedLow, b.hp);
+      if (!g.crystals.some((c) => !c.dead)) break;
+    }
+    assert.ok(guardedLow >= hp0, `she healed or held while guarded (${hp0} -> ${guardedLow})`);
 
     if (mode === 'gates') {
       assert.ok(g.crystals.some((c) => c.dead), 'the crowd can actually break them');

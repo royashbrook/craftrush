@@ -34,7 +34,7 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
   await page.click('#btnPlayShooter');
   await expect(page.locator('#hud')).toBeVisible();
   await expect(page.locator('#btnPause')).toBeVisible();
-  // the play area is button-free now; the golem charges and fires itself
+  // the play area stays button-free; normal pace releases a charged golem by tap
   await expect(page.locator('#golemMeter')).toBeVisible();
   await expect(page.locator('#steerL')).toHaveCount(0);
   await expect(page.locator('#golemBtn')).toHaveCount(0);
@@ -43,6 +43,24 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
   await expect(page.locator('#appbar')).toBeHidden();
   await page.waitForTimeout(2500); // let the run play a couple seconds
   expect(errors).toEqual([]);
+});
+
+test('run skill cues survive the real browser input and result flow', async ({ page }) => {
+  await page.goto('/');
+  await page.click('#btnPlayShooter');
+  await expect(page.locator('#runObjective')).toContainText('QUEST:');
+
+  await page.evaluate(() => {
+    window.CR.game.redstone = window.CR.game.hudState().redstoneMax;
+  });
+  await expect(page.locator('#golemLabel')).toHaveText('TAP TO SEND GOLEM');
+  await page.locator('#gameCanvas').click({ position: { x: 215, y: 300 } });
+  await expect.poll(() => page.evaluate(() => window.CR.game.summons.length)).toBe(1);
+
+  await page.evaluate(() => window.CR.game.endRun(false));
+  await expect(page.locator('#masteryCallout')).toBeVisible();
+  await expect(page.locator('#masteryCallout strong')).toHaveText(/[A-S]/);
+  await expect(page.locator('#masteryCallout small')).not.toBeEmpty();
 });
 
 test('pause and resume work', async ({ page }) => {
@@ -98,6 +116,39 @@ test('the HUD chips stay readable over a dark biome sky', async ({ page }) => {
   for (const c of colors) {
     const [r, g, b] = c.match(/\d+/g).map(Number);
     expect(r + g + b, `chip colour ${c} is not near-black`).toBeGreaterThan(200);
+  }
+});
+
+test('power, golem, objective, and boss HUD rows do not overlap', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').click();
+  await page.evaluate(() => {
+    const game = window.CR.game;
+    game.power.triple = 10;
+    game.redstone = game.hudState().redstoneMax;
+    game.startBoss();
+    game.boss.entering = false;
+    game.boss.z = game.boss.targetZ;
+    game.boss.attackT = 999;
+  });
+  await expect(page.locator('#powerChips')).toContainText('3×');
+  await expect(page.locator('#runObjective')).toBeVisible();
+  await expect(page.locator('#bossBar')).toBeVisible();
+
+  const rows = await page.evaluate(() => {
+    const rect = (id) => {
+      const box = document.querySelector(id).getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom };
+    };
+    return [
+      rect('#golemMeter'),
+      rect('#powerChips'),
+      rect('#runObjective'),
+      rect('#bossBar'),
+    ];
+  });
+  for (let i = 1; i < rows.length; i++) {
+    expect(rows[i - 1].bottom, `HUD rows ${i - 1} and ${i}`).toBeLessThanOrEqual(rows[i].top);
   }
 });
 

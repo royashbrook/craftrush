@@ -9,6 +9,9 @@ import { CombatMixin } from './combat.js';
 import { BossMixin } from './boss.js';
 import { FxMixin } from './fx.js';
 import { RenderMixin } from './render.js';
+import {
+  createMastery, finishMastery, objectiveState, recordDamage, recordDodge, recordGate,
+} from './mastery.js';
 
 let runSerial = 0;
 function newRunId() {
@@ -98,7 +101,7 @@ export class Game {
     this.speed = 0;
     this.redstone = 0;
     this.runEmeralds = 0; this.kills = 0; this.bestCrowd = 0; this.runRods = 0;
-    this.volleyT = 0;
+    this.volleyT = 0; this.chargeT = 0;
     this.power = { triple: 0, rapid: 0, power: 0, sword: 0, axe: 0 };
     this.events = [];
     this.eventIdx = 0;
@@ -109,6 +112,8 @@ export class Game {
     this.chapter = null;
     this.crystals = [];
     this.mut = {};
+    this.mastery = null;
+    this.bossArrivalCrowd = null;
   }
 
   // ---------- run lifecycle ----------
@@ -136,6 +141,7 @@ export class Game {
       TUNE.runSpeed * (1 + TUNE.speedRamp * (this.level - 1)) * (this.mut.speedMul || 1) * pace);
     this.genLevel(diff);
     this.setWorth(this.mut.startWorth || TUNE.crowdStart);
+    this.mastery = createMastery(this.chapter, this.worth());
     this.state = 'run';
     this.t = 0;
     this.applyCamera();
@@ -149,7 +155,7 @@ export class Game {
   // ---------- input ----------
   _initInput() {
     const c = this.canvas;
-    let dragging = false, lastX = null;
+    let dragging = false, lastX = null, downX = null, downY = null, moved = false;
     // relative steer from a pointer delta (blocks per on-screen pixel)
     const steer = (px) => {
       if (this.paused || (this.state !== 'run' && this.state !== 'boss')) { lastX = px; return; }
@@ -160,19 +166,44 @@ export class Game {
       lastX = px;
       if (!this.save.tutorialSeen) { this.save.tutorialSeen = true; this.hooks.onTutorial(null); }
     };
-    const onPointerDown = (e) => { c.setPointerCapture(e.pointerId); dragging = true; lastX = e.clientX; };
+    const onPointerDown = (e) => {
+      c.setPointerCapture(e.pointerId);
+      dragging = true;
+      moved = false;
+      downX = e.clientX;
+      downY = e.clientY ?? 0;
+      lastX = e.clientX;
+    };
     const onPointerMove = (e) => {
       // mouse steers on plain movement (no button); touch/pen require a drag
+      if (dragging && downX !== null && downY !== null
+        && Math.hypot(e.clientX - downX, (e.clientY ?? downY) - downY) >= 8) moved = true;
       if (e.pointerType === 'mouse' || dragging) steer(e.clientX);
     };
-    const onPointerUp = () => { dragging = false; };
-    const onPointerCancel = () => { dragging = false; };
+    const onPointerUp = (e) => {
+      if (dragging && downX !== null && downY !== null
+        && Math.hypot((e.clientX ?? downX) - downX, (e.clientY ?? downY) - downY) >= 8) moved = true;
+      const tapped = dragging && !moved;
+      dragging = false;
+      downX = null; downY = null;
+      if (tapped && this.save.speed !== 'calm') this.summonGolem();
+    };
+    const onPointerCancel = () => { dragging = false; downX = null; downY = null; moved = false; };
     // reset the reference point when the mouse leaves, so re-entry doesn't jump
     const onPointerLeave = (e) => { if (e.pointerType === 'mouse') lastX = null; };
     this.keys = {};
     const onKeyDown = (e) => {
       this.keys[e.code] = true;
       if (e.code === 'Escape') { e.preventDefault(); this.hooks.onPause && this.hooks.onPause(); }
+      const tag = e.target?.tagName;
+      const interactive = e.target?.isContentEditable
+        || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON';
+      const running = this.state === 'run' || this.state === 'boss';
+      if (e.code === 'Space' && !e.repeat && running && !this.paused
+        && !interactive && this.save.speed !== 'calm') {
+        e.preventDefault();
+        this.summonGolem();
+      }
     };
     const onKeyUp = (e) => { this.keys[e.code] = false; };
 
@@ -217,6 +248,21 @@ export class Game {
     return id;
   }
 
+  noteGate(good, risky = false) {
+    const combo = recordGate(this.mastery, good, risky);
+    if (good && combo >= 2) this.floaty(`SMART CHOICE ×${combo}!`, this.playerX, this.playerZ + 3, '#ffd94d', 1.3);
+  }
+
+  noteDamage(amount) {
+    recordDamage(this.mastery, amount);
+  }
+
+  noteDodge(near = false) {
+    recordDodge(this.mastery, near);
+    this.floaty(near ? 'CLOSE DODGE!' : 'DODGED!', this.playerX, this.playerZ + 3, '#7dcfff', 1.3);
+    Audio.sfx('near_miss', 120);
+  }
+
   // ---------- update ----------
   update(dt) {
     if (this.destroyed) return;
@@ -238,9 +284,9 @@ export class Game {
     this.targetX = Math.max(-TUNE.laneHalf, Math.min(TUNE.laneHalf, this.targetX));
     this.playerX += (this.targetX - this.playerX) * Math.min(1, dt * TUNE.steerLerp);
 
-    // the golem charges from your hits and then storms out on its own — no button
-    // to hunt for and no key to learn
-    if (this.redstone >= TUNE.redstoneMax) this.summonGolem();
+    // CALM keeps the zero-button safety net. Faster paces turn a full meter into
+    // a skill moment: tap the field or press Space to choose the release.
+    if (this.save.speed === 'calm' && this.redstone >= TUNE.redstoneMax) this.summonGolem();
 
     if (this.state === 'run') {
       this.playerZ += this.speed * dt;
@@ -292,7 +338,7 @@ export class Game {
     this.updateEshots(dt);
     this.updateFx(dt);
 
-    if (this.redstone >= TUNE.redstoneMax && !this.golemHintShown) {
+    if (this.save.speed !== 'calm' && this.redstone >= TUNE.redstoneMax && !this.golemHintShown) {
       this.golemHintShown = true;
       this.hooks.onTutorial('golem');
     }
@@ -311,6 +357,13 @@ export class Game {
     const bonus = win ? winBonus(this.level, this.bestCrowd) : 0;
     const mul = (this.mut.emeraldMul || 1) * speedById(this.save.speed).rewardMul;
     const total = Math.round((this.runEmeralds + bonus) * mul);
+    const mastery = finishMastery(this.mastery, {
+      win,
+      finalCrowd: this.armyPower(),
+      finishCrowd: this.bossArrivalCrowd ?? this.armyPower(),
+      bestCrowd: this.bestCrowd,
+      kills: this.kills,
+    });
     this.hooks.onRunEnd({
       id: this.runId || newRunId(),
       win, level: this.level, emeralds: total, pickupEmeralds: this.runEmeralds, bonus,
@@ -319,6 +372,7 @@ export class Game {
       biome: this.biome.name, biomeId: this.biome.id, mode: this.mode, structure: !!this.biome.structure,
       expedition: this.expedition ? { id: this.expedition.id, name: this.expedition.name } : null,
       chapter: this.chapter ? { id: this.chapter.id, name: this.chapter.name } : null,
+      mastery,
     });
   }
 
@@ -330,7 +384,14 @@ export class Game {
     h.progress = Math.min(1, this.playerZ / this.length);
     h.redstone = this.redstone; h.redstoneMax = TUNE.redstoneMax;
     h.level = this.level; h.biome = this.biome.name; h.mode = this.mode;
+    h.autoGolem = this.save.speed === 'calm';
     h.power = this.power;
+    const objective = objectiveState(this.mastery, {
+      finishCrowd: this.bossArrivalCrowd ?? this.armyPower(),
+    });
+    h.objectiveText = objective?.text || '';
+    h.objectiveProgress = objective ? `${objective.current}/${objective.target}` : '';
+    h.objectiveDone = !!objective?.done;
     if (this.boss && this.state === 'boss') {
       const b = h.boss;
       b.name = this.boss.name; b.hp = Math.max(0, this.boss.hp); b.max = this.boss.maxHp;

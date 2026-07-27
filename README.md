@@ -11,8 +11,8 @@ assets, fully offline after first load.
 The version shown in the top corner of the menu is **computed at build time** by
 `vite.config.js`, you don't hand-edit it. It's semver:
 **major.minor come from the latest git tag, and the patch is the number of commits
-since that tag.** So every deploy bumps the patch automatically (`0.2.3`, `0.2.4`, …),
-and cutting a milestone is just tagging the next `v0.x` in git (`v0.3`, …), which
+since that tag.** So every deploy bumps the patch automatically (`1.1.3`, `1.1.4`, …),
+and cutting a milestone is just tagging the next `v1.x` in git (`v1.2`, …), which
 resets the patch. (`VERSION` in `js/config.js` is only a fallback for an unbuilt or
 git-less checkout.)
 
@@ -43,10 +43,12 @@ Two test layers:
 - **Unit + integration** (`tests/*.test.mjs`) — pure logic
   plus a headless harness that drives the real `Game` class through full runs
   with a stubbed canvas, so cross-module regressions surface without a browser.
-- **Browser e2e** (Playwright, dev-only). One-time setup then run:
+- **Browser e2e** (Playwright, against dev or the built output). One-time setup
+  then run:
   ```sh
   npm install && npx playwright install chromium
-  npx playwright test              # desktop + mobile viewports
+  npm run test:e2e                  # dev server, desktop + mobile viewports
+  npm run test:build                # production build, including WebKit
   ```
 
 SvelteKit writes the production app to `build/`. Its service worker receives the
@@ -81,8 +83,9 @@ an offline fullscreen app.
 - **Drag anywhere** (or A/D / arrow keys) to steer the crowd.
 - **Gates**: blue = good (+N, ×N), red = bad (−N, ÷N). In Bow Blitz you can
   SHOOT gates: good gates grow, bad gates shrink toward harmless.
-- **Redstone gauge** fills from hits/kills (or emeralds in Gate Dash). Tap the
-  🗿 button (or Space) to summon an Iron Golem that flattens everything ahead.
+- **Redstone gauge** fills from hits/kills (or emeralds in Gate Dash). On NORMAL
+  and faster paces, tap anywhere without dragging (or press Space) to release a
+  charged Iron Golem. CALM releases it automatically.
 - **Uncapped army**: crowd worth grows without limit. Beyond the rendered cap,
   runners merge into **Giga Steves** (worth 10) and then **Titan Steves**
   (worth 100), which grow bigger and hit harder the larger your army gets. The
@@ -103,7 +106,8 @@ an offline fullscreen app.
 - **BOW BLITZ** — the shooter version: crowd auto-fires arrows, powerups
   (triple/rapid/power shot), bosses with attack patterns.
 - **GATE DASH** — the classic gate-multiplier version: no shooting; gates,
-  dodging and the golem are everything. Boss = crowd slam: bring enough runners.
+  dodging and the golem are everything. Bosses still attack, so steer through
+  warned safe lanes while the crowd charges.
 
 The toggle is data-driven (`mode` in `js/config.js` / menu button) — same engine,
 systems switch off cleanly.

@@ -84,6 +84,9 @@ export const TUNE = {
   biteReachX: 0.9, biteReachZ: 1.1,   // contact-bite box
   arrowHitX: 0.55,      // arrow vs enemy/obstacle half-width
   gateHitMargin: 0.25,  // gate crossing overlap slack
+  gateHalfW: 1.75,      // normal gates leave a real neutral lane at the center
+  tutorialGateHalfW: 2.15,
+  aimConeNear: 0.9, aimConePerZ: 0.045, aimConeMax: 2.2,
 
   // boss arena (blocks past the track end)
   bossSpawnZ: 17, bossHoldZ: 10,

@@ -112,7 +112,9 @@ export const CrowdMixin = {
       this.burst(this.playerX + m.ox, 0.8, this.playerZ + m.oz, [this.skin.palette.t, this.skin.palette.s, this.skin.palette.l], 7);
     }
     Audio.sfx('pop', 70);
+    const powerBefore = this.armyPower();
     this.setWorth(before - lost);
+    this.noteDamage?.(powerBefore - this.armyPower());
     if (this.worth() <= 0 && !this.bossDead && (this.state === 'run' || this.state === 'boss')) this.endRun(false);
   },
 
