@@ -37,6 +37,7 @@ export const nav = $state({
   result: null,       // the run that just ended, or null
   achPop: null,       // achievement just earned, or null
   hud: null,          // the engine pushes run state here every frame
+  shopCategory: 'skin', // transient dressing-room tab; never part of the save
 });
 
 /** What each screen is: which tab owns it, what the bar says, who it sits under. */

@@ -1,19 +1,89 @@
 <!--
-  The shop: skins, then capes, hats, arrow trails and pets. Buying an item
-  equips it; the equipped item can be tapped off again. Campaign loot wears a
-  QUEST tag no amount of emeralds will clear, until it is actually earned.
+  A compact dressing room. Cards only choose what to inspect; buying, claiming,
+  equipping and removing are separate actions in the selected-item preview.
 -->
 <script>
-  import { save, commit, toast } from '../lib/store.svelte.js';
+  import { save, nav, commit, toast } from '../lib/store.svelte.js';
   import { Audio } from '../../js/audio.js';
   import { blit, getSprite } from '../../js/assets.js';
   import { COSMETICS, SKINS, questCosmeticEarned } from '../../js/config.js';
 
   let { game } = $props();
 
-  const CAT_LABELS = { cape: 'CAPES', hat: 'HATS', trail: 'ARROW TRAILS', pet: 'PETS' };
+  const CATEGORIES = [
+    { id: 'skin', label: 'SKINS' },
+    { id: 'cape', label: 'CAPES' },
+    { id: 'hat', label: 'HATS' },
+    { id: 'trail', label: 'TRAILS' },
+    { id: 'pet', label: 'PETS' },
+  ];
+
+  let selectedId = $state(null);
 
   const activeSkin = $derived(SKINS.find((s) => s.id === save.skin) || SKINS[0]);
+  const category = $derived(CATEGORIES.some((c) => c.id === nav.shopCategory) ? nav.shopCategory : 'skin');
+  const items = $derived.by(() => category === 'skin'
+    ? SKINS
+    : (COSMETICS[category] || []).filter((d) => d.id !== 'none'));
+  const selected = $derived.by(() => {
+    const equipped = category === 'skin' ? save.skin : save.cosmetics?.[category];
+    return items.find((d) => d.id === selectedId)
+      || items.find((d) => d.id === equipped)
+      || items[0]
+      || null;
+  });
+
+  function itemState(cat, def) {
+    const skin = cat === 'skin';
+    const owned = skin
+      ? save.unlocked.includes(def.id)
+      : save.cosmeticsOwned.includes(def.id);
+    const equipped = skin
+      ? save.skin === def.id
+      : save.cosmetics?.[cat] === def.id;
+    const earned = !!def.quest && questCosmeticEarned(save, def);
+    const affordable = !def.quest && save.emeralds >= (def.cost || 0);
+    const need = Math.max(0, (def.cost || 0) - save.emeralds);
+
+    let badge = 'PRICE';
+    if (equipped) badge = 'EQUIPPED';
+    else if (owned) badge = 'OWNED';
+    else if (earned) badge = 'EARNED';
+    else if (def.quest) badge = 'QUEST';
+    else if (affordable) badge = 'READY';
+
+    return { owned, equipped, earned, affordable, need, badge };
+  }
+
+  function actionFor(cat, def, state) {
+    if (!def || !state) return { kind: 'none', label: 'UNAVAILABLE', disabled: true, blocked: true };
+    if (state.equipped) {
+      return cat === 'skin'
+        ? { kind: 'equipped', label: 'EQUIPPED', disabled: true, blocked: true }
+        : { kind: 'remove', label: 'REMOVE', disabled: false, blocked: false };
+    }
+    if (state.owned) return { kind: 'equip', label: 'EQUIP', disabled: false, blocked: false };
+    if (def.quest) {
+      return state.earned
+        ? { kind: 'claim', label: 'CLAIM', disabled: false, blocked: false }
+        : { kind: 'quest', label: 'QUEST REWARD', disabled: false, blocked: true };
+    }
+    return state.affordable
+      ? { kind: 'buy', label: `BUY ${def.cost}`, disabled: false, blocked: false }
+      : { kind: 'need', label: `NEED ${state.need} MORE`, disabled: false, blocked: true };
+  }
+
+  function stateDescription(def, state) {
+    if (state.equipped) return `${def.name}, equipped`;
+    if (state.owned) return `${def.name}, owned`;
+    if (state.earned) return `${def.name}, quest reward earned`;
+    if (def.quest) return `${def.name}, quest reward locked`;
+    if (state.affordable) return `${def.name}, affordable for ${def.cost} emeralds`;
+    return `${def.name}, costs ${def.cost} emeralds, need ${state.need} more`;
+  }
+
+  const selectedState = $derived(selected ? itemState(category, selected) : null);
+  const primaryAction = $derived(actionFor(category, selected, selectedState));
 
   // ---------- previews: composites drawn straight into a canvas ----------
   // Sprite only draws one sprite; these are two (body+cape, head+hat), so they
@@ -71,102 +141,196 @@
     return { update: draw };
   }
 
-  // ---------- clicks ----------
-  function onSkinClick(skin) {
-    const owned = save.unlocked.includes(skin.id);
-    if (owned) {
-      save.skin = skin.id;
-      Audio.sfx('click');
-    } else if (save.emeralds >= skin.cost) {
-      save.emeralds -= skin.cost;
-      save.unlocked.push(skin.id);
-      save.skin = skin.id;
-      Audio.sfx('buy');
-    } else {
-      Audio.sfx('gate_bad');
-      return;
-    }
-    commit();
-    game?.applySkin();
+  // ---------- navigation and explicit actions ----------
+  function chooseCategory(id, focus = false) {
+    if (!CATEGORIES.some((c) => c.id === id)) return;
+    nav.shopCategory = id;
+    selectedId = null;
+    Audio.sfx('click');
+    if (focus) requestAnimationFrame(() => document.getElementById(`shopTab-${id}`)?.focus());
   }
 
-  function onCosmeticClick(cat, def) {
-    const owned = save.cosmeticsOwned.includes(def.id);
-    if (owned) {
-      // click equipped item again to take it off
-      save.cosmetics[cat] = save.cosmetics[cat] === def.id ? 'none' : def.id;
-      Audio.sfx('click');
-    } else if (def.quest) {
-      // campaign loot: free once you have it, and no amount of emeralds buys it early
-      if (!questCosmeticEarned(save, def)) {
-        toast(`Find this on your quest: ${def.name}.`);
-        Audio.sfx('gate_bad');
-        return;
-      }
-      save.cosmeticsOwned.push(def.id);
-      save.cosmetics[cat] = def.id;
-      Audio.sfx('buy');
-    } else if (save.emeralds >= def.cost) {
-      save.emeralds -= def.cost;
-      save.cosmeticsOwned.push(def.id);
-      save.cosmetics[cat] = def.id;
-      Audio.sfx('buy');
-    } else {
-      Audio.sfx('gate_bad');
+  function onTabKeydown(event, index) {
+    let next = null;
+    if (event.key === 'ArrowRight') next = (index + 1) % CATEGORIES.length;
+    else if (event.key === 'ArrowLeft') next = (index - 1 + CATEGORIES.length) % CATEGORIES.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = CATEGORIES.length - 1;
+    if (next === null) return;
+    event.preventDefault();
+    chooseCategory(CATEGORIES[next].id, true);
+  }
+
+  function chooseItem(def) {
+    selectedId = def.id;
+    Audio.sfx('click');
+  }
+
+  function deny(action, def, state) {
+    Audio.sfx('gate_bad');
+    if (action.kind === 'quest') toast(`Find this on your quest: ${def.name}.`);
+    else if (action.kind === 'need') toast(`You need ${state.need} more emeralds.`);
+  }
+
+  function runPrimaryAction() {
+    if (!selected) return;
+
+    // Recompute from the live save. A stale rendered button can never spend twice
+    // or equip something that is no longer owned.
+    const state = itemState(category, selected);
+    const action = actionFor(category, selected, state);
+    if (action.blocked) {
+      deny(action, selected, state);
       return;
     }
-    commit();
-    game?.refreshCosmetics();
+
+    const skin = category === 'skin';
+    if (action.kind === 'buy') {
+      if (skin) save.unlocked.push(selected.id);
+      else save.cosmeticsOwned.push(selected.id);
+      save.emeralds -= selected.cost;
+      Audio.sfx('buy');
+      commit();
+      return;
+    }
+
+    if (action.kind === 'claim') {
+      // Quest loot is claimed into ownership first. Equipping remains a second,
+      // explicit action just like every purchased item.
+      if (skin) save.unlocked.push(selected.id);
+      else save.cosmeticsOwned.push(selected.id);
+      Audio.sfx('buy');
+      commit();
+      return;
+    }
+
+    if (action.kind === 'equip') {
+      if (skin) {
+        save.skin = selected.id;
+        Audio.sfx('click');
+        commit();
+        game?.applySkin();
+      } else {
+        save.cosmetics[category] = selected.id;
+        Audio.sfx('click');
+        commit();
+        game?.refreshCosmetics();
+      }
+      return;
+    }
+
+    if (action.kind === 'remove' && !skin) {
+      save.cosmetics[category] = 'none';
+      Audio.sfx('click');
+      commit();
+      game?.refreshCosmetics();
+    }
   }
 </script>
 
 <div id="shop" class="overlay">
   <div class="panel">
-    <div class="chipRow">
-      <span style="color:#fff">PICK YOUR HERO</span>
-      <span class="chip green"><span class="em"></span> <span id="shopEmeralds">{save.emeralds}</span></span>
-    </div>
-    <div id="shopGrid">
-      <div class="shopSection">SKINS</div>
-      {#each SKINS as skin (skin.id)}
-        {@const owned = save.unlocked.includes(skin.id)}
-        {@const selected = save.skin === skin.id}
-        {@const short = save.emeralds < skin.cost}
+    <div id="shopTabs" class="shopTabs" role="tablist" aria-label="Shop categories">
+      {#each CATEGORIES as cat, index (cat.id)}
         <button
-          class="skinCard"
-          class:sel={selected}
-          class:locked={!owned && short}
-          onclick={() => onSkinClick(skin)}
-        >
-          <canvas width="64" height="88" use:drawSkinPreview={skin}></canvas>
-          <div class="skinName">{skin.name}</div>
-          <div class="skinTag">
-            {#if selected}PICKED{:else if owned}OWNED{:else}<span class="em"></span> {skin.cost}{/if}
-          </div>
-        </button>
+          type="button"
+          id={`shopTab-${cat.id}`}
+          class="shopTab"
+          class:sel={category === cat.id}
+          data-shop-category={cat.id}
+          role="tab"
+          aria-selected={category === cat.id}
+          aria-controls="shopCatalog"
+          tabindex={category === cat.id ? 0 : -1}
+          onclick={() => chooseCategory(cat.id)}
+          onkeydown={(event) => onTabKeydown(event, index)}
+        >{cat.label}</button>
       {/each}
+    </div>
 
-      {#each Object.entries(CAT_LABELS) as [cat, label] (cat)}
-        <div class="shopSection">{label}</div>
-        {#each COSMETICS[cat].filter((d) => d.id !== 'none') as def (def.id)}
-          {@const owned = save.cosmeticsOwned.includes(def.id)}
-          {@const selected = save.cosmetics[cat] === def.id}
-          {@const questState = def.quest ? (questCosmeticEarned(save, def) ? 'EARNED' : 'QUEST') : null}
-          {@const short = questState ? questState === 'QUEST' : save.emeralds < def.cost}
+    {#if selected && selectedState}
+      <section id="shopPreview" class="shopPreview" aria-live="polite" aria-label={stateDescription(selected, selectedState)}>
+        {#if category === 'skin'}
+          <canvas
+            class="shopPreviewCanvas"
+            width="64"
+            height="88"
+            aria-hidden="true"
+            use:drawSkinPreview={selected}
+          ></canvas>
+        {:else}
+          <canvas
+            class="shopPreviewCanvas"
+            width="64"
+            height="88"
+            aria-hidden="true"
+            use:drawCosmeticPreview={{ cat: category, def: selected, skin: activeSkin }}
+          ></canvas>
+        {/if}
+        <div class="shopPreviewInfo">
+          <div class="shopPreviewName">{selected.name}</div>
+          <div class="shopPreviewState">{stateDescription(selected, selectedState)}</div>
           <button
-            class="skinCard"
-            class:sel={selected}
-            class:locked={!owned && short}
-            onclick={() => onCosmeticClick(cat, def)}
+            type="button"
+            id="shopAction"
+            class="mcbtn small shopAction"
+            data-action={primaryAction.kind}
+            disabled={primaryAction.disabled}
+            aria-disabled={primaryAction.blocked}
+            onclick={runPrimaryAction}
           >
-            <canvas width="64" height="88" use:drawCosmeticPreview={{ cat, def, skin: activeSkin }}></canvas>
-            <div class="skinName">{def.name}</div>
-            <div class="skinTag">
-              {#if selected}PICKED{:else if owned}OWNED{:else if questState}<span class="questTag">{questState}</span>{:else}<span class="em"></span> {def.cost}{/if}
-            </div>
+            {#if primaryAction.kind === 'buy'}BUY <span class="em"></span> {selected.cost}
+            {:else}{primaryAction.label}{/if}
           </button>
-        {/each}
-      {/each}
+        </div>
+      </section>
+    {/if}
+
+    <div
+      id="shopCatalog"
+      class="shopCatalog"
+      role="tabpanel"
+      aria-labelledby={`shopTab-${category}`}
+      tabindex="0"
+    >
+      {#if items.length}
+        <div id="shopGrid">
+          {#each items as def (def.id)}
+            {@const state = itemState(category, def)}
+            {@const chosen = selected?.id === def.id}
+            <button
+              type="button"
+              class="skinCard"
+              class:sel={chosen}
+              class:equipped={state.equipped}
+              class:locked={!state.owned && !state.affordable && !state.earned}
+              data-shop-item={def.id}
+              data-shop-category={category}
+              aria-pressed={chosen}
+              aria-label={stateDescription(def, state)}
+              onclick={() => chooseItem(def)}
+            >
+              {#if category === 'skin'}
+                <canvas width="64" height="88" aria-hidden="true" use:drawSkinPreview={def}></canvas>
+              {:else}
+                <canvas
+                  width="64"
+                  height="88"
+                  aria-hidden="true"
+                  use:drawCosmeticPreview={{ cat: category, def, skin: activeSkin }}
+                ></canvas>
+              {/if}
+              <div class="skinName">{def.name}</div>
+              <div class="skinTag" class:questTag={state.badge === 'QUEST' || state.badge === 'EARNED'}>
+                {#if state.badge === 'PRICE'}<span class="em"></span> {def.cost}
+                {:else}{state.badge}{/if}
+              </div>
+            </button>
+          {/each}
+        </div>
+      {:else}
+        <div id="shopEmpty">NOTHING HERE YET</div>
+      {/if}
     </div>
   </div>
 </div>
