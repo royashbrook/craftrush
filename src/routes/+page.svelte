@@ -15,6 +15,7 @@
   import { dev } from '$app/environment';
   import { initAssets, getSprite, assetsReady } from '../../js/assets.js';
   import { persistSave, THEME_ERROR } from '../../js/config.js';
+  import { finishRunSettlement } from '../../js/settlement.js';
   import { checkAchievements } from '../../js/achievements.js';
   import { Game } from '../../js/game.js';
   import { Audio } from '../../js/audio.js';
@@ -30,11 +31,13 @@
 
   onMount(() => {
     let stop = () => {};
+    let cancelled = false;
     (async () => {
       // the theme failing is the one error that used to render a blank page,
       // because it happens while modules are still evaluating
       if (THEME_ERROR) throw new Error(THEME_ERROR);
       await initAssets();
+      if (cancelled) return;
 
       Audio.setEnabled(save.sound);
       Audio.setMusic(save.music !== false);
@@ -51,7 +54,13 @@
         // assigning that reference would never look like a change and the HUD
         // would render once and freeze. Copy it, nested boss included.
         onHud: (s) => { nav.hud = { ...s, boss: { ...s.boss } }; },
-        onRunEnd: (r) => { nav.playing = false; nav.paused = false; nav.result = r; },
+        onRunEnd: (r) => {
+          const settled = finishRunSettlement(save, r);
+          if (!settled.applied) return;
+          nav.playing = false;
+          nav.paused = false;
+          nav.result = settled.result;
+        },
         onTutorial: (k) => toast(k),
         onPause: () => { if (nav.playing) togglePause(); },
       });
@@ -61,7 +70,7 @@
       persistSave(save);
 
       game = g;
-      initHistory(pushState);   // the system back gesture walks the screen stack
+      const stopHistory = initHistory(pushState);   // the system back gesture walks the screen stack
 
       const onVisibility = () => {
         if (document.hidden && (g.state === 'run' || g.state === 'boss') && !g.paused) {
@@ -121,6 +130,7 @@
       // of "I edited it and nothing changed", and vite already serves fresh
       // modules. In production this is registered by hand rather than by
       // SvelteKit, so that rule lives in one visible place.
+      let onControllerChange = null;
       if (!dev && 'serviceWorker' in navigator
           && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
         navigator.serviceWorker.register(`${base}/service-worker.js`, { type: 'module' }).catch(() => {});
@@ -130,26 +140,33 @@
         // so checking it then would reload on a first install too.
         const hadController = !!navigator.serviceWorker.controller;
         let reloading = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
+        onControllerChange = () => {
           if (reloading || !hadController) return;
           reloading = true;
           location.reload();
-        });
+        };
+        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
       }
 
       stop = () => {
         cancelAnimationFrame(raf);
+        g.destroy();
+        stopHistory();
         document.removeEventListener('visibilitychange', onVisibility);
+        document.removeEventListener('pointerdown', unlock);
         window.removeEventListener('resize', fit);
         window.removeEventListener('orientationchange', fit);
         window.visualViewport?.removeEventListener('resize', fit);
         window.visualViewport?.removeEventListener('scroll', fit);
+        if (onControllerChange) navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
+        if (window.CR?.game === g) delete window.CR;
       };
     })().catch((e) => {
+      if (cancelled) return;
       failed = e.message;
       console.error(e);
     });
-    return () => stop();
+    return () => { cancelled = true; stop(); };
   });
 </script>
 

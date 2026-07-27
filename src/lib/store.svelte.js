@@ -16,9 +16,6 @@ export const save = $state(loadSave());
 // reads and loop forever. After this, everything just reads save.world.
 migrateWorld(save);
 
-/** The world record: towns, which one you are in, which house. */
-export const world = () => save.world;
-
 /** Write to localStorage. Reads are reactive; saving is deliberate. */
 export function commit() {
   persistSave(save);
@@ -129,17 +126,19 @@ export function togglePause(force) {
  * leave the app, which is what someone at the menu expects.
  */
 export function initHistory(pushState) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return () => {};
   // SvelteKit owns the history stack, so the shallow-routing pushState from
   // $app/navigation is passed in rather than calling history.pushState directly,
   // which the router warns about and would eventually fight us over.
   const arm = () => pushState('', { cr: true });
   arm();
-  window.addEventListener('popstate', () => {
+  const onPopState = () => {
     // mid-run, back means "wait, stop" rather than "go somewhere"
     if (nav.playing && !nav.paused) { togglePause(true); arm(); return; }
     if (back()) { arm(); return; }
     if (nav.screen !== 'menu') { go('menu', { push: false }); arm(); return; }
     // at the menu with nothing behind it: let the gesture close the app
-  });
+  };
+  window.addEventListener('popstate', onPopState);
+  return () => window.removeEventListener('popstate', onPopState);
 }

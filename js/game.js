@@ -10,7 +10,13 @@ import { BossMixin } from './boss.js';
 import { FxMixin } from './fx.js';
 import { RenderMixin } from './render.js';
 
-
+let runSerial = 0;
+function newRunId() {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return uuid;
+  runSerial += 1;
+  return `${Date.now().toString(36)}-${runSerial.toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
 export class Game {
   constructor(canvas, save, hooks) {
     this.canvas = canvas;
@@ -28,6 +34,8 @@ export class Game {
     this.mode = save.mode;
     this.biome = BIOMES[(this.level - 1) % BIOMES.length];
     this.menuScroll = 0;
+    this.destroyed = false;
+    this._timeouts = new Set();
     this._initInput();
     this.resetRunState();
     this.applyCamera();
@@ -107,6 +115,7 @@ export class Game {
   // expedition: optional daily-expedition object (overrides biome/mode + `mut`)
   startRun(expedition = null, replayId = null) {
     this.resetRunState();
+    this.runId = newRunId();
     this.expedition = expedition;
     // a plain run plays the chapter you are up to, if its cost is covered;
     // once the chain is finished you can ask for one back by name
@@ -151,25 +160,66 @@ export class Game {
       lastX = px;
       if (!this.save.tutorialSeen) { this.save.tutorialSeen = true; this.hooks.onTutorial(null); }
     };
-    c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); dragging = true; lastX = e.clientX; });
-    c.addEventListener('pointermove', (e) => {
+    const onPointerDown = (e) => { c.setPointerCapture(e.pointerId); dragging = true; lastX = e.clientX; };
+    const onPointerMove = (e) => {
       // mouse steers on plain movement (no button); touch/pen require a drag
       if (e.pointerType === 'mouse' || dragging) steer(e.clientX);
-    });
-    c.addEventListener('pointerup', () => { dragging = false; });
-    c.addEventListener('pointercancel', () => { dragging = false; });
+    };
+    const onPointerUp = () => { dragging = false; };
+    const onPointerCancel = () => { dragging = false; };
     // reset the reference point when the mouse leaves, so re-entry doesn't jump
-    c.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') lastX = null; });
+    const onPointerLeave = (e) => { if (e.pointerType === 'mouse') lastX = null; };
     this.keys = {};
-    window.addEventListener('keydown', (e) => {
+    const onKeyDown = (e) => {
       this.keys[e.code] = true;
       if (e.code === 'Escape') { e.preventDefault(); this.hooks.onPause && this.hooks.onPause(); }
-    });
-    window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+    };
+    const onKeyUp = (e) => { this.keys[e.code] = false; };
+
+    c.addEventListener('pointerdown', onPointerDown);
+    c.addEventListener('pointermove', onPointerMove);
+    c.addEventListener('pointerup', onPointerUp);
+    c.addEventListener('pointercancel', onPointerCancel);
+    c.addEventListener('pointerleave', onPointerLeave);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+
+    this._inputCleanup = () => {
+      c.removeEventListener('pointerdown', onPointerDown);
+      c.removeEventListener('pointermove', onPointerMove);
+      c.removeEventListener('pointerup', onPointerUp);
+      c.removeEventListener('pointercancel', onPointerCancel);
+      c.removeEventListener('pointerleave', onPointerLeave);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }
+
+  destroy() {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.state = 'destroyed';
+    if (this._inputCleanup) {
+      this._inputCleanup();
+      this._inputCleanup = null;
+    }
+    for (const id of this._timeouts) clearTimeout(id);
+    this._timeouts.clear();
+  }
+
+  _later(callback, delay) {
+    if (this.destroyed) return null;
+    const id = setTimeout(() => {
+      this._timeouts.delete(id);
+      if (!this.destroyed) callback();
+    }, delay);
+    this._timeouts.add(id);
+    return id;
   }
 
   // ---------- update ----------
   update(dt) {
+    if (this.destroyed) return;
     this.t += dt;
     if (this.freeze > 0) { this.freeze -= dt; return; }
     this.flashFx = Math.max(0, this.flashFx - dt * 3);
@@ -261,25 +311,12 @@ export class Game {
     const bonus = win ? winBonus(this.level, this.bestCrowd) : 0;
     const mul = (this.mut.emeraldMul || 1) * speedById(this.save.speed).rewardMul;
     const total = Math.round((this.runEmeralds + bonus) * mul);
-    const st = this.save.stats;
-    if (st) {
-      st.runs = (st.runs || 0) + 1;
-      st.kills = (st.kills || 0) + this.kills;
-      if (win) {
-        st.wins = (st.wins || 0) + 1;
-        st.bossWins = st.bossWins || {};
-        st.bossWins[this.biome.id] = (st.bossWins[this.biome.id] || 0) + 1;
-      }
-    }
-    // bank campaign resources collected this run
-    if (this.runRods > 0 && this.save.inventory) {
-      this.save.inventory.blazeRods = (this.save.inventory.blazeRods || 0) + this.runRods;
-    }
     this.hooks.onRunEnd({
+      id: this.runId || newRunId(),
       win, level: this.level, emeralds: total, pickupEmeralds: this.runEmeralds, bonus,
       emeraldMul: mul, rods: this.runRods,
       kills: this.kills, bestCrowd: this.bestCrowd,
-      biome: this.biome.name, mode: this.mode, structure: !!this.biome.structure,
+      biome: this.biome.name, biomeId: this.biome.id, mode: this.mode, structure: !!this.biome.structure,
       expedition: this.expedition ? { id: this.expedition.id, name: this.expedition.name } : null,
       chapter: this.chapter ? { id: this.chapter.id, name: this.chapter.name } : null,
     });

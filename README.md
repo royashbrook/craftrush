@@ -9,7 +9,7 @@ assets, fully offline after first load.
 ## Versioning
 
 The version shown in the top corner of the menu is **computed at build time** by
-`tools/build.mjs` and stamped into `dist/`, you don't hand-edit it. It's semver:
+`vite.config.js`, you don't hand-edit it. It's semver:
 **major.minor come from the latest git tag, and the patch is the number of commits
 since that tag.** So every deploy bumps the patch automatically (`0.2.3`, `0.2.4`, …),
 and cutting a milestone is just tagging the next `v0.x` in git (`v0.3`, …), which
@@ -24,7 +24,7 @@ the two repo deploy, and the gotchas that cost hours.
 ```sh
 npm install        # once
 npm run dev        # vite dev server, no service worker, always fresh
-npm test           # unit + headless integration (121 tests)
+npm test           # unit + headless integration
 npm run test:e2e   # browser e2e (playwright)
 npm run art        # rebuild the atlas after editing themes/<id>/art/*.png
 npm run build      # build/, a prerendered page plus a service worker
@@ -49,10 +49,10 @@ Two test layers:
   npx playwright test              # desktop + mobile viewports
   ```
 
-`tools/build.mjs` copies the runtime files into `dist/` and regenerates the
-service-worker precache list and a content-hashed cache version from the actual
-file tree, so the precache can never drift. All asset paths are relative, so
-`dist/` serves correctly under a subpath such as `/craftrush`.
+SvelteKit writes the production app to `build/`. Its service worker receives the
+real generated file list from `$service-worker`, so the precache follows the
+build automatically. All asset paths are relative, so the same output serves
+correctly under a subpath such as `/craftrush`.
 
 ## Contributing
 
@@ -66,17 +66,15 @@ git config core.hooksPath .githooks
 
 ## Run it
 
-Any static file server works (needs http:// for ES modules + service worker):
+The dev server is the quickest local path:
 
 ```sh
-cd craftshoot
-python3 -m http.server 8080
-# or: npx serve .
-# for cache-free iteration on the ES modules: python3 tools/devserver.py 8300
+npm run dev
 ```
 
-Open http://localhost:8080 — on a phone, use your machine's LAN IP, then
-"Add to Home Screen" to install it as an app (fullscreen, offline).
+For the exact production shape, run `npm run build && npm run preview`. On a
+phone, use the machine's LAN address, then "Add to Home Screen" to install it as
+an offline fullscreen app.
 
 ## Play
 
@@ -124,22 +122,25 @@ Everything visual is data:
   base palette the colour variants are derived from.
 - `themes/<id>/atlas.png` + `atlas.json` — build output. Nothing edits these by
   hand.
-- `js/config.js` — biomes (palettes, enemy rosters, bosses, scenery), skins
-  (palette swaps + head sprite), enemy behavior stats, tuning.
+- `js/config.js` — engine tuning, economy, save schema and compatibility
+  re-exports for theme data.
 - Levels are procedurally generated from the level number (seeded), difficulty
   scales automatically; 7 biomes cycle forever.
 
 ## Structure
 
 ```
-index.html        shell + CSS
-js/main.js        boot + loop + resize
-js/config.js      tuning, biomes, skins, save
-js/engine.js      camera, pseudo-3D ground/sky renderer
-js/assets.js      sprite baker/registry (palette swaps, hit-flash)
-js/game.js        crowd sim, combat, gates, bosses, fx
-js/ui.js          menu/shop/HUD/results DOM
-js/audio.js       WebAudio chiptune sfx + music
-sw.js             offline cache
-tools/            icon generator, sprite validator
+src/routes/+page.svelte   boot, canvas sizing and engine loop
+src/App.svelte            app bar, screen stack and bottom navigation
+src/screens/              one Svelte component per game screen
+src/lib/store.svelte.js   reactive save, navigation and back gesture
+src/service-worker.js     generated-file precache
+js/game.js                run lifecycle and engine composition
+js/levelgen.js            deterministic procedural tracks
+js/combat.js              gates, enemies, pickups and summons
+js/boss.js                boss fights
+js/config.js              tuning, economy, save and theme re-exports
+themes/<id>/              theme data, source art and packed atlas
+tools/                    theme, atlas and rescue-page builders
+tests/                    node integration and Playwright browser coverage
 ```

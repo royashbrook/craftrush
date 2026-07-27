@@ -110,6 +110,7 @@ export interface Save {
   roomTiersOwned: string[];
   decorOwned: Record<string, number>;
   world: Record<string, unknown>;
+  settledRunIds?: string[];
 }
 
 /** Everything a theme folder supplies, keyed by file name. */

@@ -9,7 +9,7 @@
   there is one obvious way out and nothing to hunt for in a corner.
 -->
 <script>
-  import { save, nav, go, back, canGoBack, SCREENS, commit } from './lib/store.svelte.js';
+  import { save, nav, go, back, canGoBack, SCREENS } from './lib/store.svelte.js';
   import { Audio } from '../js/audio.js';
   import { VERSION, townById, pendingIdleWorld, mineEnergy, MINE } from '../js/config.js';
   import Sprite from './lib/Sprite.svelte';
@@ -32,6 +32,11 @@
   import AchPop from './components/AchPop.svelte';
 
   let { game } = $props();
+  let clock = $state(Date.now());
+  $effect(() => {
+    const id = setInterval(() => { clock = Date.now(); }, 500);
+    return () => clearInterval(id);
+  });
 
   const TABS = [
     { tab: 'play',  screen: 'menu',  icon: 'ui_play',    label: 'Play' },
@@ -52,8 +57,8 @@
   });
 
   // "come back" dots: villagers have earned something, or the pickaxe has energy
-  const villageDot = $derived(pendingIdleWorld(save.world, save.home?.lastCollect ?? 0, Date.now()) > 0);
-  const mineDot = $derived(mineEnergy(save.mine, Date.now()) >= MINE.energyCap);
+  const villageDot = $derived(pendingIdleWorld(save.world, save.home?.lastCollect ?? 0, clock) > 0);
+  const mineDot = $derived(mineEnergy(save.mine, clock) >= MINE.energyCap);
 
   // A run only takes the whole screen while it is actually running. Paused, the
   // bars come back so you can step into the shop or your goals and come back.
@@ -83,7 +88,7 @@
 <main id="screens" class:hidden={immersive}>
   {#if nav.screen === 'menu'}<Menu {game} />
   {:else if nav.screen === 'shop'}<Shop {game} />
-  {:else if nav.screen === 'home'}<Village {game} />
+  {:else if nav.screen === 'home'}<Village {game} now={clock} />
   {:else if nav.screen === 'world'}<World {game} />
   {:else if nav.screen === 'town'}<Town {game} />
   {:else if nav.screen === 'playroom'}<Playroom {game} />

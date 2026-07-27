@@ -5,10 +5,10 @@
 import { Audio } from './audio.js';
 import { hash2 } from './engine.js';
 
-// Build version shown in the UI. Bump the patch each build (0.2.1, 0.2.2, ...);
-// tag the next 0.x milestone in git when cutting a release.
+// Build version shown in the UI. Tag the next feature milestone in git; Vite
+// appends the number of commits since it as the patch.
 // Unbuilt source: an honest placeholder, so a dev/local page never looks like a
-// real release. tools/build.mjs stamps the computed semver into dist/.
+// real release.
 // Vite replaces __APP_VERSION__ at build time with major.minor from the last
 // tag plus commits since, so the number in the corner counts without anyone
 // editing it. In dev the fallback keeps it obvious the build is not a release.
@@ -548,7 +548,10 @@ export function loadSave() {
     music: true, sfx: true,   // music and effects toggle independently
     decorOwned: {},   // furniture bought but not currently placed (the bin refills this)
     // world/towns/houses live here; migrateWorld() builds and repairs it on load
-    world: null };
+    world: null,
+    // A short idempotency window for engine results. Additive only: old saves
+    // receive the default and keep every existing field.
+    settledRunIds: [] };
   let save = def;
   try {
     const raw = localStorage.getItem(SAVE_KEY);

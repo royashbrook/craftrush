@@ -20,19 +20,20 @@ function fakeCtx() {
 }
 function fakeCanvas(w = 0, h = 0) {
   return { width: w, height: h, getContext: () => fakeCtx(), toDataURL: () => 'data:,',
-    addEventListener: noop, setPointerCapture: noop };
+    addEventListener: noop, removeEventListener: noop, setPointerCapture: noop };
 }
 globalThis.document = { createElement: () => fakeCanvas(), getElementById: () => null };
-globalThis.window = { addEventListener: noop };
+globalThis.window = { addEventListener: noop, removeEventListener: noop };
 
 const { initAssets } = await import('../js/assets.js');
 const { Game } = await import('../js/game.js');
 const { loadSave } = await import('../js/config.js');
+const { finishRunSettlement } = await import('../js/settlement.js');
 await initAssets();
 
-function makeGame(overrides = {}) {
+function makeGame(overrides = {}, hookOverrides = {}) {
   const save = Object.assign(loadSave(), overrides); // loadSave returns defaults (no localStorage)
-  const hooks = { onHud: noop, onRunEnd: noop, onTutorial: noop, onPause: noop };
+  const hooks = { onHud: noop, onRunEnd: noop, onTutorial: noop, onPause: noop, ...hookOverrides };
   const g = new Game(fakeCanvas(), save, hooks);
   g.save.tutorialSeen = true;
   g.resize(430, 900);
@@ -73,6 +74,50 @@ test('a full gates run also completes and defeats the boss', () => {
     runToBossDeath(g);
   });
   assert.equal(g.bossDead, true);
+});
+
+test('a real engine result reaches the settlement boundary exactly once', () => {
+  let result;
+  let persists = 0;
+  let backups = 0;
+  const g = makeGame(
+    { mode: 'shooter', level: 2 },
+    { onRunEnd: (value) => { result = value; } },
+  );
+  g.startRun();
+  g.chapter = null;
+  g.runEmeralds = 7;
+  g.runRods = 2;
+  g.kills = 5;
+  g.bestCrowd = 24;
+  g.endRun(true);
+
+  assert.ok(result.id);
+  assert.equal(result.biomeId, g.biome.id);
+  const settled = finishRunSettlement(g.save, result, {
+    now: Date.UTC(2026, 6, 27),
+    persist: () => { persists++; },
+    backup: () => { backups++; },
+  });
+  assert.equal(settled.applied, true);
+  assert.equal(g.save.stats.runs, 1);
+  assert.equal(g.save.stats.kills, 5);
+  assert.equal(g.save.stats.wins, 1);
+  assert.equal(g.save.inventory.blazeRods, 2);
+  assert.equal(g.save.emeralds, result.settlement.banked);
+  assert.equal(persists, 1);
+  assert.equal(backups, 1);
+
+  const saved = JSON.stringify(g.save);
+  const duplicate = finishRunSettlement(g.save, result, {
+    persist: () => { persists++; },
+    backup: () => { backups++; },
+  });
+  assert.equal(duplicate.applied, false);
+  assert.equal(JSON.stringify(g.save), saved);
+  assert.equal(persists, 1);
+  assert.equal(backups, 1);
+  g.destroy();
 });
 
 test('every biome including the fortress renders and plays a few seconds', () => {
