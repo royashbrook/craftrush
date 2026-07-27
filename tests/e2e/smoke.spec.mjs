@@ -122,7 +122,7 @@ test('the browser actually loaded the art', async ({ page }) => {
   await expect(page.locator('#btnPlayShooter')).toBeVisible();
   // a missing atlas degrades to magenta placeholders rather than crashing, so
   // without this the suite would pass on a build that shipped no art at all
-  const ready = await page.evaluate(() => import('/js/assets.js').then((m) => m.assetsReady()));
+  const ready = await page.evaluate(() => window.CR.assetsReady());
   expect(ready).toBe(true);
 });
 

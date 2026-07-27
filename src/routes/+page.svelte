@@ -13,7 +13,7 @@
   import { base } from '$app/paths';
   import { pushState } from '$app/navigation';
   import { dev } from '$app/environment';
-  import { initAssets, getSprite } from '../../js/assets.js';
+  import { initAssets, getSprite, assetsReady } from '../../js/assets.js';
   import { persistSave } from '../../js/config.js';
   import { checkAchievements } from '../../js/achievements.js';
   import { Game } from '../../js/game.js';
@@ -99,7 +99,10 @@
       const unlock = () => { Audio.unlock(); if (g.state === 'menu' && save.sound) Audio.music('menu'); };
       document.addEventListener('pointerdown', unlock, { once: true });
 
-      window.CR = { game: g, save, nav, commit, togglePause }; // debug/testing handle
+      // debug/testing handle. assetsReady is here because the e2e suite runs
+      // against the BUILT output too, where js/assets.js is bundled and cannot
+      // be imported by path.
+      window.CR = { game: g, save, nav, commit, togglePause, assetsReady };
 
       let raf = 0, last = performance.now();
       const frame = (now) => {

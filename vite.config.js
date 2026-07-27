@@ -93,6 +93,12 @@ function themes() {
 
 export default defineConfig({
   plugins: [themes(), sveltekit()],
+  build: {
+    // Ship sourcemaps. A minified production-only failure reported as
+    // "Ti is not a function" costs hours that a real function name costs
+    // minutes, and for a game this size the maps are free.
+    sourcemap: true,
+  },
   define: {
     __APP_VERSION__: JSON.stringify(appVersion()),
   },
