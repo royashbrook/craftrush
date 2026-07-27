@@ -45,7 +45,7 @@
   <h1>Save Rescue</h1>
   <div class="sub">
     For when the game will not start, or to move progress between the installed app
-    and the browser. This reads your save straight out of storage. It never deletes anything.
+    and the browser. Reading, copying, and downloading do not alter your save.
   </div>
 
   <div id="incoming" hidden>
@@ -88,8 +88,11 @@
   </div>
 
   <div class="card">
-    <h2>DAILY BACKUPS</h2>
-    <div class="dim">The game keeps one automatic backup per day you played.</div>
+    <h2>BACKUPS &amp; ONE-STEP ROLLBACK</h2>
+    <div class="dim">
+      The game keeps one automatic backup per day you played. After a restore,
+      the exact save that was replaced appears first here.
+    </div>
     <div id="backups" class="dim">—</div>
   </div>
 
@@ -97,7 +100,8 @@
     <h2>PUT A SAVE BACK</h2>
     <div class="dim">
       Paste a save you copied earlier and press restore. Use this after a reinstall,
-      or to move progress from another device.
+      or to move progress from another device. Before replacement, the current
+      save is copied byte-for-byte into the rollback section above.
     </div>
     <textarea id="restoreBox" spellcheck="false" placeholder="paste a save here"></textarea>
     <div><button id="restore" class="red">RESTORE THIS SAVE</button></div>

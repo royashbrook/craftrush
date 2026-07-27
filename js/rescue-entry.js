@@ -8,12 +8,24 @@
 // Svelte does for the app. What it must never do is import anything at runtime.
 import QRCode from 'qrcode';
 import { encodeSave, decodeSave, saveLink, codeFromHash } from './savecode.js';
+import {
+  ownsCraftRushCache,
+  ownsCraftRushRegistration,
+  parsePlayableSave,
+} from './pwa-safety.js';
 
 const SAVE_KEY = 'craftrush_save_v1';
 const BACKUP_KEY = 'craftrush_backups_v1';
+const PRE_RESTORE_KEY = 'craftrush_pre_restore_v1';
 const $ = (id) => document.getElementById(id);
 
 const readSave = () => { try { return localStorage.getItem(SAVE_KEY); } catch { return null; } };
+function message(id, kind, text) {
+  const span = document.createElement('span');
+  span.className = kind;
+  span.textContent = text;
+  $(id).replaceChildren(span);
+}
 
 /**
  * On iOS an app added to the Home Screen gets its OWN storage, separate from
@@ -47,41 +59,111 @@ function summarise(json) {
   }
 }
 
+function decodeBackup(entry) {
+  try {
+    if (entry && typeof entry === 'object' && typeof entry.code === 'string') return decodeBackup(entry.code);
+    if (entry && typeof entry === 'object') return JSON.stringify(entry);
+    if (typeof entry !== 'string') return null;
+    if (!entry.startsWith('CR1|')) return entry;
+    return decodeURIComponent(escape(atob(entry.slice(4))));
+  } catch {
+    return null;
+  }
+}
+
+function backupRows(list) {
+  if (Array.isArray(list)) {
+    return list.map((entry, index) => ({
+      label: entry?.day || `backup ${index + 1}`,
+      raw: decodeBackup(entry),
+    }));
+  }
+  if (list && typeof list === 'object') {
+    return Object.entries(list).map(([label, entry]) => ({ label, raw: decodeBackup(entry) }));
+  }
+  return [];
+}
+
 function showBackups() {
-  let b = null;
-  try { b = localStorage.getItem(BACKUP_KEY); } catch { /* private mode */ }
-  if (!b) { $('backups').textContent = 'none found'; return; }
-  let list;
-  try { list = JSON.parse(b); } catch { $('backups').textContent = 'found, but could not be read'; return; }
-  const keys = Object.keys(list);
-  if (!keys.length) { $('backups').textContent = 'none found'; return; }
+  let dailyRaw = null;
+  let previousRaw = null;
+  try {
+    dailyRaw = localStorage.getItem(BACKUP_KEY);
+    previousRaw = localStorage.getItem(PRE_RESTORE_KEY);
+  } catch { /* private mode */ }
 
-  $('backups').innerHTML = '<ul>' + keys.map((k) => {
-    let em = '';
+  const rows = [];
+  if (previousRaw) {
     try {
-      const p = typeof list[k] === 'string' ? JSON.parse(list[k]) : list[k];
-      if (p && p.emeralds != null) em = ` — ${p.emeralds} emeralds`;
-    } catch { /* show the date alone */ }
-    return `<li>${k}${em} <button data-k="${k}" class="grey useBackup">USE THIS ONE</button></li>`;
-  }).join('') + '</ul>';
+      const previous = JSON.parse(previousRaw);
+      if (typeof previous?.raw === 'string') {
+        rows.push({
+          label: `before last restore (${new Date(previous.ts).toLocaleString()})`,
+          raw: previous.raw,
+        });
+      }
+    } catch { /* a broken previous slot must not hide valid daily backups */ }
+  }
+  if (dailyRaw) {
+    try {
+      rows.push(...backupRows(JSON.parse(dailyRaw)));
+    } catch {
+      if (!rows.length) {
+        $('backups').textContent = 'found, but could not be read';
+        return;
+      }
+    }
+  }
+  if (!rows.length) { $('backups').textContent = 'none found'; return; }
 
-  for (const btn of document.querySelectorAll('.useBackup')) {
-    btn.addEventListener('click', () => {
-      const entry = list[btn.getAttribute('data-k')];
-      $('restoreBox').value = typeof entry === 'string' ? entry : JSON.stringify(entry);
+  const list = document.createElement('ul');
+  for (const row of rows) {
+    const item = document.createElement('li');
+    let emeralds = '';
+    try {
+      const parsed = JSON.parse(row.raw);
+      if (parsed?.emeralds != null) emeralds = ` — ${parsed.emeralds} emeralds`;
+    } catch { /* keep the backup visible even when its detail cannot be read */ }
+    item.append(document.createTextNode(`${row.label}${emeralds} `));
+    const button = document.createElement('button');
+    button.className = 'grey useBackup';
+    button.textContent = row.raw ? 'USE THIS ONE' : 'CANNOT READ';
+    button.disabled = !row.raw;
+    button.addEventListener('click', () => {
+      $('restoreBox').value = row.raw;
       $('msg2').innerHTML = '<span class="ok">Loaded below. Press RESTORE to use it.</span>';
       $('restoreBox').scrollIntoView({ block: 'center' });
     });
+    item.append(button);
+    list.append(item);
   }
+  $('backups').replaceChildren(list);
+}
+
+/**
+ * A restore can replace the live slot only after the exact old bytes are in a
+ * dedicated rollback slot. Daily backups keep their own cadence and are never
+ * consumed or overwritten by rescue work.
+ */
+function preserveCurrentSave(raw) {
+  localStorage.setItem(PRE_RESTORE_KEY, JSON.stringify({ ts: Date.now(), raw }));
+  const written = JSON.parse(localStorage.getItem(PRE_RESTORE_KEY));
+  if (written?.raw !== raw) throw new Error('the rollback copy could not be verified');
 }
 
 function show() {
   describeContext();
   const raw = readSave();
   if (raw) {
-    $('status').innerHTML = '<span class="ok">FOUND YOUR SAVE — it is safe.</span>';
     $('box').value = raw;
-    $('summary').textContent = summarise(raw);
+    const playable = parsePlayableSave(raw);
+    if (playable.error) {
+      message('status', 'bad', 'FOUND SAVE DATA, but it is not playable yet.');
+      $('summary').textContent = `Copy it before changing anything, then try Backups & one-step rollback below. Problem: ${playable.error}.`;
+    } else {
+      message('status', 'ok', 'FOUND YOUR SAVE — it is safe.');
+      $('summary').textContent = summarise(raw);
+    }
   } else {
     $('status').innerHTML = '<span class="bad">No save found in this browser.</span>';
     $('summary').textContent = 'If you played in a different browser, or as an installed app, try there.';
@@ -114,9 +196,13 @@ async function showQR() {
     // the honest failure: a very long save will not fit, and a code that cannot
     // be scanned is worse than saying so
     $('qrWrap').hidden = true;
-    $('qrMsg').innerHTML = '<span class="bad">This save is too big for a QR code'
-      + ' — use COPY and paste it into the other device instead.</span>'
-      + `<div class="dim">${e && e.message ? e.message : e}</div>`;
+    const explanation = document.createElement('span');
+    explanation.className = 'bad';
+    explanation.textContent = 'This save is too big for a QR code — use COPY and paste it into the other device instead.';
+    const reason = document.createElement('div');
+    reason.className = 'dim';
+    reason.textContent = e && e.message ? e.message : String(e);
+    $('qrMsg').replaceChildren(explanation, reason);
   }
 }
 
@@ -132,7 +218,7 @@ async function takeIncoming() {
     // do not leave the save sitting in the address bar
     history.replaceState(null, '', location.pathname + location.search);
   } catch (e) {
-    $('msg2').innerHTML = `<span class="bad">That scanned code did not work: ${e.message}</span>`;
+    message('msg2', 'bad', `That scanned code did not work: ${e.message}`);
   }
 }
 
@@ -167,18 +253,40 @@ function wire() {
   $('restore').addEventListener('click', () => {
     const v = $('restoreBox').value.trim();
     if (!v) { $('msg2').innerHTML = '<span class="bad">Paste a save first.</span>'; return; }
-    try { JSON.parse(v); } catch {
-      $('msg2').innerHTML = '<span class="bad">That does not look like a save (not valid JSON).</span>';
+    const incoming = parsePlayableSave(v);
+    if (incoming.error) {
+      message('msg2', 'bad', `That is not a playable Craft Rush save: ${incoming.error}.`);
       return;
     }
-    if (readSave() && !confirm('This replaces the save in this browser. Copy it first if you need it. Continue?')) return;
+    const beforeConfirm = readSave();
+    if (beforeConfirm
+        && !confirm('This replaces the save in this browser. The current save will be backed up first. Continue?')) return;
+    // confirm() yields control to the browser. Another tab can save while the
+    // dialog is open, so read again and preserve the bytes that are actually
+    // about to be replaced rather than the stale pre-dialog snapshot.
+    const current = readSave();
+    if (current) {
+      try {
+        preserveCurrentSave(current);
+      } catch (e) {
+        message('msg2', 'bad', `Nothing was replaced because the current save could not be backed up: ${e.message}`);
+        return;
+      }
+    }
     try {
       localStorage.setItem(SAVE_KEY, v);
-      $('msg2').innerHTML = '<span class="ok">Restored. Open the game to check it.</span>';
-      $('incoming').hidden = true;
-      show();
+      if (readSave() !== v) throw new Error('the restored bytes could not be verified');
     } catch (e) {
-      $('msg2').innerHTML = `<span class="bad">Could not write to storage: ${e.message}</span>`;
+      message('msg2', 'bad', `Could not write the restored save: ${e.message}`);
+      return;
+    }
+    message('msg2', 'ok', `Restored.${current ? ' Your previous save is available in Backups & one-step rollback above.' : ''} Open the game to check it.`);
+    $('incoming').hidden = true;
+    show();
+    if (current) {
+      const rollbackButton = $('backups').querySelector('button');
+      rollbackButton?.focus();
+      $('backups').scrollIntoView({ block: 'center' });
     }
   });
 
@@ -186,14 +294,18 @@ function wire() {
     $('msg3').textContent = 'Working…';
     try {
       if (window.caches) {
-        for (const k of await caches.keys()) await caches.delete(k);
+        for (const k of await caches.keys()) {
+          if (ownsCraftRushCache(k)) await caches.delete(k);
+        }
       }
       if (navigator.serviceWorker) {
-        for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+        for (const r of await navigator.serviceWorker.getRegistrations()) {
+          if (ownsCraftRushRegistration(r, location.href)) await r.unregister();
+        }
       }
       $('msg3').innerHTML = `<span class="ok">Cleared the app cache. Your save is ${readSave() ? 'still here' : 'NOT in this browser (it was not before either)'}.</span> Now open <a href="./">the game</a>.`;
     } catch (e) {
-      $('msg3').innerHTML = `<span class="bad">Something went wrong: ${e.message}</span>`;
+      message('msg3', 'bad', `Something went wrong: ${e.message}`);
     }
   });
 }

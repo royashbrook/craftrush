@@ -33,6 +33,19 @@ test('loadSave merges a partial v0.1 save over the defaults', () => {
   assert.ok(s.stats);
 });
 
+test('loadSave keeps a current-theme starter when owned skins are empty or foreign', () => {
+  withStorage({ emeralds: 1, level: 2, unlocked: ['skin_from_another_theme'] });
+  const s = loadSave();
+  assert.ok(s.unlocked.includes('steve'));
+  assert.ok(s.unlocked.includes('skin_from_another_theme'), 'foreign ownership is preserved');
+});
+
+test('import repairs an empty owned-skin list before it reaches a screen', () => {
+  withStorage(null);
+  const restored = importSave(exportSave({ level: 2, unlocked: [] }));
+  assert.ok(restored.unlocked.includes('steve'));
+});
+
 test('a backup code round-trips through export and import', () => {
   withStorage(null);
   const s = loadSave();
@@ -43,6 +56,19 @@ test('a backup code round-trips through export and import', () => {
   assert.equal(back.emeralds, 9876);
   assert.equal(back.level, 7);
   assert.deepEqual(back.unlocked, ['steve', 'alex', 'zombie']);
+});
+
+test('an import preserves the exact prior save in the rollback slot', () => {
+  withStorage({ emeralds: 55, level: 4, unlocked: ['steve'] });
+  const before = localStorage.getItem('craftrush_save_v1');
+  const incoming = loadSave();
+  incoming.emeralds = 9876;
+  incoming.level = 7;
+
+  assert.ok(importSave(exportSave(incoming)));
+  const rollback = JSON.parse(localStorage.getItem('craftrush_pre_restore_v1'));
+  assert.equal(rollback.raw, before);
+  assert.equal(JSON.parse(localStorage.getItem('craftrush_save_v1')).emeralds, 9876);
 });
 
 test('an invalid backup code is rejected', () => {

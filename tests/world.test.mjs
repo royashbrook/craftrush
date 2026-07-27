@@ -77,12 +77,26 @@ test('a legacy flat playroom folds into plains house 0 and the flat keys are dro
   assert.equal(legacy.roomTier, undefined);
 });
 
+test('a malformed legacy playroom is repaired before any screen can render it', () => {
+  const legacy = {
+    playmates: [null, { skin: 'alex', cosmetics: 'broken' }],
+    decor: [null, { item: 'bed', x: 0.2, y: 0.9 }],
+  };
+  const house = migrateWorld(legacy).towns.plains.houses[0];
+
+  assert.equal(house.people.length, 1);
+  assert.deepEqual(house.people[0].cosmetics, { cape: 'none', hat: 'none' });
+  assert.equal(house.decor.length, 1);
+  assert.equal(house.decor[0].item, 'bed');
+});
+
 test('migrateWorld is idempotent and repairs a broken pointer', () => {
   const s = {};
   migrateWorld(s);
   s.world.towns.plains.houses[0].people.push({ skin: 'alex', cosmetics: {}, x: 0.5, y: 0.8 });
   migrateWorld(s);
   assert.equal(s.world.towns.plains.houses[0].people.length, 1, 'does not duplicate or wipe');
+  s.world.towns.nonsense = { unlocked: true };
   s.world.town = 'nonsense'; s.world.house = 99;
   migrateWorld(s);
   assert.equal(s.world.town, 'plains');
