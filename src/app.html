@@ -8,6 +8,36 @@
 <link rel="icon" href="%sveltekit.assets%/icons/icon-192.png">
 <link rel="apple-touch-icon" href="%sveltekit.assets%/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+/*
+  Catch a save handed over from the game's old address, BEFORE anything else runs.
+
+  Inline and dependency free for the same reason the watchdog below is: it has to
+  work even if the module graph never loads, and it has to run before the store,
+  which reads localStorage exactly once at module load.
+
+  It is deliberately the dumbest part of the migration. It knows how to move bytes
+  out of a URL and nothing whatsoever about what they mean: no schema, no save
+  writing, no decisions. It parks the payload in an inbox key and strips the
+  fragment, and js/migrate.js decides what to do with it using the game's own
+  tested import path. Splitting it this way means the pre-boot script can never
+  be the thing that corrupts a save.
+
+  The payload rides in the FRAGMENT rather than the query string, so it is never
+  sent to any server and never lands in a log.
+*/
+(function () {
+  try {
+    var m = /(?:^|[#&])cr-migrate=([^&]+)/.exec(location.hash || '');
+    if (!m) return;
+    // strip it immediately, before anything can go wrong further down: a
+    // reload or a shared link must not replay someone else's save
+    history.replaceState(null, '', location.pathname + location.search);
+    var json = decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/'))));
+    localStorage.setItem('craftrush_migration_inbox_v1', json);
+  } catch (e) { /* a bad or truncated payload is a no-op, the old page still has the save */ }
+})();
+</script>
 %sveltekit.head%
 <style>
   #stuck { position: fixed; inset: 0; z-index: 9999; background: #17141d; color: #fff;
