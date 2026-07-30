@@ -20,10 +20,21 @@ export const BossMixin = {
     // HP stays tied to the generated track rather than the arrival army. Good
     // play still shortens the fight, but surplus crowd damage is compressed below.
     const baseHp = bt.hp * diff * (this.mode === 'gates' ? 0.45 : 0.75);
+    const gatesHpPerPower = TUNE.bossGatesHpPerParPower
+      + Math.min(
+        TUNE.bossGatesHpBonusCap,
+        Math.max(0, this.level - 1) * TUNE.bossGatesHpPerLevel,
+      );
     const parHp = par.power * (this.mode === 'gates'
-      ? TUNE.bossGatesHpPerParPower
+      ? gatesHpPerPower
       : TUNE.bossShooterHpPerParPower);
-    const hp = Math.max(12, Math.ceil(baseHp), Math.ceil(parHp));
+    // Gate Dash spends its crowd to deal damage. A high-HP biome boss must not
+    // demand more than the authored par crowd can physically output, even when
+    // the level curve lands on Warden/Dragon base stats.
+    const reachableBaseHp = this.mode === 'gates'
+      ? Math.min(baseHp, par.power * TUNE.bossGatesBaseHpCap)
+      : baseHp;
+    const hp = Math.max(12, Math.ceil(reachableBaseHp), Math.ceil(parHp));
     const reaction = this.bossReactionScale();
     this.bossArrivalCrowd = this.armyPower();
     const ch = this.chapter || null;
@@ -36,6 +47,7 @@ export const BossMixin = {
       t: 0, flash: 0, attackT: 3.2 * reaction, attackIdx: 0, lunge: 0, entering: true,
       // a long fight in stages: each phase hits harder and comes faster
       phases, phase: 1, shielded: 0,
+      rhythmIdx: 0, remixIdx: 0,
     };
     // crystals hold the boss up: while any survive she claws health back, so they
     // have to come down before the fight can actually be won
@@ -115,6 +127,7 @@ export const BossMixin = {
   },
 
   spawnBossWave(wave) {
+    if (wave.sweep && !wave.warnTotal) wave.warnTotal = wave.warn;
     wave.threatened = Math.abs(this.playerX - wave.x) < wave.halfW + 0.4;
     this.waves.push(wave);
   },
@@ -216,6 +229,91 @@ export const BossMixin = {
     }
   },
 
+  // The first beat, then every third beat, asks for the same skill the biome
+  // taught on the track. Inputs are captured up front so the pattern is fully
+  // deterministic once the attack begins.
+  bossRemixAttack() {
+    const b = this.boss;
+    const style = this.biome?.runStyle;
+    if (!b || !['open', 'fork', 'sweep'].includes(style)) return false;
+
+    const index = b.remixIdx || 0;
+    const reaction = this.bossReactionScale();
+    const groupId = `${style}-boss-${index}`;
+    const kills = Math.min(12, 3 + Math.ceil(this.level / 2));
+
+    if (style === 'open') {
+      const lanes = [-2.8, -1.4, 0, 1.4, 2.8];
+      const safeLane = lanes[(this.level + index) % lanes.length];
+      for (const x of lanes) {
+        if (x === safeLane) continue;
+        this.spawnBossWave({
+          x,
+          halfW: 0.32,
+          z: b.z - 1,
+          warn: 1.35 * reaction,
+          speed: 14,
+          kills,
+          color: '#ffd94d',
+          remix: 'plains-wall',
+          groupId,
+          safeLane,
+          stationaryLane: true,
+        });
+      }
+      this.floaty('FIND THE GAP!', safeLane, this.playerZ + 5, '#ffd94d', 1.6);
+    } else if (style === 'fork') {
+      const side = Math.abs(this.playerX) > 0.35
+        ? Math.sign(this.playerX)
+        : ((this.level + index) % 2 ? 1 : -1);
+      const count = Math.min(5, 2 + Math.ceil(this.level / 4));
+      const pool = this.biome.enemies || [];
+      const ambush = Array.from({ length: count }, (_, i) => ({
+        id: pool.length ? pool[(this.level + index + i) % pool.length] : null,
+        x: Math.max(-TUNE.laneHalf, Math.min(TUNE.laneHalf, side * 2.2 + (i % 3 - 1) * 0.5)),
+        z: b.z - 2 + Math.floor(i / 3) * 0.8,
+      })).filter((enemy) => enemy.id);
+      this.spawnBossWave({
+        x: side * 2.2,
+        halfW: 1.15,
+        z: b.z - 1,
+        warn: 1.45 * reaction,
+        speed: 0,
+        kills: 0,
+        color: '#4fa554',
+        remix: 'forest-ambush',
+        groupId,
+        commitSide: side,
+        ambush,
+      });
+      this.floaty('SIDE AMBUSH!', side * 2.2, this.playerZ + 5, '#8fe388', 1.5);
+    } else {
+      const direction = (this.level + index) % 2 ? 1 : -1;
+      const fromX = -direction * 2.7;
+      const toX = direction * 2.7;
+      const warn = 1.5 * reaction;
+      this.spawnBossWave({
+        x: fromX,
+        halfW: 1.3,
+        z: b.z - 1,
+        warn,
+        warnTotal: warn,
+        speed: 17,
+        kills,
+        color: '#ff9d3c',
+        remix: 'desert-sweep',
+        groupId,
+        sweep: { fromX, toX },
+        safeLane: -toX,
+      });
+      this.floaty('TRACK THE SWEEP!', 0, this.playerZ + 5, '#ffbf69', 1.5);
+    }
+
+    b.remixIdx = index + 1;
+    Audio.sfx('boss_roar');
+    return true;
+  },
+
   updateBoss(dt) {
     const b = this.boss;
     if (!b) return;
@@ -241,7 +339,10 @@ export const BossMixin = {
           1.9,
           (3.5 - this.level * 0.1) * this.bossReactionScale(),
         );
-        this.bossAttack();
+        const rhythmIdx = b.rhythmIdx || 0;
+        const remixed = rhythmIdx % 3 === 0 && this.bossRemixAttack();
+        b.rhythmIdx = rhythmIdx + 1;
+        if (!remixed) this.bossAttack();
       }
     }
     if (this.mode === 'gates') {

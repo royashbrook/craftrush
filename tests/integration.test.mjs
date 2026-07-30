@@ -27,7 +27,7 @@ globalThis.window = { addEventListener: noop, removeEventListener: noop };
 
 const { initAssets } = await import('../js/assets.js');
 const { Game } = await import('../js/game.js');
-const { loadSave } = await import('../js/config.js');
+const { BIOMES, loadSave } = await import('../js/config.js');
 const { finishRunSettlement } = await import('../js/settlement.js');
 await initAssets();
 
@@ -74,6 +74,30 @@ test('a full gates run also completes and defeats the boss', () => {
     runToBossDeath(g);
   });
   assert.equal(g.bossDead, true);
+});
+
+test('the opening gathering chapter actually pilots Plains, Forest, and Desert', () => {
+  const seen = [];
+  for (const level of [1, 2, 3]) {
+    const g = makeGame({ level });
+    g.startRun();
+    seen.push(g.biome.id);
+    assert.equal(g.chapter.id, 'mine_obsidian');
+    g.destroy();
+  }
+  assert.deepEqual(seen, ['plains', 'forest', 'desert']);
+});
+
+test('authored milestone chapters still own their biome', () => {
+  const g = makeGame({
+    level: 3,
+    campaign: { done: ['mine_obsidian'] },
+    inventory: { obsidian: 12 },
+  });
+  g.startRun();
+  assert.equal(g.chapter.id, 'portal');
+  assert.equal(g.biome.id, 'nether');
+  g.destroy();
 });
 
 test('a real engine result reaches the settlement boundary exactly once', () => {
@@ -128,6 +152,7 @@ test('every biome including the fortress renders and plays a few seconds', () =>
       g.setWorth(80, true);
       for (let i = 0; i < 300; i++) { g.update(1 / 60); g.render(); }
     }, `level ${level} (${g.biome.id}) should not throw`);
+    assert.equal(g.biome.id, BIOMES[level - 1].id);
   }
 });
 

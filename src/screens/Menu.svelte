@@ -20,9 +20,14 @@
   let panel = $state(null);
   let tier = $state('');          // '', 'compact' or 'compact tight'
 
-  const biome = $derived(BIOMES[(save.level - 1) % BIOMES.length]);
   const done = $derived(save.campaign?.done ?? []);
   const chapter = $derived(currentChapter(save));
+  const levelBiome = $derived(BIOMES[(save.level - 1) % BIOMES.length]);
+  const biome = $derived(
+    chapter && !chapter.cycleBiomes
+      ? (BIOMES.find((entry) => entry.id === chapter.biome) || levelBiome)
+      : levelBiome,
+  );
   const next = $derived(CAMPAIGN.find((c) => !done.includes(c.id)));
   const missing = $derived(next && chapter && next.id !== chapter.id ? chapterMissing(save, next.id) : null);
   const exp = $derived(dailyExpedition());

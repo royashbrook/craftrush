@@ -63,6 +63,7 @@ export const THEMES = {
       "creeper",
       "spider"
      ],
+     "runStyle": "open",
      "obstacle": "fence",
      "boss": "boss_slime"
     },
@@ -100,6 +101,7 @@ export const THEMES = {
       "spider",
       "witch"
      ],
+     "runStyle": "fork",
      "obstacle": "fence",
      "boss": "boss_ravager"
     },
@@ -135,6 +137,7 @@ export const THEMES = {
       "spider",
       "skeleton"
      ],
+     "runStyle": "sweep",
      "obstacle": "cactus",
      "boss": "boss_ravager"
     },
@@ -1269,6 +1272,7 @@ export const THEMES = {
        "target": 12,
        "text": "Bring 12 runners to the boss"
       },
+      "cycleBiomes": true,
       "repeatable": true,
       "grants": {
        "obsidian": 4
@@ -2324,6 +2328,7 @@ export const THEMES = {
       "creeper",
       "spider"
      ],
+     "runStyle": "open",
      "obstacle": "fence",
      "boss": "boss_slime"
     },
@@ -2361,6 +2366,7 @@ export const THEMES = {
       "spider",
       "witch"
      ],
+     "runStyle": "fork",
      "obstacle": "fence",
      "boss": "boss_ravager"
     },
@@ -2396,6 +2402,7 @@ export const THEMES = {
       "spider",
       "skeleton"
      ],
+     "runStyle": "sweep",
      "obstacle": "cactus",
      "boss": "boss_ravager"
     },
@@ -3530,6 +3537,7 @@ export const THEMES = {
        "target": 12,
        "text": "Bring 12 runners to the boss"
       },
+      "cycleBiomes": true,
       "repeatable": true,
       "grants": {
        "obsidian": 4

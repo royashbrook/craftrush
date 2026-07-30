@@ -189,6 +189,7 @@ export const CombatMixin = {
     }
     for (const o of this.obstacles) {
       if (o.hp <= 0 || Math.abs(o.z - a.z) > 0.6) continue;
+      if (o.directed) continue;
       if (Math.abs(a.x - o.x) < TUNE.arrowHitX) { o.hp--; o.wobble = 0.15; a.dead = true; if (o.hp <= 0) this.breakObstacle(o); return; }
     }
     for (const p of this.pickups) {
@@ -288,6 +289,12 @@ export const CombatMixin = {
           }
         }
       }
+
+      // Directed enemy-route encounters promise a readable open half. Chasers
+      // can advance and fight normally, but cannot erase that route by drifting
+      // or teleporting across the center line after the choice was shown.
+      if (e.routeSide < 0) e.x = Math.min(e.x, -1.2);
+      else if (e.routeSide > 0) e.x = Math.max(e.x, 1.2);
 
       // contact bites
       if (type.kind !== 'exploder') {
@@ -432,7 +439,27 @@ export const CombatMixin = {
 
   updateWaves(dt) {
     for (const w of this.waves) {
-      if (w.warn > 0) { w.warn -= dt; continue; }
+      if (w.warn > 0) {
+        w.warn = Math.max(0, w.warn - dt);
+        if (w.sweep) {
+          const progress = 1 - w.warn / Math.max(0.001, w.warnTotal);
+          const eased = progress * progress * (3 - 2 * progress);
+          w.x = w.sweep.fromX + (w.sweep.toX - w.sweep.fromX) * eased;
+          if (Math.abs(this.playerX - w.x) < w.halfW + 0.4) w.threatened = true;
+        }
+        if (w.warn > 0) continue;
+        // A regular wave starts travelling on the next frame. A forest warning
+        // resolves immediately because its reveal, not a second lane hit, is
+        // the promised payoff.
+        if (!w.ambush) continue;
+      }
+      if (w.ambush) {
+        for (const enemy of w.ambush) this.spawnEnemy(enemy.id, enemy.x, enemy.z);
+        w.dead = true;
+        this.floaty?.('AMBUSH!', w.x, this.playerZ + 4, '#8fe388', 1.4);
+        Audio.sfx('boss_roar');
+        continue;
+      }
       w.z -= w.speed * dt;
       if (w.z <= this.playerZ + 0.5) {
         w.dead = true;

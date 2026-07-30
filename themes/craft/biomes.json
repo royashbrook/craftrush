@@ -34,6 +34,7 @@
    "creeper",
    "spider"
   ],
+  "runStyle": "open",
   "obstacle": "fence",
   "boss": "boss_slime"
  },
@@ -71,6 +72,7 @@
    "spider",
    "witch"
   ],
+  "runStyle": "fork",
   "obstacle": "fence",
   "boss": "boss_ravager"
  },
@@ -106,6 +108,7 @@
    "spider",
    "skeleton"
   ],
+  "runStyle": "sweep",
   "obstacle": "cactus",
   "boss": "boss_ravager"
  },

@@ -72,6 +72,18 @@ export const RenderMixin = {
 
   renderObstacles(q) {
     for (const o of this.obstacles) {
+      if (o.directed) {
+        const p = this.cam.project(o.x, 0, o.z);
+        if (p) q.add(o.z + 0.02, (ctx) => {
+          ctx.globalAlpha = 0.55 + Math.sin(this.t * 8 + o.z) * 0.12;
+          ctx.strokeStyle = o.motion ? '#ff9d3c' : '#ffd94d';
+          ctx.lineWidth = Math.max(2, p.s * 0.08);
+          ctx.beginPath();
+          ctx.ellipse(p.sx, p.sy, p.s * 0.72, p.s * 0.28, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        });
+      }
       this.bb(q, o.sprite, o.x + Math.sin(o.wobble * 40) * 0.06, o.z, 1.15, {});
     }
   },
