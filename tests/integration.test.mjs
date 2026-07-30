@@ -27,7 +27,7 @@ globalThis.window = { addEventListener: noop, removeEventListener: noop };
 
 const { initAssets } = await import('../js/assets.js');
 const { Game } = await import('../js/game.js');
-const { BIOMES, loadSave } = await import('../js/config.js');
+const { BIOMES, CAMPAIGN, loadSave } = await import('../js/config.js');
 const { finishRunSettlement } = await import('../js/settlement.js');
 await initAssets();
 
@@ -97,6 +97,22 @@ test('authored milestone chapters still own their biome', () => {
   g.startRun();
   assert.equal(g.chapter.id, 'portal');
   assert.equal(g.biome.id, 'nether');
+  g.destroy();
+});
+
+test('the engine marks the credits result so settlement can exclude it from mastery', () => {
+  let result;
+  const g = makeGame(
+    { campaign: { done: CAMPAIGN.filter((chapter) => !chapter.credits).map((chapter) => chapter.id) } },
+    { onRunEnd: (value) => { result = value; } },
+  );
+  g.startRun();
+  assert.equal(g.chapter.id, 'credits');
+  assert.equal(g.chapter.credits, true);
+  g.endRun(true);
+  assert.equal(result.chapter.id, 'credits');
+  assert.equal(result.chapter.credits, true);
+  assert.equal(result.chapter.coda, false);
   g.destroy();
 });
 

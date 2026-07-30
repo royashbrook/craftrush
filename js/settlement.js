@@ -7,6 +7,7 @@ import {
   recordExpedition,
   writeBackup,
 } from './config.js';
+import { mergeChapterMastery } from './mastery.js';
 
 export const SETTLED_RUN_CAP = 12;
 
@@ -65,6 +66,20 @@ export function settleRunResult(save, result, { now = Date.now(), expeditionKey 
   save.bestCrowd = Math.max(save.bestCrowd, result.bestCrowd);
 
   if (result.win && result.chapter) completeChapter(save, result.chapter.id);
+
+  if (!isExpedition && result.chapter) {
+    const mastery = mergeChapterMastery(save, result);
+    if (mastery.applied) {
+      result.mastery = {
+        ...(result.mastery || {}),
+        masteryUpdate: {
+          newBadges: mastery.newBadges,
+          record: mastery.record,
+          nextTarget: mastery.nextTarget,
+        },
+      };
+    }
+  }
 
   result.settlement = { earned, banked, streakBonus, streak, expeditionFirst };
   save.settledRunIds = [result.id, ...settledIds.filter((id) => id !== result.id)]

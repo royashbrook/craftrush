@@ -2,6 +2,12 @@
 import { TUNE, ENEMY_TYPES, TIERS, PICKUPS } from './config.js';
 import { Audio } from './audio.js';
 
+export const GOLEM_GRANT_PROGRESS = Object.freeze([1 / 3, 2 / 3, 1]);
+// Actual first-impact time, measured in active play seconds. The 0.15s floor
+// keeps an immediate panic collision plain while still admitting the held boss
+// at max Turbo speed (its collision boundary arrives at roughly 0.152s).
+export const GOLEM_SMASH_WINDOW = Object.freeze({ min: 0.15, max: 1.65 });
+
 export const CombatMixin = {
   // ---------- combat ----------
   damageEnemy(e, dmg, silent = false) {
@@ -12,7 +18,6 @@ export const CombatMixin = {
     if (e.hp <= 0) {
       e.dead = true;
       this.kills++;
-      this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerKill);
       const cols = e.id.includes('creeper') ? ['#4fbf3c', '#2b7d20', '#66d94f'] :
         e.id.includes('skeleton') || e.id.includes('stray') ? ['#e8e8e8', '#9e9e9e', '#666'] :
         e.id.includes('blaze') || e.id.includes('magma') ? ['#ffb63c', '#ff7b2e', '#6d2828'] :
@@ -118,15 +123,102 @@ export const CombatMixin = {
     if (n > 0 || anyBig) Audio.sfx('shoot', 90);
   },
 
-  summonGolem() {
+  ensureGolemMastery() {
+    if (!this.mastery) this.mastery = {};
+    for (const key of ['golemSends', 'usefulGolems', 'golemHits']) {
+      if (!Number.isFinite(this.mastery[key]) || this.mastery[key] < 0) this.mastery[key] = 0;
+    }
+    return this.mastery;
+  },
+
+  gainGolemCharge(progress = 0) {
+    const ready = this.redstone >= TUNE.redstoneMax;
+    this.golemGrantLog ||= [];
+    this.golemGrantLog.push({
+      progress: Math.max(0, Math.min(1, Number(progress) || 0)),
+      awarded: !ready,
+      wasted: ready,
+    });
+    if (ready) return false;
+
+    this.redstone = TUNE.redstoneMax;
+    this.floaty?.('GOLEM READY!', this.playerX, this.playerZ + 4, '#ffd94d', 1.55);
+    this.ring?.(this.playerX, this.playerZ + 1.5, 2);
+    Audio.sfx('golem_ready');
+    if (this.save.speed === 'calm') this.summonGolem('auto');
+    return true;
+  },
+
+  updateGolemChargeProgress(progress) {
+    if (this.chapter?.credits) return;
+    const p = Math.max(0, Math.min(1, Number(progress) || 0));
+    this.golemGrantIdx ||= 0;
+    while (this.golemGrantIdx < GOLEM_GRANT_PROGRESS.length
+      && p + Number.EPSILON >= GOLEM_GRANT_PROGRESS[this.golemGrantIdx]) {
+      const threshold = GOLEM_GRANT_PROGRESS[this.golemGrantIdx++];
+      this.gainGolemCharge(threshold);
+    }
+
+    // Between grants the existing meter previews distance to the next charge.
+    // A held charge stays full, including when a later grant is deliberately
+    // wasted; there is never a hidden stack waiting behind it.
+    if (this.redstone < TUNE.redstoneMax && this.golemGrantIdx < GOLEM_GRANT_PROGRESS.length) {
+      const start = this.golemGrantIdx === 0 ? 0 : GOLEM_GRANT_PROGRESS[this.golemGrantIdx - 1];
+      const end = GOLEM_GRANT_PROGRESS[this.golemGrantIdx];
+      this.redstone = Math.max(0, Math.min(
+        TUNE.redstoneMax - Number.EPSILON,
+        ((p - start) / Math.max(Number.EPSILON, end - start)) * TUNE.redstoneMax,
+      ));
+    }
+  },
+
+  summonGolem(source = 'manual') {
     if (this.paused || this.redstone < TUNE.redstoneMax || (this.state !== 'run' && this.state !== 'boss')) return;
     this.redstone = 0;
     if (this.save.stats) this.save.stats.golems = (this.save.stats.golems || 0) + 1;
-    this.summons.push({ x: this.playerX, z: this.playerZ + 1.5, t: 0, stompT: 0 });
+    const startZ = this.playerZ + 1.5;
+    this.summons.push({
+      x: this.playerX,
+      z: startZ,
+      t: 0,
+      stompT: 0,
+      source,
+      perfectTiming: false,
+      firstImpactT: null,
+      impactCount: 0,
+    });
+    this.ensureGolemMastery().golemSends++;
     this.burst(this.playerX, 1.2, this.playerZ + 1.5, ['#d4d8d4', '#9a9e9a', '#ff5545'], 18);
     this.ring(this.playerX, this.playerZ + 1.5, 2.4);
     this.cam.shake = Math.min(1, this.cam.shake + 0.35);
     Audio.sfx('golem');
+  },
+
+  recordGolemImpact(s, x, z) {
+    const mastery = this.ensureGolemMastery();
+    mastery.golemHits++;
+    const first = s.impactCount === 0;
+    s.impactCount++;
+    if (!first) return false;
+
+    mastery.usefulGolems++;
+    const impactT = Number.isFinite(s.t) ? Math.max(0, s.t) : 0;
+    const perfect = impactT >= GOLEM_SMASH_WINDOW.min && impactT <= GOLEM_SMASH_WINDOW.max;
+    s.firstImpactT = impactT;
+    s.perfectTiming = perfect;
+    this.ring(x, z, perfect ? 4 : 2.8);
+    this.burst(
+      x, 1, z,
+      perfect
+        ? ['#ffffff', '#ffd94d', '#ff9d3c', '#d4d8d4']
+        : ['#ffffff', '#d4d8d4', '#9a9e9a'],
+      perfect ? 22 : 14,
+      perfect ? 7 : 5,
+    );
+    this.cam.shake = Math.min(1, this.cam.shake + (perfect ? 0.38 : 0.2));
+    this.floaty(perfect ? 'PERFECT SMASH!' : 'SMASH!', x, z, perfect ? '#ffd94d' : '#ffffff', perfect ? 2 : 1.35);
+    Audio.sfx(perfect ? 'golem_smash' : 'golem_hit', 80);
+    return true;
   },
 
   // ---------- gates ----------
@@ -178,7 +270,6 @@ export const CombatMixin = {
       if (e.dead || e.z < a.z - 0.5 || e.z > a.z + 0.6) continue;
       if (Math.abs(e.x - a.x) < TUNE.arrowHitX) {
         this.damageEnemy(e, a.dmg);
-        this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerHit);
         a.dead = true;
         return;
       }
@@ -212,9 +303,7 @@ export const CombatMixin = {
       a.dead = true;
       // a phase change shields her briefly, so a burst cannot skip a whole stage,
       // and her crystals guard her outright until they are down
-      if (this.damageBoss(a.dmg, true)) {
-        this.redstone = Math.min(TUNE.redstoneMax, this.redstone + TUNE.redstonePerHit);
-      }
+      this.damageBoss(a.dmg, true);
       Audio.sfx('hit', 70);
     }
   },
@@ -419,18 +508,50 @@ export const CombatMixin = {
         this.cam.shake = Math.min(0.5, this.cam.shake + 0.06);
       }
       for (const e of this.enemies) {
-        if (!e.dead && Math.abs(e.z - s.z) < 1.7 && Math.abs(e.x - s.x) < 1.7) this.damageEnemy(e, 999);
+        if (!e.dead && Math.abs(e.z - s.z) < 1.7 && Math.abs(e.x - s.x) < 1.7) {
+          this.damageEnemy(e, 999);
+          this.recordGolemImpact(s, e.x, e.z);
+        }
       }
       for (const o of this.obstacles) {
-        if (o.hp > 0 && Math.abs(o.z - s.z) < 1.6 && Math.abs(o.x - s.x) < 1.6) { o.hp = 0; this.breakObstacle(o); }
+        if (o.hp > 0 && Math.abs(o.z - s.z) < 1.6 && Math.abs(o.x - s.x) < 1.6) {
+          o.hp = 0;
+          this.breakObstacle(o);
+          this.recordGolemImpact(s, o.x, o.z);
+        }
       }
       for (const p of this.pickups) {
-        if (p.kind === 'chest' && !p.dead && Math.abs(p.z - s.z) < 1.6 && Math.abs(p.x - s.x) < 1.6) this.openChest(p);
+        if (p.kind === 'chest' && !p.dead && Math.abs(p.z - s.z) < 1.6 && Math.abs(p.x - s.x) < 1.6) {
+          this.openChest(p);
+          this.recordGolemImpact(s, p.x, p.z);
+        }
+      }
+      let spent = false;
+      for (const crystal of this.crystals || []) {
+        if (crystal.dead || Math.abs(crystal.z - s.z) >= 1.7 || Math.abs(crystal.x - s.x) >= 1.7) continue;
+        crystal.hp -= 60;
+        this.recordGolemImpact(s, crystal.x, crystal.z);
+        if (crystal.hp <= 0) this.crystalDown(crystal);
+        s.dead = true;
+        spent = true;
+        break;
       }
       const b = this.boss;
-      if (b && !b.entering && Math.abs(b.z - s.z) < 2 && Math.abs(b.x - s.x) < 2.4) {
-        this.damageBoss(60); b.flash = 0.12; s.dead = true;
-        this.explode(s.x, s.z, 1.8, 0, false);
+      if (!spent && b && Math.abs(b.z - s.z) < 2 && Math.abs(b.x - s.x) < 2.4) {
+        if (b.entering) {
+          // The boss-arrival grant is a real opportunity on every pace. Hold a
+          // correctly aimed summon at the arena edge instead of letting it run
+          // through an untargetable entrance animation.
+          s.z = Math.min(s.z, b.z - 1.75);
+        } else if (this.damageBoss(60)) {
+          b.flash = 0.12;
+          this.recordGolemImpact(s, b.x, b.z);
+          s.dead = true;
+        } else {
+          // A phase shield or crystal guard blocks damage, not the summon.
+          // Hold it just outside the hitbox so it can retry when protection ends.
+          s.z = Math.min(s.z, b.z - 1.75);
+        }
       }
       if (s.z > this.playerZ + TUNE.golemRange) s.dead = true;
     }

@@ -114,12 +114,31 @@ export function saveSchemaError(save) {
     }
   }
   if ('roomTier' in save && typeof save.roomTier !== 'string') return 'roomTier must be text';
-  for (const key of ['cosmetics', 'stats', 'expedition', 'inventory', 'campaign', 'home', 'mine', 'decorOwned']) {
+  for (const key of ['cosmetics', 'stats', 'expedition', 'inventory', 'campaign', 'home', 'mine', 'decorOwned', 'mastery']) {
     if (key in save && !record(save[key])) return `${key} must be an object`;
   }
   if ('world' in save && save.world !== null && !record(save.world)) return 'world must be an object';
   if (save.campaign && 'done' in save.campaign && !stringArray(save.campaign.done)) {
     return 'campaign.done must be a list of chapter names';
+  }
+  if (save.mastery) {
+    if ('chapters' in save.mastery && !record(save.mastery.chapters)) {
+      return 'mastery.chapters must be an object';
+    }
+    for (const [chapter, value] of Object.entries(save.mastery.chapters || {})) {
+      if (!record(value)) return `mastery.chapters.${chapter} must be an object`;
+      if ('bestGrade' in value
+          && value.bestGrade !== null
+          && (typeof value.bestGrade !== 'string' || !value.bestGrade.trim())) {
+        return `mastery.chapters.${chapter}.bestGrade must be nonempty text or null`;
+      }
+      if ('bestCrowd' in value && !finiteAtLeast(value.bestCrowd, 0)) {
+        return `mastery.chapters.${chapter}.bestCrowd must be a non-negative number`;
+      }
+      if ('badges' in value && !stringArray(value.badges)) {
+        return `mastery.chapters.${chapter}.badges must be a list of badge names`;
+      }
+    }
   }
   if (save.cosmetics) {
     for (const key of ['cape', 'hat', 'trail', 'pet']) {

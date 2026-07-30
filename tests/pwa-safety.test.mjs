@@ -83,6 +83,15 @@ test('save validation accepts playable partial and current-shaped saves', () => 
     cosmetics: { cape: 'none', hat: 'hat_cat', trail: 'none', pet: 'none' },
     inventory: { elytra: 1 },
     campaign: { done: ['mine_obsidian'] },
+    mastery: {
+      chapters: {
+        mine_obsidian: {
+          bestGrade: 'S+',
+          bestCrowd: 37,
+          badges: ['clean_line', 'future_badge'],
+        },
+      },
+    },
     world: {
       town: 'plains',
       house: 0,
@@ -112,6 +121,20 @@ test('syntactically valid but unplayable JSON is rejected', () => {
   assert.match(parsePlayableSave('{"level":1,"stats":{"runs":[]}}').error, /stats.runs/);
   assert.match(parsePlayableSave('{"level":1,"home":{"lastCollect":"yesterday"}}').error, /lastCollect/);
   assert.match(parsePlayableSave('{"level":1,"decorOwned":{"bed":-1}}').error, /decorOwned.bed/);
+  assert.match(parsePlayableSave('{"level":1,"mastery":[]}').error, /mastery/);
+  assert.match(parsePlayableSave('{"level":1,"mastery":{"chapters":[]}}').error, /mastery.chapters/);
+  assert.match(parsePlayableSave(
+    '{"level":1,"mastery":{"chapters":{"portal":{"bestGrade":7,"bestCrowd":2,"badges":[]}}}}',
+  ).error, /bestGrade/);
+  assert.match(parsePlayableSave(
+    '{"level":1,"mastery":{"chapters":{"portal":{"bestGrade":"   ","bestCrowd":2,"badges":[]}}}}',
+  ).error, /bestGrade/);
+  assert.match(parsePlayableSave(
+    '{"level":1,"mastery":{"chapters":{"portal":{"bestGrade":"A","bestCrowd":-1,"badges":[]}}}}',
+  ).error, /bestCrowd/);
+  assert.match(parsePlayableSave(
+    '{"level":1,"mastery":{"chapters":{"portal":{"bestGrade":"A","bestCrowd":2,"badges":[7]}}}}',
+  ).error, /badges/);
   assert.match(parsePlayableSave('{"level":1,"world":{"towns":{"plains":"broken"}}}').error, /plains/);
   assert.match(parsePlayableSave(
     '{"level":1,"world":{"town":"plains","towns":{"plains":{"unlocked":true,"houses":[{}]}}}}',

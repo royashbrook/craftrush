@@ -29,9 +29,24 @@ Codes: **Y** observed without help, **P** observed after a prompt, **N** not obs
 | 4 | ___ | ___ | ___ | ___ | ___ | Win / Loss / NA | ___ | ___ | ________________________ |
 | 5 | ___ | ___ | ___ | ___ | ___ | Win / Loss / NA | ___ | ___ | ________________________ |
 
+## v1.7 Golem and mastery focus
+
+Run at least one session on NORMAL or faster and one on CALM. Do not explain the
+Golem meter or the mastery screens before observing them.
+
+| Run | Pace | Notices ready cue | Taps to send or recognizes auto | Golem hits a threat | Notices result badge/record | Can find next target | Replays toward target | Notes |
+|-----|------|--------------------|----------------------------------|---------------------|-----------------------------|----------------------|------------------------|-------|
+| 1 | ______ | ___ | ___ | ___ | ___ | ___ | ___ | __________________ |
+| 2 | ______ | ___ | ___ | ___ | ___ | ___ | ___ | __________________ |
+
+For a manual run, note whether the player starts anticipating one of the three
+readiness points, whether `SMASH!` versus `PERFECT SMASH!` changes their next
+release, and whether holding a ready Golem through a later grant is understood.
+For CALM, note whether the HUD makes automatic release clear without prompting.
+
 ## Release balance report
 
-Gameplay candidate: v1.2  Test date: 2026-07-27  Levels: 2-20  Difficulty: NORMAL
+Gameplay candidate: v1.7  Test date: 2026-07-30  Levels: 2-20  Difficulty: NORMAL
 
 | Mode | Bot | Runs | Wins | Win rate | Target | Pass |
 |------|-----|------|------|----------|--------|------|
@@ -42,4 +57,5 @@ Gameplay candidate: v1.2  Test date: 2026-07-27  Levels: 2-20  Difficulty: NORMA
 
 Release notes or failures: ____________________________________________________________________________
 
-[ ] Both modes start on production  [ ] Boss warning appears  [ ] Shop task works  [ ] No visible production errors
+[ ] Both modes start on production  [ ] All three Golem grants appear  [ ] CALM auto-sends
+[ ] Boss warning appears  [ ] Mastery persists after reload  [ ] Shop task works  [ ] No visible production errors

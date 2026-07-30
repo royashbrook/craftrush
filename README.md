@@ -83,9 +83,14 @@ an offline fullscreen app.
 - **Drag anywhere** (or A/D / arrow keys) to steer the crowd.
 - **Gates**: blue = good (+N, ×N), red = bad (−N, ÷N). In Bow Blitz you can
   SHOOT gates: good gates grow, bad gates shrink toward harmless.
-- **Redstone gauge** fills from hits/kills (or emeralds in Gate Dash). On NORMAL
-  and faster paces, tap anywhere without dragging (or press Space) to release a
-  charged Iron Golem. CALM releases it automatically.
+- **Iron Golem** readiness arrives at one-third, two-thirds, and boss arrival,
+  so every run has the same three readable opportunities. On NORMAL and faster
+  paces, tap anywhere without dragging (or press Space) to choose the release
+  timing. CALM releases it automatically. Holding a ready Golem through the next
+  opportunity wastes that grant rather than stacking a hidden extra charge.
+- **Chapter mastery** keeps each campaign chapter's best grade, biggest crowd,
+  and three skill badges. The menu and Goals show one useful next target; mastery
+  never changes rewards, purchases, or campaign progression.
 - **Uncapped army**: crowd worth grows without limit. Beyond the rendered cap,
   runners merge into **Giga Steves** (worth 10) and then **Titan Steves**
   (worth 100), which grow bigger and hit harder the larger your army gets. The
@@ -144,6 +149,7 @@ js/encounters.js          seeded eight-beat encounter direction
 js/levelgen.js            directed track runtime and event spawning
 js/combat.js              gates, enemies, pickups and summons
 js/boss.js                boss fights
+js/mastery.js             run grades, persistent records, badges and next target
 js/config.js              tuning, economy, save and theme re-exports
 themes/<id>/              theme data, source art and packed atlas
 tools/                    theme, atlas and rescue-page builders

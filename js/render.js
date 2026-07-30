@@ -1,5 +1,6 @@
 // Craft Rush rendering: billboards, scenery, crowd, enemies, boss, fx draw.
 import { TUNE, SKINS, TIERS, PICKUPS } from './config.js';
+import { GOLEM_SMASH_WINDOW } from './combat.js';
 import { drawShadow, outlineText, hash2 } from './engine.js';
 import { getSprite, blit, hasSprite } from './assets.js';
 
@@ -142,6 +143,18 @@ export const RenderMixin = {
 
   renderSummons(q) {
     for (const s of this.summons) {
+      if (!s.impactCount) {
+        const p = this.cam.project(s.x, 0, s.z);
+        if (p) q.add(s.z + 0.01, (ctx) => {
+          ctx.globalAlpha = 0.18 + Math.sin(this.t * 9) * 0.04;
+          const inSmashWindow = s.t >= GOLEM_SMASH_WINDOW.min && s.t <= GOLEM_SMASH_WINDOW.max;
+          ctx.fillStyle = inSmashWindow ? '#ffd94d' : '#ffffff';
+          ctx.beginPath();
+          ctx.ellipse(p.sx, p.sy, p.s * 0.75, p.s * 0.28, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+      }
       this.bb(q, 'iron_golem', s.x, s.z, 2.6, { frame: Math.floor(s.t * 6) % 2 });
     }
   },

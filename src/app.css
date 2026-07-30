@@ -107,8 +107,6 @@
     text-shadow: 2px 2px 0 rgba(0,0,0,0.7); text-align: center; }
   .aboutText { font-size: 12px; line-height: 1.55; color: #cfc9d8; text-align: left; }
   .aboutText p + p { margin-top: 8px; }
-  .aboutMeta { font-size: 10px; color: #8f88a0; text-align: center; }
-
   .overlay { position: absolute; top: var(--bar-top); bottom: var(--bar-bottom); left: 0; right: 0;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: clamp(6px, 1.6vh, 14px); z-index: 10; overflow: hidden;
@@ -310,6 +308,11 @@
   #questDesc { font-size: 11px; color: #bcd6df; line-height: 1.4; }
   #questNeed { font-size: 11px; color: #ffd94d; text-align: left; }
   #questNeed:empty { display: none; }
+  #menuMasteryTarget { display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    padding-top: 5px; border-top: 1px solid rgba(126,224,255,0.35); color: #8fb4c0;
+    font-size: 9px; font-weight: 900; letter-spacing: 0.7px; text-align: left; }
+  #menuMasteryTarget b { min-width: 0; overflow: hidden; color: #fff; font-size: 10px;
+    letter-spacing: 0; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
   #btnQuestReplay { background: #2a6f86; }
   .questTag { color: #7ee0ff; font-weight: 900; letter-spacing: 1px; }
 
@@ -407,8 +410,44 @@
   #bossFill { height: 100%; width: 100%; background: linear-gradient(#ff6d5a, #c02a1c); }
   #bossHint { font-weight: 900; font-size: 12px; color: #ffd94d; text-shadow: 2px 2px 0 #000; margin-top: 3px; }
 
-  /* achievements */
-  #achGrid { display: flex; flex-direction: column; gap: 6px; width: 100%; max-height: 62vh; overflow-y: auto; }
+  /* chapter mastery: the record, what was earned, and one useful next target */
+  .masteryGoals { width: min(350px, 96%); overflow: hidden; align-items: stretch; text-align: left; }
+  .goalsTabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; width: 100%; }
+  .goalsTabs button { min-width: 0; min-height: 44px; padding: 5px 3px; border: 2px solid #000;
+    background: #3a3444; color: #aaa3b8; font: 900 10px/1 'Courier New', Courier, monospace;
+    cursor: pointer; box-shadow: inset 2px 2px 0 rgba(255,255,255,0.12); }
+  .goalsTabs button.sel { background: #2a6f86; color: #fff; }
+  .masteryEyebrow { color: #7ee0ff; font-size: 10px; font-weight: 900; letter-spacing: 2px; }
+  .goalsChapterPicker { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
+    position: relative; gap: 7px; width: 100%; color: #9a92ad; font-size: 9px; font-weight: 900; letter-spacing: 1px; }
+  .goalsChapterPicker::after { content: '▼'; position: absolute; right: 10px; color: #7ee0ff;
+    font-size: 9px; pointer-events: none; }
+  #goalsChapterSelect { appearance: none; -webkit-appearance: none; min-width: 0; min-height: 44px;
+    height: 44px; width: 100%; padding: 7px 30px 7px 9px;
+    border: 2px solid #000; border-radius: 0; background: #302b3a; color: #fff;
+    font: 900 11px/1.2 'Courier New', Courier, monospace; box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1); }
+  #masteryRecord { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; width: 100%; }
+  #masteryRecord > div { min-width: 0; padding: 8px; border: 2px solid #000;
+    background: rgba(0,0,0,0.35); text-align: center; }
+  #masteryRecord span, #masteryBadges h2, #goalsNextTarget h2 {
+    display: block; color: #9a92ad; font-size: 9px; font-weight: 900; letter-spacing: 1px; }
+  #masteryRecord strong { display: block; margin-top: 3px; color: #ffd94d; font-size: 21px;
+    line-height: 1; text-shadow: 1px 1px 0 #000; }
+  #masteryBadges, #goalsNextTarget { width: 100%; padding: 9px; border: 2px solid #000;
+    background: rgba(0,0,0,0.28); }
+  #masteryBadges h2, #goalsNextTarget h2 { margin-bottom: 7px; }
+  #masteryBadges h2 span { float: right; color: #7dff7d; }
+  .masteryBadgeList { display: flex; flex-wrap: wrap; gap: 5px; }
+  .masteryBadge { max-width: 100%; padding: 5px 7px; border: 1px solid #7d5f13;
+    background: rgba(77,58,12,0.65); color: #ffd94d; font-size: 10px; font-weight: 900; }
+  .masteryEmpty { color: #aaa3b8; font-size: 11px; line-height: 1.4; }
+  #goalsNextTarget { border-color: #2a6f86; background: rgba(10,30,40,0.55); }
+  #goalsNextTarget strong { display: block; color: #fff; font-size: 14px; line-height: 1.25; }
+  #goalsNextTarget p { margin-top: 4px; color: #bcd6df; font-size: 10px; line-height: 1.35; }
+
+  /* legacy achievement pop-up styles */
+  #achGrid { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; gap: 6px;
+    width: 100%; max-height: 62vh; overflow-y: auto; }
   .achRow { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.35);
     border: 2px solid #000; padding: 6px 8px; box-shadow: inset 1px 1px 0 rgba(255,255,255,0.1); }
   .achRow.locked { opacity: 0.45; }
@@ -446,6 +485,16 @@
     text-shadow: 2px 2px 0 #000; }
   #masteryCallout span { font-size: 14px; font-weight: 900; }
   #masteryCallout small { display: block; margin-top: 3px; color: #d9d2e3; font-size: 11px; font-weight: 700; }
+  #resultMasteryProgress { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+  #resultMasteryProgress > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    min-width: 0; padding: 5px 7px; border-left: 3px solid #7ee0ff; background: rgba(0,0,0,0.3); }
+  #resultMasteryProgress span { flex: 0 0 auto; color: #9fb0bb; font-size: 9px; font-weight: 900;
+    letter-spacing: 0.8px; }
+  #resultMasteryProgress strong { min-width: 0; overflow: hidden; color: #fff; font-size: 10px;
+    text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+  #resultNewBadges { border-color: #ffd94d !important; }
+  #resultNewBadges strong { color: #ffd94d; }
+  #resultMasteryRecord { border-color: #7dff7d !important; }
   #resultStats { width: 100%; display: flex; flex-direction: column; gap: 6px; }
   .statRow { display: flex; justify-content: space-between; color: #cfc9d8; font-size: 14px; font-weight: 700;
     background: rgba(0,0,0,0.35); padding: 7px 10px; border: 1px solid #000; }

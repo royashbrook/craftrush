@@ -16,8 +16,8 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.6**, tag `v1.6`, deployed builds count up from it
-(`v1.6.1` and so on). `main` is the deployed branch.
+Current release: **v1.7**, tag `v1.7`, deployed builds count up from it
+(`v1.7.1` and so on). `main` is the deployed branch.
 
 ## The standalone deploy and old-address handoff
 
@@ -179,16 +179,16 @@ damage and fixed Gate Dash's star-power discontinuity (#90). v1.6 moved the
 production app to its dedicated subdomain, added the safe first-party save
 handoff, and replaced event lottery with an eight-beat encounter director. Its
 Plains, Forest, and Desert pilot each has a distinct run and boss identity
-(#81, #95). v1.7's golem timing, persistent chapter mastery, and impact-polish
-work is tracked by #94.
+(#81, #95). v1.7 delivered three progress-timed Golem opportunities, accessible
+CALM auto-release, persistent per-chapter records and skill badges, one compact
+next target, and restrained impact feedback (#94). It also removed the duplicate
+About-page version while keeping the menu as the canonical release display
+(#89).
 
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker
   and Aseprite exports have. At 512x212 none of that earns its complexity. When
   it does, adopt an existing format rather than growing ours.
-- **#89 Remove the duplicate version from the About footer.** The main screen is
-  the canonical in-app release display; About should keep its credits without
-  repeating the version.
 - **#72 Sourcemaps do not reach production.** Closed after production verification:
   the map returns, parses, and embeds all source bodies.
 

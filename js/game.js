@@ -5,7 +5,7 @@ import { Camera, renderWorld, DrawQueue } from './engine.js';
 import { Audio } from './audio.js';
 import { CrowdMixin } from './crowd.js';
 import { LevelMixin } from './levelgen.js';
-import { CombatMixin } from './combat.js';
+import { CombatMixin, GOLEM_GRANT_PROGRESS } from './combat.js';
 import { BossMixin } from './boss.js';
 import { FxMixin } from './fx.js';
 import { RenderMixin } from './render.js';
@@ -111,6 +111,8 @@ export class Game {
     this.length = 0;
     this.creditSigns = [];
     this.golemHintShown = false;
+    this.golemGrantIdx = 0;
+    this.golemGrantLog = [];
     this.expedition = null;
     this.chapter = null;
     this.crystals = [];
@@ -301,6 +303,10 @@ export class Game {
           this.startBoss();
         }
       }
+      // Create the boss before awarding the arrival charge. CALM can then aim
+      // its automatic send at the actual encounter instead of firing into an
+      // empty stretch on the frame before the boss exists.
+      this.updateGolemChargeProgress(this.length > 0 ? this.playerZ / this.length : 0);
       this.spawnPending();
     } else {
       this.updateBoss(dt);
@@ -379,7 +385,12 @@ export class Game {
       kills: this.kills, bestCrowd: this.bestCrowd,
       biome: this.biome.name, biomeId: this.biome.id, mode: this.mode, structure: !!this.biome.structure,
       expedition: this.expedition ? { id: this.expedition.id, name: this.expedition.name } : null,
-      chapter: this.chapter ? { id: this.chapter.id, name: this.chapter.name } : null,
+      chapter: this.chapter ? {
+        id: this.chapter.id,
+        name: this.chapter.name,
+        credits: !!this.chapter.credits,
+        coda: !!this.chapter.coda,
+      } : null,
       mastery,
     });
   }
@@ -391,6 +402,9 @@ export class Game {
     h.crowd = this.armyPower(); h.stars = this.stars;
     h.progress = Math.min(1, this.playerZ / this.length);
     h.redstone = this.redstone; h.redstoneMax = TUNE.redstoneMax;
+    h.golemReady = this.redstone >= TUNE.redstoneMax;
+    h.golemGrants = this.golemGrantIdx || 0;
+    h.nextGolemGrant = GOLEM_GRANT_PROGRESS[this.golemGrantIdx || 0] ?? null;
     h.level = this.level; h.biome = this.biome.name; h.mode = this.mode;
     h.autoGolem = this.save.speed === 'calm';
     h.power = this.power;

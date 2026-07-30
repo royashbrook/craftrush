@@ -13,6 +13,7 @@
     VERSION, BIOMES, CAMPAIGN, RESOURCES, currentChapter, chapterMissing,
     dailyExpedition, expeditionStatus,
   } from '../../js/config.js';
+  import { masteryChapterEligible, nextMasteryTarget } from '../../js/mastery.js';
   import Sprite from '../lib/Sprite.svelte';
 
   let { game } = $props();
@@ -32,6 +33,9 @@
   const missing = $derived(next && chapter && next.id !== chapter.id ? chapterMissing(save, next.id) : null);
   const exp = $derived(dailyExpedition());
   const expStat = $derived(expeditionStatus(save));
+  const masteryTarget = $derived(
+    masteryChapterEligible(chapter) ? nextMasteryTarget(save, chapter.id) : null,
+  );
 
   function start(mode) {
     Audio.unlock();
@@ -61,7 +65,7 @@
   // after each render and steps down through two compact tiers until it fits.
   // A height breakpoint cannot do this: it does not know what is on the page.
   $effect(() => {
-    void [chapter, missing, exp, save.level];   // re-measure when the content changes
+    void [chapter, missing, exp, masteryTarget, save.level];   // re-measure when the content changes
     if (!panel) return;
     const el = panel;
     let cancelled = false;
@@ -103,6 +107,12 @@
           Need {Object.entries(missing).map(([k, n]) => `${n} more ${RESOURCES[k].label}`).join(', ')} for {next.name}.
         {/if}
       </div>
+      {#if masteryChapterEligible(chapter)}
+        <div id="menuMasteryTarget">
+          <span>YOUR NEXT MARK</span>
+          <b>{masteryTarget?.label || 'CHAPTER MASTERED'}</b>
+        </div>
+      {/if}
       {#if !chapter}
         <button class="mcbtn small" id="btnQuestReplay" onclick={replayWalkHome}>REPLAY THE WALK HOME</button>
       {/if}
