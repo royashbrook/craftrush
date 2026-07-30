@@ -106,6 +106,22 @@ test('every theme in the repo loads and carries what the engine needs', () => {
   }
 });
 
+test('every theme maps the three directed biome identities the same way', () => {
+  const expected = { plains: 'open', forest: 'fork', desert: 'sweep' };
+  const themes = readdirSync(new URL('../themes/', import.meta.url), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  for (const theme of themes) {
+    const biomes = JSON.parse(readFileSync(new URL(`../themes/${theme}/biomes.json`, import.meta.url), 'utf8'));
+    const campaign = JSON.parse(readFileSync(new URL(`../themes/${theme}/campaign.json`, import.meta.url), 'utf8'));
+    for (const [id, runStyle] of Object.entries(expected)) {
+      assert.equal(biomes.find((biome) => biome.id === id)?.runStyle, runStyle,
+        `${theme} ${id} uses ${runStyle}`);
+    }
+    assert.equal(campaign.chapters[0]?.cycleBiomes, true,
+      `${theme} exposes the pilot trio during the opening gathering loop`);
+  }
+});
+
 test('the village and world content the theme ships is usable', () => {
   assert.ok(VILLAGERS.length >= 1, 'someone to hire');
   for (const v of VILLAGERS) {

@@ -9,7 +9,7 @@ assets, fully offline after first load.
 ## Versioning
 
 The version shown in the top corner of the menu is **computed at build time** by
-`vite.config.js`, you don't hand-edit it. It's semver:
+`svelte.config.js`, you don't hand-edit it. It's semver:
 **major.minor come from the latest git tag, and the patch is the number of commits
 since that tag.** So every deploy bumps the patch automatically (`1.1.3`, `1.1.4`, …),
 and cutting a milestone is just tagging the next `v1.x` in git (`v1.2`, …), which
@@ -17,7 +17,7 @@ resets the patch. (`VERSION` in `js/config.js` is only a fallback for an unbuilt
 git-less checkout.)
 
 Picking this up cold? Read [docs/HANDOFF.md](docs/HANDOFF.md) first: architecture,
-the two repo deploy, and the gotchas that cost hours.
+the standalone deploy, save handoff, and the gotchas that cost hours.
 
 ## Develop
 
@@ -53,8 +53,8 @@ Two test layers:
 
 SvelteKit writes the production app to `build/`. Its service worker receives the
 real generated file list from `$service-worker`, so the precache follows the
-build automatically. All asset paths are relative, so the same output serves
-correctly under a subpath such as `/craftrush`.
+build automatically. Relative asset paths keep local preview and the production
+root at `https://craftrush.royashbrook.com/` on the same artifact.
 
 ## Contributing
 
@@ -140,7 +140,8 @@ src/screens/              one Svelte component per game screen
 src/lib/store.svelte.js   reactive save, navigation and back gesture
 src/service-worker.js     generated-file precache
 js/game.js                run lifecycle and engine composition
-js/levelgen.js            deterministic procedural tracks
+js/encounters.js          seeded eight-beat encounter direction
+js/levelgen.js            directed track runtime and event spawning
 js/combat.js              gates, enemies, pickups and summons
 js/boss.js                boss fights
 js/config.js              tuning, economy, save and theme re-exports

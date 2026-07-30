@@ -5,7 +5,7 @@ Everything needed to pick this project up. Read this first, then `README.md`.
 ## What it is
 
 Craft Rush: a Minecraft-flavoured crowd runner, built for Roy's kids. It is live
-at **royashbrook.com/craftrush** and is genuinely played, which is the single
+at **craftrush.royashbrook.com** and is genuinely played, which is the single
 most important fact about it. Two consequences:
 
 - **A save is sacred.** It lives in `localStorage` under `craftrush_save_v1`,
@@ -16,30 +16,29 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.5**, tag `v1.5`, deployed builds count up from it
-(`v1.5.1` and so on). `main` is the deployed branch.
+Current release: **v1.6**, tag `v1.6`, deployed builds count up from it
+(`v1.6.1` and so on). `main` is the deployed branch.
 
-## The two repo deploy, which is easy to miss
+## The standalone deploy and old-address handoff
 
-This repo does **not** build the deployed site. Pushing to `main` here fires
-`.github/workflows/deploy-site.yml`, which clones **`royashbrook/royashbrook.com`**
-and runs *its* build. That site's `scripts/pull-craftrush.mjs` clones this repo
-(full clone, no `--depth`, because the version comes from git tags), runs
-`npm ci && npm run build`, and copies whatever appears in `build/` or `dist/`
-into `public/craftrush/`.
+This repo builds and deploys the game directly. Pushing to `main` runs
+`.github/workflows/deploy-site.yml`: full-history checkout, unit tests,
+`npm run build`, a real-version guard, then `wrangler deploy`. `wrangler.jsonc`
+owns the `craftrush.royashbrook.com` custom domain and serves `build/` as static
+assets.
 
-Three things follow:
+Full history is not optional. The release and service-worker cache key come from
+the latest tag plus commits since it. A shallow checkout stamps `0.0.0-dev`, so
+CI refuses to deploy one.
 
-1. **A change to this repo's build output shape can silently break the site.**
-   That pull script fails soft on purpose so a broken game cannot take the whole
-   site down, which means a mistake ships as "the game quietly vanished". It
-   prints a loud block when it gives up. Read it before changing the build.
-2. Both repos are on this machine: `~/gh/craftshoot` and `~/gh/royashbrook.com`.
-3. Another agent owns the site repo. Coordinate rather than assuming.
+The companion **`royashbrook/royashbrook.com`** repo no longer builds the game.
+Its `/craftrush/` page stays as a first-party save handoff because localStorage
+cannot cross origins. That page may retire only the historical `/craftrush/`
+service-worker scope and `craftrush-*` caches. It must never touch another app
+on the old origin.
 
-Deploy takes roughly three to four minutes. Watch it with
-`gh run list --limit 1` and verify the live site afterwards, never just the CI
-status.
+Watch the deploy with `gh run list --repo royashbrook/craftrush --limit 1` and
+verify the live hostname afterwards, never just the CI status.
 
 ## Run it
 
@@ -61,8 +60,9 @@ alternate theme.
 
 ```
 js/            the engine. Canvas only, touches no DOM but the one canvas.
-               game, render, levelgen, combat, boss, crowd, minegame, townscene,
-               config (rules + save schema), theme, assets, atlaskey, variants
+               game, render, levelgen, encounters, combat, boss, crowd,
+               minegame, townscene, config (rules + save schema), theme,
+               assets, atlaskey, variants
 src/           the SvelteKit app. One route, one screen stack, no URLs.
   routes/+page.svelte   boots the game, owns the stage and canvas
   App.svelte            top bar, bottom nav, the screen stack
@@ -126,10 +126,11 @@ loops. See `docs/SVELTE_PORT.md`.
 `static/sw.js` is one: a registration whose script 404s can leave an old worker
 alive forever, intercepting fetches and holding a stale cache.
 
-**The origin is shared.** Craft Rush owns cache names beginning `craftrush-` and
-service-worker scopes below `/craftrush/`, nothing else. The worker, tombstone,
-Settings, and rescue page all enforce that boundary. Never broaden their cleanup
-to every cache or registration on royashbrook.com.
+**The origins are split, but cleanup still has boundaries.** On
+`craftrush.royashbrook.com`, Craft Rush owns its root service worker and cache
+names beginning `craftrush-`. On `royashbrook.com`, the permanent handoff page
+owns only the historical `/craftrush/` scope and the same cache prefix. Never
+broaden either cleanup path to neighboring origins, registrations, or caches.
 
 **The host canonicalizes some `.html` URLs.** In particular, `rescue.html`
 redirects to `/rescue`. A redirected response stored by `cache.addAll` cannot be
@@ -174,8 +175,12 @@ The researched product roadmap lives in `docs/NEXT.md` and is tracked by issues
 offline observer sheet (#76, #77, #78, #80). v1.3 delivered the compact
 dressing-room shop (#79). v1.4 delivered shared-origin PWA/save hardening (#82).
 v1.5 made standard boss fights survive strong arrivals with logarithmic surplus
-damage and fixed Gate Dash's star-power discontinuity (#90). Content issue #81
-stays gated on actual playtest observations.
+damage and fixed Gate Dash's star-power discontinuity (#90). v1.6 moved the
+production app to its dedicated subdomain, added the safe first-party save
+handoff, and replaced event lottery with an eight-beat encounter director. Its
+Plains, Forest, and Desert pilot each has a distinct run and boss identity
+(#81, #95). v1.7's golem timing, persistent chapter mastery, and impact-polish
+work is tracked by #94.
 
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker
@@ -210,4 +215,5 @@ Worth knowing, because it will save friction.
 ## The one rule
 
 If you are about to suggest that someone clear their browser data, stop. That
-destroys a save. Send them to `/craftrush/rescue.html` first, every time.
+destroys a save. Send them to
+`https://craftrush.royashbrook.com/rescue.html` first, every time.

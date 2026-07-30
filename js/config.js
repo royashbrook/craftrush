@@ -93,7 +93,10 @@ export const TUNE = {
   bossSpawnZ: 17, bossHoldZ: 10,
   bossShooterHpPerParPower: 21,
   bossGatesHpPerParPower: 2.1,
-  bossSurplusLogScale: 0.4,
+  bossGatesHpPerLevel: 0.06,
+  bossGatesHpBonusCap: 0.24,
+  bossGatesBaseHpCap: 2.4,
+  bossSurplusLogScale: 0.38,
   chargeSpendDivisor: 84, // gates-mode charge: worth spent per tick = worth/this
 };
 

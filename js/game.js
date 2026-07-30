@@ -105,6 +105,9 @@ export class Game {
     this.power = { triple: 0, rapid: 0, power: 0, sword: 0, axe: 0 };
     this.events = [];
     this.eventIdx = 0;
+    this.encounters = [];
+    this.encounterTriggers = [];
+    this.runStyle = 'classic';
     this.length = 0;
     this.creditSigns = [];
     this.golemHintShown = false;
@@ -130,7 +133,8 @@ export class Game {
     this.level = expedition ? expedition.level : this.save.level;
     this.mode = expedition && expedition.mode ? expedition.mode : this.save.mode;
     this.biome = (expedition && expedition.biome && BIOMES.find(b => b.id === expedition.biome))
-      || (this.chapter && BIOMES.find(b => b.id === this.chapter.biome))
+      || (this.chapter && !this.chapter.cycleBiomes
+        && BIOMES.find(b => b.id === this.chapter.biome))
       || BIOMES[(this.level - 1) % BIOMES.length];
     this.applySkin();
     this.paused = false;
@@ -292,13 +296,17 @@ export class Game {
       this.playerZ += this.speed * dt;
       if (this.playerZ >= this.length) {
         if (this.chapter && this.chapter.credits) this.endRun(true);   // no fight waits at the end of the credits
-        else this.startBoss();
+        else {
+          this.encounterTriggers.length = 0;
+          this.startBoss();
+        }
       }
       this.spawnPending();
     } else {
       this.updateBoss(dt);
     }
 
+    this.updateEncounterRuntime();
     this.cam.follow(this.playerX, this.playerZ, dt, true);
 
     this.flushReform(); // place the crowd once if worth changed this frame

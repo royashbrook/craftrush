@@ -131,7 +131,10 @@ export function initHistory(pushState) {
   // SvelteKit owns the history stack, so the shallow-routing pushState from
   // $app/navigation is passed in rather than calling history.pushState directly,
   // which the router warns about and would eventually fight us over.
-  const arm = () => pushState('', { cr: true });
+  // Keep a migration fragment if the pre-boot inbox write failed. That fragment
+  // is the only remaining copy on this origin, and an ordinary shallow-history
+  // arm must not consume it before a reload can retry.
+  const arm = () => pushState(window.location.hash || '', { cr: true });
   arm();
   const onPopState = () => {
     // mid-run, back means "wait, stop" rather than "go somewhere"

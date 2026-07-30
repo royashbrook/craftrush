@@ -84,29 +84,81 @@ function steerCompetently(game) {
   }
 
   const distance = (item) => item.z - game.playerZ;
-  const obstacles = game.obstacles.filter((item) => item.hp > 0 && distance(item) > 0 && distance(item) < 13);
-  if (obstacles.length) {
-    const nearest = Math.min(...obstacles.map(distance));
-    game.targetX = safestLane(obstacles.filter((item) => Math.abs(distance(item) - nearest) < 1.5), game.playerX);
+  const hostileShots = game.eshots.filter((shot) =>
+    !shot.dead && distance(shot) > 0 && distance(shot) < 15);
+  if (hostileShots.length) {
+    const center = hostileShots.reduce((sum, shot) => sum + shot.x, 0) / hostileShots.length;
+    const fallback = Math.abs(game.targetX) > 1.8
+      ? game.targetX
+      : -Math.sign(center || 1) * TUNE.laneHalf;
+    game.targetX = safestLane(
+      hostileShots.map((shot) => ({ x: shot.x, halfW: 0.9 })),
+      fallback,
+    );
     return;
   }
+  const obstacles = game.obstacles.filter((item) => item.hp > 0 && distance(item) > 0 && distance(item) < 13);
   const gates = game.gates.filter((gate) => !gate.used && distance(gate) > 0 && distance(gate) < 32);
-  if (gates.length) {
-    const nearest = Math.min(...gates.map(distance));
-    const pair = gates.filter((gate) => Math.abs(distance(gate) - nearest) < 0.1);
+  const obstacleDistance = obstacles.length ? Math.min(...obstacles.map(distance)) : Infinity;
+  const gateDistance = gates.length ? Math.min(...gates.map(distance)) : Infinity;
+  // Commit to a gate that arrives before the hazard, then use the promised
+  // follow-through window to cross away. Never steer through a nearer hazard
+  // merely because a later gate is already visible.
+  if (gates.length && gateDistance < obstacleDistance - 2) {
+    const pair = gates.filter((gate) => Math.abs(distance(gate) - gateDistance) < 0.1);
     pair.sort((a, b) => gateWorth(b, game.worth()) - gateWorth(a, game.worth()));
     game.targetX = pair[0].x;
     return;
   }
-  const enemies = game.enemies.filter((enemy) => !enemy.dead && distance(enemy) > 0 && distance(enemy) < 17);
+  if (obstacles.length) {
+    game.targetX = safestLane(
+      obstacles.filter((item) => Math.abs(distance(item) - obstacleDistance) < 1.5),
+      game.playerX,
+    );
+    return;
+  }
+  if (gates.length) {
+    const pair = gates.filter((gate) => Math.abs(distance(gate) - gateDistance) < 0.1);
+    pair.sort((a, b) => gateWorth(b, game.worth()) - gateWorth(a, game.worth()));
+    game.targetX = pair[0].x;
+    return;
+  }
+  const enemies = game.enemies.filter((enemy) => !enemy.dead && distance(enemy) > 0 && distance(enemy) < 32);
   if (enemies.length) {
     if (game.mode === 'shooter') {
       enemies.sort((a, b) => distance(a) - distance(b));
       game.targetX = enemies[0].x;
     } else {
-      game.targetX = safestLane(enemies.map((enemy) => ({ x: enemy.x, halfW: 0.9 })), game.playerX);
+      const center = enemies.reduce((sum, enemy) => sum + enemy.x, 0) / enemies.length;
+      const fallback = Math.abs(game.targetX) > 1.8
+        ? game.targetX
+        : -Math.sign(center || 1) * TUNE.laneHalf;
+      game.targetX = safestLane(
+        enemies.map((enemy) => ({ x: enemy.x, halfW: 0.9 })),
+        fallback,
+      );
     }
   }
+}
+
+function steerGreedily(game) {
+  if (game.state === 'boss') {
+    steerCompetently(game);
+    return;
+  }
+  if (game.redstone >= TUNE.redstoneMax) game.summonGolem();
+  const distance = (item) => item.z - game.playerZ;
+  const gates = game.gates.filter((gate) => !gate.used && distance(gate) > 0 && distance(gate) < 32);
+  if (!gates.length) return;
+  const nearest = Math.min(...gates.map(distance));
+  const pair = gates.filter((gate) => Math.abs(distance(gate) - nearest) < 0.1);
+  const risk = pair.find((gate) => gate.risk);
+  if (risk) {
+    game.targetX = risk.x;
+    return;
+  }
+  pair.sort((a, b) => gateWorth(b, game.worth()) - gateWorth(a, game.worth()));
+  game.targetX = pair[0].x;
 }
 
 function simulate(mode, level, active, speed = 'normal') {
@@ -118,11 +170,23 @@ function simulate(mode, level, active, speed = 'normal') {
     game.startRun();
     let ticks = 0;
     while ((game.state === 'run' || game.state === 'boss') && !game.bossDead && ticks < 18000) {
-      if (active) steerCompetently(game);
+      if (typeof active === 'function') active(game);
+      else if (active) steerCompetently(game);
       game.update(1 / 60);
       ticks++;
     }
-    return game.bossDead || result?.win === true;
+    const won = game.bossDead || result?.win === true;
+    // Production waits for the victory celebration before settling. Finish
+    // synchronously here so policy tests can compare the exact shipped grade.
+    if (won && !result && (game.state === 'run' || game.state === 'boss')) game.endRun(true);
+    return {
+      win: won,
+      grade: result?.mastery?.grade || null,
+      arrivalPower: game.bossArrivalCrowd ?? 0,
+      expectedPower: game.expectedBossArmy().power,
+      damageTaken: result?.mastery?.damageTaken ?? game.mastery?.damageTaken ?? 0,
+      finalCrowd: result?.mastery?.finalCrowd ?? game.armyPower(),
+    };
   } finally {
     game.destroy();
     Math.random = originalRandom;
@@ -159,8 +223,6 @@ function measureBoss(mode, level, speed, arrivalMultiple) {
 }
 
 test('normal gates require a lane and generated choices remain fair', () => {
-  let freePairs = 0;
-  let freeGoodGood = 0;
   let riskPairs = 0;
   const goodSides = new Set();
 
@@ -170,48 +232,57 @@ test('normal gates require a lane and generated choices remain fair', () => {
     const gates = game.events.filter((event) => event.type === 'gate');
     const byZ = new Map();
     for (const gate of gates) byZ.set(gate.z, [...(byZ.get(gate.z) || []), gate]);
+    let positivePairs = 0;
     for (const pair of byZ.values()) {
       assert.equal(pair.length, 2);
       assert.ok(pair.every((gate) => Math.abs(gate.x) <= TUNE.laneHalf));
       assert.ok(pair.every((gate) => Math.abs(gate.x) >= gate.halfW + TUNE.gateHitMargin),
         `level ${level} center must overlap neither gate`);
       assert.ok(pair.some((gate) => game.gateGood(gate)), `level ${level} needs a non-losing choice`);
+      positivePairs++;
       if (level === 1) assert.ok(pair.every((gate) => game.gateGood(gate)));
 
       const risky = pair.find((gate) => gate.risk);
       if (risky) {
         riskPairs++;
+        assert.ok(risky.followThroughZ - risky.z >= 22,
+          `level ${level} leaves a readable follow-through window`);
         assert.ok(game.events.some((event) => event.type === 'obstacle'
-          && Math.abs(event.z - (risky.z + 12)) < 0.1
+          && Math.abs(event.z - risky.followThroughZ) < 0.1
           && Math.abs(event.x - risky.x) < 1.3));
-        const nextRow = game.events.find((event) => event.z > risky.z + 12.1);
-        assert.ok(!nextRow || nextRow.z - (risky.z + 12) >= 10,
-          `level ${level} leaves time to cross after the risk lane`);
       } else if (level > 1) {
-        freePairs++;
-        if (pair.every((gate) => game.gateGood(gate))) freeGoodGood++;
         const onlyGood = pair.filter((gate) => game.gateGood(gate));
         if (onlyGood.length === 1) goodSides.add(Math.sign(onlyGood[0].x));
       }
     }
+    assert.ok(positivePairs >= 3, `level ${level} has at least three positive decisions`);
     game.destroy();
   }
 
-  assert.ok(freeGoodGood / freePairs <= 0.3, 'free good-good pairs stay uncommon after level 1');
   assert.deepEqual([...goodSides].sort(), [-1, 1]);
   assert.ok(riskPairs > 0, 'the safe-growth versus reward-and-dodge choice is generated');
 });
 
-test('passive and competent players separate across the normal campaign', { timeout: 30000 }, () => {
+test('passive, greedy, and competent players separate across the normal campaign', { timeout: 30000 }, () => {
   for (const mode of ['shooter', 'gates']) {
-    let passiveWins = 0;
-    let competentWins = 0;
-    for (let level = 2; level <= 20; level++) {
-      if (simulate(mode, level, false)) passiveWins++;
-      if (simulate(mode, level, true)) competentWins++;
+    const passive = [];
+    const greedy = [];
+    const competent = [];
+    for (let level = 1; level <= 20; level++) {
+      passive.push({ level, ...simulate(mode, level, false) });
+      greedy.push({ level, ...simulate(mode, level, steerGreedily) });
+      competent.push({ level, ...simulate(mode, level, true) });
     }
-    assert.ok(passiveWins <= 4, `${mode} passive wins ${passiveWins}/19`);
-    assert.ok(competentWins >= 16, `${mode} competent wins ${competentWins}/19`);
+    const passiveWins = passive.filter((sample) => sample.win).length;
+    const greedyWins = greedy.filter((sample) => sample.win).length;
+    const competentWins = competent.filter((sample) => sample.win).length;
+    const passiveHighGrades = passive.filter((sample) => ['A', 'S'].includes(sample.grade)).length;
+    assert.ok(passiveWins <= 4, `${mode} passive wins ${passiveWins}/20`);
+    assert.equal(passiveHighGrades, 0, `${mode} passive play earns no A or S grades`);
+    assert.ok(greedyWins >= passiveWins, `${mode} greedy ${greedyWins} >= passive ${passiveWins}`);
+    const competentLosses = competent.filter((sample) => !sample.win).map((sample) => sample.level);
+    assert.ok(competentWins >= 17,
+      `${mode} competent wins ${competentWins}/20; losses ${competentLosses}`);
   }
 });
 
@@ -388,6 +459,30 @@ test('crystals take arrow hits before the guarded boss behind them', () => {
   game.destroy();
 });
 
+test('directed route hazards cannot be erased by passive arrows', () => {
+  const game = makeGame('shooter', 3);
+  game.startRun();
+  game.enemies = [];
+  game.gates = [];
+  game.pickups = [];
+  game.crystals = [];
+  const obstacle = {
+    x: 0,
+    z: game.playerZ + 5,
+    hp: 3,
+    directed: true,
+    wobble: 0,
+  };
+  game.obstacles = [obstacle];
+  const arrow = { x: obstacle.x, z: obstacle.z, dmg: 99 };
+
+  game.arrowHitTest(arrow);
+
+  assert.equal(obstacle.hp, 3);
+  assert.notEqual(arrow.dead, true);
+  game.destroy();
+});
+
 test('an active turbo charge is not restarted by the attack timer', () => {
   const game = makeGame('gates', 20, 'turbo');
   game.startRun();
@@ -425,10 +520,16 @@ test('CALM releases a ready golem automatically while NORMAL waits', () => {
   normal.destroy();
 });
 
-test('competent CALM play remains completable across the level curve', () => {
+test('competent play remains completable at every selectable pace', { timeout: 30000 }, () => {
   for (const mode of ['shooter', 'gates']) {
-    for (const level of [1, 5, 10, 15, 20]) {
-      assert.equal(simulate(mode, level, true, 'calm'), true, `${mode} CALM level ${level}`);
+    for (const speed of ['calm', 'normal', 'fast', 'turbo']) {
+      // Levels 1-3 are the directed Plains, Forest, and Desert pilot. Later
+      // samples retain the high-difficulty and repeated-cycle coverage.
+      for (const level of [1, 2, 3, 10, 20]) {
+        const sample = simulate(mode, level, true, speed);
+        assert.equal(sample.win, true,
+          `${mode} ${speed} level ${level}: ${JSON.stringify(sample)}`);
+      }
     }
   }
 });

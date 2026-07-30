@@ -7,7 +7,55 @@ const CURRENT_SAVE = JSON.stringify({
   campaign: { done: ['mine_obsidian'] },
 });
 
-test('rescue cleanup removes only Craft Rush caches and registrations', async ({ page, context }) => {
+const migrationUrl = (save, backups) => {
+  const code = `CR1|${Buffer.from(JSON.stringify(save), 'utf8').toString('base64')}`;
+  const payload = Buffer.from(JSON.stringify({ s: code, ...(backups ? { b: backups } : {}) }), 'utf8')
+    .toString('base64url');
+  return { code, url: `/#cr-migrate=${payload}` };
+};
+
+test('the pre-boot handoff adopts a save before the app store starts', async ({ page }) => {
+  const arriving = { level: 7, emeralds: 707, unlocked: ['alex'] };
+  const moved = migrationUrl(arriving);
+
+  await page.goto(moved.url);
+  // Adoption intentionally reloads once so the app store is rebuilt from the
+  // newly imported bytes. Wait for the post-reload cue before reading storage;
+  // evaluating during that navigation makes a successful handoff look flaky.
+  await expect(page.locator('#toast')).toContainText('YOUR GAME CAME WITH YOU!');
+  const adoptedLevel = await page.evaluate(() => {
+    try { return JSON.parse(localStorage.getItem('craftrush_save_v1')).level; } catch { return null; }
+  });
+  expect(adoptedLevel).toBe(7);
+
+  const state = await page.evaluate(() => ({
+    hash: location.hash,
+    inbox: localStorage.getItem('craftrush_migration_inbox_v1'),
+    backups: JSON.parse(localStorage.getItem('craftrush_backups_v1')),
+  }));
+  expect(state.hash).toBe('');
+  expect(state.inbox).toBeNull();
+  expect(state.backups[0].code).toBe(moved.code);
+});
+
+test('a failed pre-boot inbox write leaves the migration fragment retryable', async ({ page, context }) => {
+  const moved = migrationUrl({ level: 4, emeralds: 44 });
+  await context.addInitScript(() => {
+    const set = Storage.prototype.setItem;
+    Storage.prototype.setItem = function setItem(key, value) {
+      if (key === 'craftrush_migration_inbox_v1') throw new Error('storage unavailable');
+      return set.call(this, key, value);
+    };
+  });
+
+  await page.goto(moved.url);
+  await expect(page.locator('#btnPlayShooter')).toBeVisible();
+  expect(new URL(page.url()).hash).toContain('cr-migrate=');
+  expect(await page.evaluate(() =>
+    localStorage.getItem('craftrush_migration_inbox_v1'))).toBeNull();
+});
+
+test('rescue cleanup removes only Craft Rush caches and scoped registrations', async ({ page, context }) => {
   await context.addInitScript((save) => localStorage.setItem('craftrush_save_v1', save), CURRENT_SAVE);
   await page.goto('/rescue.html');
   await page.evaluate(async () => {

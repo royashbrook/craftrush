@@ -50,6 +50,7 @@ export interface Biome {
   /** sprite names, which must exist in the theme's art */
   scenery: string[];
   enemies: string[];
+  runStyle?: 'open' | 'fork' | 'sweep';
   obstacle: string;
   boss?: string;
 }
@@ -79,6 +80,8 @@ export interface Chapter {
   };
   /** a gathering chapter you come back to, rather than a milestone */
   repeatable?: boolean;
+  /** use the level's biome while repeating this gathering chapter */
+  cycleBiomes?: boolean;
 }
 
 /**

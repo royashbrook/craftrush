@@ -45,6 +45,33 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
   expect(errors).toEqual([]);
 });
 
+test('a cycling chapter names the same biome on the menu and in the run', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+  await page.evaluate(() => {
+    window.CR.save.level = 3;
+    window.CR.save.campaign.done = [];
+  });
+
+  await expect(page.locator('#menuLevel')).toHaveText('LV 3 · BLAZING DESERT');
+  await page.locator('#btnPlayShooter').click();
+  await expect(page.locator('#hudLevel')).toHaveText('LV 3 · Blazing Desert');
+});
+
+test('an authored milestone owns the same biome on the menu and in the run', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+  await page.evaluate(() => {
+    window.CR.save.level = 3;
+    window.CR.save.campaign.done = ['mine_obsidian'];
+    window.CR.save.inventory.obsidian = 10;
+  });
+
+  await expect(page.locator('#menuLevel')).toHaveText('LV 3 · THE NETHER');
+  await page.locator('#btnPlayShooter').click();
+  await expect(page.locator('#hudLevel')).toHaveText('LV 3 · The Nether');
+});
+
 test('run skill cues survive the real browser input and result flow', async ({ page }) => {
   await page.goto('/');
   await page.click('#btnPlayShooter');

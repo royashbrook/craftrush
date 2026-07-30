@@ -31,6 +31,7 @@
     "target": 12,
     "text": "Bring 12 runners to the boss"
    },
+   "cycleBiomes": true,
    "repeatable": true,
    "grants": {
     "obsidian": 4

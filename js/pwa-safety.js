@@ -3,6 +3,7 @@
 // narrow ownership rules.
 
 export const CRAFTRUSH_CACHE_PREFIX = 'craftrush-';
+export const CRAFTRUSH_APP_ORIGIN = 'https://craftrush.royashbrook.com';
 
 export function ownsCraftRushCache(name) {
   return typeof name === 'string' && name.startsWith(CRAFTRUSH_CACHE_PREFIX);
@@ -25,13 +26,16 @@ export function replayableCachedResponse(response) {
 }
 
 /**
- * The deployed game lives below /craftrush/. Derive a deeper mount when there
- * is one, but never interpret a root-hosted test page as authority over every
- * service worker on that origin.
+ * Craft Rush owns the root only on its dedicated production origin. Everywhere
+ * else it retains the old, deliberately narrow /craftrush/ boundary. That
+ * includes royashbrook.com, local development and lookalike hostnames: a rescue
+ * or update button must never unregister a neighboring app's root worker.
  */
 export function craftRushScopePath(pageHref) {
   try {
-    const path = new URL('./', pageHref).pathname;
+    const page = new URL(pageHref);
+    if (page.origin === CRAFTRUSH_APP_ORIGIN) return '/';
+    const path = new URL('./', page).pathname;
     return path === '/' ? '/craftrush/' : path;
   } catch {
     return '/craftrush/';

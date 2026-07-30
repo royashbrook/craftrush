@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import {
+  CRAFTRUSH_APP_ORIGIN,
   craftRushScopePath,
   ownsCraftRushCache,
   ownsCraftRushRegistration,
@@ -47,10 +48,30 @@ test('registration ownership stays below the game mount', () => {
   assert.equal(ownsCraftRushRegistration({ scope: 'https://example.com/craftrush/' }, page), false);
 });
 
-test('root-hosted development never grants root service-worker ownership', () => {
-  const page = 'http://127.0.0.1:8399/rescue.html';
-  assert.equal(craftRushScopePath(page), '/craftrush/');
-  assert.equal(ownsCraftRushRegistration({ scope: 'http://127.0.0.1:8399/' }, page), false);
+test('only the exact dedicated HTTPS origin grants root worker ownership', () => {
+  const page = `${CRAFTRUSH_APP_ORIGIN}/rescue.html`;
+  assert.equal(craftRushScopePath(page), '/');
+  assert.equal(ownsCraftRushRegistration({ scope: `${CRAFTRUSH_APP_ORIGIN}/` }, page), true);
+  assert.equal(ownsCraftRushRegistration({ scope: `${CRAFTRUSH_APP_ORIGIN}/tools/` }, page), true);
+
+  for (const other of [
+    'https://royashbrook.com/rescue.html',
+    'https://royashbrook.com/craftrush/rescue.html',
+    'http://127.0.0.1:8399/rescue.html',
+    'http://localhost:8399/rescue.html',
+    'http://craftrush.royashbrook.com/rescue.html',
+    'https://craftrush.royashbrook.com:8443/rescue.html',
+    'https://craftrush.royashbrook.com.evil.example/rescue.html',
+    'https://quantamari.royashbrook.com/rescue.html',
+  ]) {
+    assert.notEqual(craftRushScopePath(other), '/');
+    const origin = new URL(other).origin;
+    assert.equal(
+      ownsCraftRushRegistration({ scope: `${origin}/` }, other),
+      false,
+      `${other} must not own its root worker`,
+    );
+  }
 });
 
 test('save validation accepts playable partial and current-shaped saves', () => {
