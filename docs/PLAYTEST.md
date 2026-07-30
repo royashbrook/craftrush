@@ -44,6 +44,28 @@ readiness points, whether `SMASH!` versus `PERFECT SMASH!` changes their next
 release, and whether holding a ready Golem through a later grant is understood.
 For CALM, note whether the HUD makes automatic release clear without prompting.
 
+## v1.7.1 iPhone relocation check
+
+Use a disposable test save, not the only copy of real progress.
+
+1. Open the old installed app at `royashbrook.com/craftrush/`.
+2. Confirm it stays on the handoff page without navigating on its own.
+3. Confirm the current save code is visible and the page says to keep the old app.
+4. Tap `COPY SAVE & OPEN NEW HOME`. If copying is blocked, attempt the download,
+   verify the file exists outside the old app, then check the confirmation box.
+5. Before restoring, go offline and confirm the old icon still reopens. Go back
+   online without removing it.
+6. Install the new home from the Safari view, then open the new Home Screen app.
+7. Confirm `RESTORE COPIED SAVE` is visible on the fresh menu.
+8. Restore and verify the emerald count, level, skins, and chapters.
+9. Close and reopen the new app. Verify the same progress remains.
+10. Only then remove the old test icon.
+
+[ ] No automatic handoff navigation  [ ] Save copied before leaving
+[ ] Old icon remains an offline rescue copy
+[ ] Fresh installed app offers restore  [ ] Restored progress survives relaunch
+[ ] Emerald wallet is visible beside Settings on the main menu
+
 ## Release balance report
 
 Gameplay candidate: v1.7  Test date: 2026-07-30  Levels: 2-20  Difficulty: NORMAL

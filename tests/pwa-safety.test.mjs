@@ -5,11 +5,13 @@ import vm from 'node:vm';
 import {
   CRAFTRUSH_APP_ORIGIN,
   craftRushScopePath,
+  isStandaloneApp,
   ownsCraftRushCache,
   ownsCraftRushRegistration,
   parsePlayableSave,
   replayableCachedResponse,
   saveSchemaError,
+  shouldOfferLegacyRestore,
   updateReloadIsSafe,
 } from '../js/pwa-safety.js';
 
@@ -72,6 +74,39 @@ test('only the exact dedicated HTTPS origin grants root worker ownership', () =>
       `${other} must not own its root worker`,
     );
   }
+});
+
+test('standalone detection accepts both iOS and manifest display modes', () => {
+  assert.equal(isStandaloneApp({ standalone: true }, () => ({ matches: false })), true);
+  assert.equal(isStandaloneApp({}, () => ({ matches: true })), true);
+  assert.equal(isStandaloneApp({}, () => ({ matches: false })), false);
+  assert.equal(isStandaloneApp({}, () => { throw new Error('unsupported'); }), false);
+});
+
+test('legacy restore appears only for a fresh installed save', () => {
+  const fresh = {
+    level: 1,
+    bestLevel: 1,
+    emeralds: 18,
+    unlocked: ['steve'],
+    campaign: { done: [] },
+    stats: { runs: 1, totalEmeralds: 18 },
+  };
+  assert.equal(shouldOfferLegacyRestore(fresh, true), true);
+  assert.equal(shouldOfferLegacyRestore(fresh, false), false);
+  assert.equal(shouldOfferLegacyRestore({ ...fresh, level: 2 }, true), false);
+  assert.equal(shouldOfferLegacyRestore({
+    ...fresh,
+    campaign: { done: ['mine_obsidian'] },
+  }, true), false);
+  assert.equal(shouldOfferLegacyRestore({
+    ...fresh,
+    unlocked: ['steve', 'alex'],
+  }, true), false);
+  assert.equal(shouldOfferLegacyRestore({
+    ...fresh,
+    stats: { runs: 2, totalEmeralds: 18 },
+  }, true), false);
 });
 
 test('save validation accepts playable partial and current-shaped saves', () => {

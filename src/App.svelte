@@ -77,7 +77,7 @@
 
 <header id="appbar">
   <span id="appTitle">{title}</span>
-  <span class="chip green" id="barWallet" class:hidden={nav.screen === 'menu'}>
+  <span class="chip green" id="barWallet">
     <span class="em"></span> <span id="barEmeralds">{save.emeralds}</span>
   </span>
   <button id="navMore" class="barBtn" onclick={() => { Audio.sfx('click'); go('more'); }}>

@@ -4,7 +4,7 @@
   destroys a kid's progress, and that is not something a stray tap should do.
 -->
 <script>
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import QRCode from 'qrcode';
   import { encodeSave, saveLink } from '../../js/savecode.js';
   import { save, nav } from '../lib/store.svelte.js';
@@ -30,6 +30,19 @@
   let qrMsg = $state('');
   let updateMsg = $state('');
   let updateStatusEl = $state(null);
+  let importEl = $state(null);
+  let restoreHint = $state('');
+  const LEGACY_RESTORE_DONE_KEY = 'craftrush_legacy_restore_done_v1';
+  const LEGACY_RESTORE_OFFER_KEY = 'craftrush_legacy_restore_offer_v1';
+
+  onMount(async () => {
+    if (!nav.restoreIntent) return;
+    nav.restoreIntent = false;
+    restoreHint = 'Paste the save code copied from the old app, then tap LOAD CODE.';
+    await tick();
+    importEl?.scrollIntoView({ block: 'center' });
+    importEl?.focus();
+  });
 
   async function showUpdateMessage(text) {
     updateMsg = text;
@@ -108,6 +121,12 @@
         && !confirm('Replace this device’s save? Your current save will be kept as a one-step rollback on the rescue page.')) return;
     const merged = importSave(importText);
     if (merged) {
+      if (restoreHint) {
+        try {
+          localStorage.setItem(LEGACY_RESTORE_DONE_KEY, '1');
+          localStorage.removeItem(LEGACY_RESTORE_OFFER_KEY);
+        } catch { /* the imported save is already durable even if this hint returns */ }
+      }
       setMsg = 'Loaded! Restarting…';
       setTimeout(() => location.reload(), 700);
     } else {
@@ -173,7 +192,16 @@
     <button class="mcbtn small rowBtn" id="btnCopySave" onclick={copyCode}><Sprite name="ui_palette" />COPY CODE</button>
 
     <div class="setLabel">Paste a code to restore your game:</div>
-    <textarea id="saveImport" class="saveBox" placeholder="paste your code here" bind:value={importText}></textarea>
+    {#if restoreHint}
+      <div id="legacyRestoreHint" class="setMsg restoreHint" role="status">{restoreHint}</div>
+    {/if}
+    <textarea
+      id="saveImport"
+      class="saveBox"
+      placeholder="paste your code here"
+      bind:this={importEl}
+      bind:value={importText}
+    ></textarea>
     <button class="mcbtn small rowBtn" id="btnLoadSave" onclick={loadCode}><Sprite name="ui_back" />LOAD CODE</button>
     <button
       class="mcbtn small rowBtn"
