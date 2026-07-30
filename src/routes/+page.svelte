@@ -18,6 +18,7 @@
   import { finishRunSettlement } from '../../js/settlement.js';
   import { checkAchievements } from '../../js/achievements.js';
   import { updateReloadIsSafe } from '../../js/pwa-safety.js';
+  import { consumeMigration, takePendingToast } from '../../js/migrate.js';
   import { Game } from '../../js/game.js';
   import { Audio } from '../../js/audio.js';
   import { save, nav, toast, commit, togglePause, initHistory } from '../lib/store.svelte.js';
@@ -61,6 +62,18 @@
       navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
       navigator.serviceWorker.register(`${base}/service-worker.js`, { type: 'module' }).catch(() => {});
     }
+
+    // A save handed over from the game's old address, if there is one. Done here,
+    // before assets, because adopting one means reloading: the store builds the
+    // save proxy from localStorage once at module load and cannot be re-pointed
+    // at a save that arrived after it. A reload is a path this app already walks
+    // for updates, so it is the cheap correct answer rather than a new one.
+    try {
+      const moved = consumeMigration();
+      if (moved?.adopted) { location.reload(); return; }
+      const pending = moved?.message || takePendingToast();
+      if (pending) toast(pending);
+    } catch { /* never let the move stop the game from starting */ }
 
     (async () => {
       // the theme failing is the one error that used to render a blank page,
