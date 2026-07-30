@@ -2,20 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { readdirSync, statSync, mkdirSync, copyFileSync, rmSync, existsSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
-import { execSync } from 'node:child_process';
-
-// Version: major.minor from the last tag, patch from commits since it. Same
-// rule the hand-rolled build used, so the number in the corner keeps counting
-// from where it was rather than resetting when the toolchain changed.
-function appVersion() {
-  try {
-    const tag = execSync('git describe --tags --abbrev=0', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-    const since = execSync(`git rev-list ${tag}..HEAD --count`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-    return `${tag.replace(/^v/, '')}.${since}`;
-  } catch {
-    return '0.0.0-dev';
-  }
-}
+import { appVersion } from './tools/version.mjs';
 
 const walk = (dir, out = [], root = dir) => {
   for (const name of readdirSync(dir)) {
