@@ -523,7 +523,9 @@ test('CALM releases a ready golem automatically while NORMAL waits', () => {
 test('competent play remains completable at every selectable pace', { timeout: 30000 }, () => {
   for (const mode of ['shooter', 'gates']) {
     for (const speed of ['calm', 'normal', 'fast', 'turbo']) {
-      for (const level of [1, 10, 20]) {
+      // Levels 1-3 are the directed Plains, Forest, and Desert pilot. Later
+      // samples retain the high-difficulty and repeated-cycle coverage.
+      for (const level of [1, 2, 3, 10, 20]) {
         const sample = simulate(mode, level, true, speed);
         assert.equal(sample.win, true,
           `${mode} ${speed} level ${level}: ${JSON.stringify(sample)}`);

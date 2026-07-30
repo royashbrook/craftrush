@@ -16,7 +16,9 @@ export default defineConfig({
       ? 'npm run build && npx vite preview --host 127.0.0.1 --port 8399 --strictPort'
       : 'npx vite dev --host 127.0.0.1 --port 8399 --strictPort',
     url: 'http://127.0.0.1:8399/',
-    reuseExistingServer: true,
+    // A built-output run must never attach to a forgotten dev server and pass
+    // against the wrong artifact. Local dev runs may still reuse `npm run dev`.
+    reuseExistingServer: process.env.PW_TARGET !== 'build',
     stdout: 'ignore',
   },
   use: {
