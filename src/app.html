@@ -30,11 +30,17 @@
   try {
     var m = /(?:^|[#&])cr-migrate=([^&]+)/.exec(location.hash || '');
     if (!m) return;
-    // strip it immediately, before anything can go wrong further down: a
-    // reload or a shared link must not replay someone else's save
-    history.replaceState(null, '', location.pathname + location.search);
-    var json = decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/'))));
+    var encoded = m[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (encoded.length % 4) encoded += '=';
+    var json = decodeURIComponent(escape(atob(encoded)));
     localStorage.setItem('craftrush_migration_inbox_v1', json);
+    if (localStorage.getItem('craftrush_migration_inbox_v1') !== json) {
+      throw new Error('migration inbox write could not be verified');
+    }
+    // Strip it only after the bytes are durable. If storage is temporarily
+    // unavailable, leaving the fragment in place lets a reload retry instead
+    // of silently consuming the only copy on this origin.
+    history.replaceState(null, '', location.pathname + location.search);
   } catch (e) { /* a bad or truncated payload is a no-op, the old page still has the save */ }
 })();
 </script>

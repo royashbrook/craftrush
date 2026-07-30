@@ -13,8 +13,8 @@ export default defineConfig({
   // saw dev passed a build that was broken in the wild.
   webServer: {
     command: process.env.PW_TARGET === 'build'
-      ? 'npm run build && npx vite preview --port 8399 --strictPort'
-      : 'npx vite dev --port 8399 --strictPort',
+      ? 'npm run build && npx vite preview --host 127.0.0.1 --port 8399 --strictPort'
+      : 'npx vite dev --host 127.0.0.1 --port 8399 --strictPort',
     url: 'http://127.0.0.1:8399/',
     reuseExistingServer: true,
     stdout: 'ignore',
