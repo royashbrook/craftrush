@@ -19,6 +19,7 @@ test('loadSave returns full defaults when nothing is stored', () => {
   assert.equal(s.mode, 'shooter');
   assert.deepEqual(s.unlocked, ['steve']);
   assert.ok(s.stats && s.expedition && s.cosmetics);
+  assert.deepEqual(s.mastery, { chapters: {} });
 });
 
 test('loadSave merges a partial v0.1 save over the defaults', () => {
@@ -58,6 +59,22 @@ test('a backup code round-trips through export and import', () => {
   assert.deepEqual(back.unlocked, ['steve', 'alex', 'zombie']);
 });
 
+test('chapter mastery survives backup export and import', () => {
+  withStorage(null);
+  const s = loadSave();
+  s.mastery.chapters.portal = {
+    bestGrade: 'S+',
+    bestCrowd: 42,
+    badges: ['clean_line', 'future_badge'],
+  };
+  const back = importSave(exportSave(s));
+  assert.deepEqual(back.mastery.chapters.portal, {
+    bestGrade: 'S+',
+    bestCrowd: 42,
+    badges: ['clean_line', 'future_badge'],
+  });
+});
+
 test('an import preserves the exact prior save in the rollback slot', () => {
   withStorage({ emeralds: 55, level: 4, unlocked: ['steve'] });
   const before = localStorage.getItem('craftrush_save_v1');
@@ -92,4 +109,50 @@ test('a corrupt save falls back to defaults instead of throwing', () => {
     const s = loadSave();
     assert.equal(s.level, 1);
   });
+});
+
+test('loadSave adds mastery to old saves and repairs malformed mastery in place', () => {
+  withStorage({ level: 5, emeralds: 91 });
+  assert.deepEqual(loadSave().mastery, { chapters: {} });
+
+  withStorage({
+    level: 5,
+    emeralds: 91,
+    mastery: {
+      chapters: {
+        portal: {
+          bestGrade: 'Z',
+          bestCrowd: 'many',
+          badges: ['untouched', 'clean_line', 'clean_line', 7],
+        },
+        stronghold: {
+          bestGrade: 7,
+          bestCrowd: 12,
+          badges: [],
+        },
+        fortress: 'broken',
+      },
+    },
+  });
+  const repaired = loadSave();
+  assert.equal(repaired.level, 5);
+  assert.equal(repaired.emeralds, 91);
+  assert.deepEqual(repaired.mastery.chapters.portal, {
+    bestGrade: 'Z',
+    bestCrowd: 0,
+    badges: ['clean_line', 'untouched'],
+  });
+  assert.deepEqual(repaired.mastery.chapters.stronghold, {
+    bestGrade: null,
+    bestCrowd: 12,
+    badges: [],
+  });
+  assert.deepEqual(repaired.mastery.chapters.fortress, {
+    bestGrade: null,
+    bestCrowd: 0,
+    badges: [],
+  });
+
+  withStorage({ level: 5, mastery: [] });
+  assert.deepEqual(loadSave().mastery, { chapters: {} });
 });

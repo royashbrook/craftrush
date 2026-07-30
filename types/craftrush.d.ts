@@ -65,6 +65,7 @@ export interface Chapter {
   phases?: number;
   crystals?: boolean;
   credits?: boolean;
+  coda?: boolean;
   structure?: boolean;
   /** must be held before it opens */
   requires?: Record<string, number>;
@@ -82,6 +83,26 @@ export interface Chapter {
   repeatable?: boolean;
   /** use the level's biome while repeating this gathering chapter */
   cycleBiomes?: boolean;
+}
+
+export type MasteryGrade = 'D' | 'C' | 'B' | 'A' | 'S';
+export type MasteryBadgeId = 'clean_line' | 'golem_ace' | 'untouched';
+
+export interface ChapterMasteryRecord {
+  /** Current grades plus future string grades preserved by an older build. */
+  bestGrade: MasteryGrade | string | null;
+  bestCrowd: number;
+  /** Known badge IDs plus any future IDs preserved across an older build. */
+  badges: string[];
+}
+
+/** Result-only snapshot. `isNew` is never persisted in the save. */
+export interface ChapterMasteryUpdateRecord extends ChapterMasteryRecord {
+  isNew: boolean;
+}
+
+export interface PersistentMastery {
+  chapters: Record<string, ChapterMasteryRecord>;
 }
 
 /**
@@ -111,6 +132,7 @@ export interface Save {
   /** campaign resources: obsidian, blazeRods, enderEyes, elytra, trims, witherSkulls */
   inventory: Record<string, number>;
   campaign: { done: string[] };
+  mastery: PersistentMastery;
   home: { lastCollect: number };
   mine: {
     dug: string[]; mx: number; my: number; depth: number;

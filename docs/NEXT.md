@@ -29,9 +29,13 @@ uses actual power spent across star graduations.
 | 5x generated par | 5.45–5.48s | 4.52s |
 
 The matrix covers levels 1, 6, 12, and 20 at every pace. Normal and Turbo differ
-by at most 0.07 seconds for equivalent arrivals. Issue #81 intentionally waits
-for further observations from the production playtest described in
-`docs/PLAYTEST.md`.
+by at most 0.07 seconds for equivalent arrivals. v1.6 completed #81 and #95 by
+moving production to its dedicated subdomain and replacing event lottery with a
+seeded eight-beat encounter director. Plains, Forest, and Desert now have
+distinct run and boss identities. v1.7 completed #89 and #94: three fixed Golem
+readiness points, manual timing feedback with CALM auto-release, persistent
+chapter records and badges, one next target, and a single canonical version
+display.
 
 ## Product direction
 

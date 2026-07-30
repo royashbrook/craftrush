@@ -40,6 +40,13 @@
     current = queue.shift();
     nav.achPop = current;
     Audio.sfx('powerup');
+  });
+
+  // Schedule dismissal only after `current` has settled. Doing this in the
+  // queue-draining effect cancels its own timer when assigning `current`
+  // retriggers that effect, leaving the popup stuck over every later screen.
+  $effect(() => {
+    if (!current) return;
     const t = setTimeout(() => {
       nav.achPop = null;
       current = null;

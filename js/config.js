@@ -4,6 +4,7 @@
 // here, so a full reskin = new sprite packs + new tables. No engine changes.
 import { Audio } from './audio.js';
 import { hash2 } from './engine.js';
+import { normalizeMasterySave } from './mastery.js';
 import { saveSchemaError } from './pwa-safety.js';
 
 // Build version shown in the UI. Tag the next feature milestone in git; Vite
@@ -58,9 +59,6 @@ export const TUNE = {
 
   // golem ability
   redstoneMax: 100,
-  redstonePerHit: 1.6,
-  redstonePerKill: 6,
-  redstonePerEmeraldGatesMode: 7,
   golemSpeed: 1.7,      // multiplier vs run speed
   golemRange: 34,
 
@@ -148,7 +146,6 @@ export const PICKUPS = {
     sprite: 'emerald', worldH: 0.72, magnet: true,
     onCollect(g, p) {
       g.runEmeralds += TUNE.emeraldPickup;
-      if (g.mode === 'gates') g.redstone = Math.min(TUNE.redstoneMax, g.redstone + TUNE.redstonePerEmeraldGatesMode);
       Audio.sfx('emerald', 60);
       g.burst(p.x, 1, p.z, ['#2eff70', '#1fcf58'], 4, 3);
     },
@@ -606,13 +603,15 @@ export function loadSave() {
     world: null,
     // A short idempotency window for engine results. Additive only: old saves
     // receive the default and keep every existing field.
-    settledRunIds: [] };
+    settledRunIds: [],
+    mastery: { chapters: {} } };
   let save = def;
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) save = { ...def, ...JSON.parse(raw) };
   } catch { save = def; }
   normalizeUnlockedSkins(save);
+  normalizeMasterySave(save);
   migrateWorld(save); // build/repair the world, folding in any legacy flat playroom
   return save;
 }
@@ -644,6 +643,7 @@ export function importSave(code) {
     if (saveSchemaError(obj)) return null;
     const merged = { ...loadSave(), ...obj }; // fill any missing fields with defaults
     normalizeUnlockedSkins(merged);
+    normalizeMasterySave(merged);
     migrateWorld(merged);
     const incoming = JSON.stringify(merged);
     const current = localStorage.getItem(SAVE_KEY);

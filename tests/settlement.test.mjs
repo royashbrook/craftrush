@@ -129,3 +129,124 @@ test('the settled run window stays bounded', () => {
   assert.equal(save.settledRunIds.length, SETTLED_RUN_CAP);
   assert.equal(save.settledRunIds[0], `run-${SETTLED_RUN_CAP + 3}`);
 });
+
+test('campaign settlement attaches a persistent mastery update without changing rewards', () => {
+  const save = loadSave();
+  const settled = settleRunResult(save, result({
+    id: 'mastery-first',
+    chapter: { id: 'chapter-under-test' },
+    mastery: {
+      grade: 'B',
+      goodGates: 3,
+      badGates: 0,
+      missedGates: 0,
+      usefulGolems: 2,
+      damageTaken: 0,
+      bestCrowd: 28,
+    },
+  }), { now: NOW });
+
+  assert.equal(save.emeralds, 50, 'mastery never changes the payout');
+  assert.equal(settled.result.settlement.earned, 50);
+  assert.deepEqual(settled.result.mastery.masteryUpdate, {
+    newBadges: ['clean_line', 'golem_ace', 'untouched'],
+    record: {
+      bestGrade: 'B',
+      bestCrowd: 30,
+      badges: ['clean_line', 'golem_ace', 'untouched'],
+      isNew: true,
+    },
+    nextTarget: {
+      kind: 'grade',
+      grade: 'A',
+      label: 'Earn grade A',
+    },
+  });
+  const { isNew, ...persistentRecord } = settled.result.mastery.masteryUpdate.record;
+  assert.equal(isNew, true);
+  assert.deepEqual(save.mastery.chapters['chapter-under-test'], persistentRecord);
+  assert.equal('isNew' in save.mastery.chapters['chapter-under-test'], false);
+});
+
+test('mastery settlement is monotonic and duplicate delivery remains idempotent', () => {
+  const save = loadSave();
+  settleRunResult(save, result({
+    id: 'mastery-high',
+    chapter: { id: 'chapter-under-test' },
+    bestCrowd: 45,
+    mastery: {
+      grade: 'A',
+      goodGates: 3,
+      badGates: 0,
+      missedGates: 0,
+      usefulGolems: 2,
+      damageTaken: 0,
+    },
+  }), { now: NOW });
+
+  const lower = result({
+    id: 'mastery-low',
+    win: false,
+    chapter: { id: 'chapter-under-test' },
+    bestCrowd: 10,
+    mastery: {
+      grade: 'D',
+      goodGates: 0,
+      badGates: 1,
+      missedGates: 2,
+      usefulGolems: 0,
+      damageTaken: 8,
+    },
+  });
+  settleRunResult(save, lower, { now: NOW });
+  assert.equal(lower.mastery.masteryUpdate.record.bestGrade, 'A');
+  assert.equal(lower.mastery.masteryUpdate.record.bestCrowd, 45);
+  assert.equal(lower.mastery.masteryUpdate.record.isNew, false);
+  assert.deepEqual(lower.mastery.masteryUpdate.newBadges, []);
+
+  const before = JSON.stringify(save);
+  settleRunResult(save, { ...lower }, { now: NOW });
+  assert.equal(JSON.stringify(save), before);
+});
+
+test('daily expeditions remain isolated from campaign mastery', () => {
+  const save = loadSave();
+  const expedition = result({
+    id: 'mastery-expedition',
+    expedition: { id: 'daily' },
+    chapter: { id: 'chapter-under-test' },
+    mastery: {
+      grade: 'S',
+      goodGates: 9,
+      badGates: 0,
+      missedGates: 0,
+      usefulGolems: 3,
+      damageTaken: 0,
+    },
+  });
+  settleRunResult(save, expedition, { now: NOW, expeditionKey: '2026-07-27' });
+  assert.equal(Object.hasOwn(save.mastery.chapters, 'chapter-under-test'), false);
+  assert.equal('masteryUpdate' in expedition.mastery, false);
+});
+
+test('credits can complete the campaign without creating a mastery record', () => {
+  const save = loadSave();
+  const credits = result({
+    id: 'credits-run',
+    chapter: { id: 'credits', name: 'The Long Walk Home', credits: true },
+    mastery: {
+      grade: 'S',
+      goodGates: 9,
+      badGates: 0,
+      missedGates: 0,
+      usefulGolems: 3,
+      damageTaken: 0,
+    },
+  });
+
+  settleRunResult(save, credits, { now: NOW });
+
+  assert.ok(save.campaign.done.includes('credits'));
+  assert.equal(Object.hasOwn(save.mastery.chapters, 'credits'), false);
+  assert.equal('masteryUpdate' in credits.mastery, false);
+});

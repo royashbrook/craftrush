@@ -25,6 +25,32 @@ test('boots to the menu with no console errors', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('an earned achievement clears instead of covering later screens', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+  await page.evaluate(() => {
+    CR.save.stats.golems = 1;
+    CR.commit();
+  });
+
+  await expect(page.locator('#achPop')).toBeVisible();
+  await expect(page.locator('#achPopName')).toHaveText('Iron Friend');
+  await expect(page.locator('#achPop')).toBeHidden({ timeout: 5000 });
+});
+
+test('the menu is the one canonical version display and About keeps only its credits', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#verTag')).toHaveCount(1);
+  await expect(page.locator('#verTag')).toHaveText(/^v\d+\.\d+\.\d+(?:-dev)?$/);
+
+  await page.locator('#navMore').click();
+  await page.locator('#btnAbout').click();
+  await expect(page.locator('#about')).toBeVisible();
+  await expect(page.locator('#aboutVersion')).toHaveCount(0);
+  await expect(page.locator('.aboutMeta')).toHaveCount(0);
+  await expect(page.locator('#about')).not.toContainText(/\bversion\b/i);
+});
+
 test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) => {
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -43,6 +69,26 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
   await expect(page.locator('#appbar')).toBeHidden();
   await page.waitForTimeout(2500); // let the run play a couple seconds
   expect(errors).toEqual([]);
+});
+
+test('CALM says clearly that the ready golem sends automatically', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+  await page.evaluate(() => {
+    CR.save.speed = 'calm';
+    CR.commit();
+  });
+  await page.locator('#btnPlayShooter').click();
+  await expect(page.locator('#golemLabel')).toContainText('CALM · AUTO AT 100%');
+
+  await page.evaluate(() => {
+    CR.paused = true;
+    CR.game.gainGolemCharge(1 / 3);
+    const hud = CR.game.hudState();
+    CR.nav.hud = { ...hud, boss: { ...hud.boss } };
+  });
+  await expect.poll(() => page.evaluate(() => CR.game.summons.length)).toBe(1);
+  await expect(page.locator('#golemLabel')).toContainText('CALM · AUTO AT 100%');
 });
 
 test('a cycling chapter names the same biome on the menu and in the run', async ({ page }) => {
@@ -78,16 +124,183 @@ test('run skill cues survive the real browser input and result flow', async ({ p
   await expect(page.locator('#runObjective')).toContainText('QUEST:');
 
   await page.evaluate(() => {
-    window.CR.game.redstone = window.CR.game.hudState().redstoneMax;
+    const game = window.CR.game;
+    window.CR.paused = true;
+    game.obstacles = [{
+      x: game.playerX,
+      baseX: game.playerX,
+      z: game.playerZ + 8,
+      hp: 3,
+      sprite: game.biome.obstacle,
+      wobble: 0,
+      stationary: true,
+      directed: false,
+      motion: null,
+    }];
+    game.redstone = game.hudState().redstoneMax;
+    const hud = game.hudState();
+    window.CR.nav.hud = { ...hud, boss: { ...hud.boss } };
   });
-  await expect(page.locator('#golemLabel')).toHaveText('TAP TO SEND GOLEM');
+  await expect(page.locator('#golemLabel')).toHaveText('GOLEM READY · TAP');
   await page.locator('#gameCanvas').click({ position: { x: 215, y: 300 } });
   await expect.poll(() => page.evaluate(() => window.CR.game.summons.length)).toBe(1);
+  await page.evaluate(() => {
+    const game = window.CR.game;
+    for (let i = 0; i < 80 && game.mastery.usefulGolems === 0; i++) game.updateSummons(0.05);
+  });
+  await expect.poll(() => page.evaluate(() => window.CR.game.mastery.usefulGolems)).toBe(1);
 
-  await page.evaluate(() => window.CR.game.endRun(false));
+  await page.evaluate(() => {
+    const mastery = window.CR.game.mastery;
+    mastery.gateChoices = 3;
+    mastery.goodGates = 3;
+    mastery.badGates = 0;
+    mastery.missedGates = 0;
+    window.CR.game.endRun(false);
+  });
   await expect(page.locator('#masteryCallout')).toBeVisible();
   await expect(page.locator('#masteryCallout strong')).toHaveText(/[A-S]/);
   await expect(page.locator('#masteryCallout small')).not.toBeEmpty();
+  await expect(page.locator('#resultNewBadges')).toContainText('Clean Line');
+  await expect(page.locator('#resultMasteryRecord')).toBeVisible();
+  await expect(page.locator('#resultMasteryRecord')).toContainText('NEW RECORD');
+  await expect(page.locator('#resultNextTarget')).toContainText('Golem Ace');
+
+  await page.reload();
+  await expect(page.locator('#menuMasteryTarget')).toContainText('Golem Ace');
+});
+
+test('menu and Goals surface one concrete chapter mastery target', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+  await page.evaluate(() => {
+    CR.save.mastery = {
+      chapters: {
+        mine_obsidian: { bestGrade: 'A', bestCrowd: 321, badges: ['clean_line'] },
+      },
+    };
+    CR.commit();
+  });
+
+  await expect(page.locator('#menuMasteryTarget')).toContainText('Golem Ace');
+  await page.locator('#navMore').click();
+  await page.locator('#btnGoals').click();
+  await expect(page.locator('#goalsChapterSelect')).toHaveValue('mine_obsidian');
+  await expect(page.locator('#masteryBestGrade')).toHaveText('A');
+  await expect(page.locator('#masteryBestCrowd')).toHaveText('321');
+  await expect(page.locator('#masteryBadges')).toContainText('Clean Line');
+  await expect(page.locator('#goalsNextTarget')).toContainText('Golem Ace');
+  await expect(page.locator('#achGrid')).toHaveCount(0);
+  await page.locator('#goalsTabAchievements').click();
+  await expect(page.locator('#achGrid .achRow').first()).toBeVisible();
+  expect(await page.locator('#achGrid .achRow').count()).toBeGreaterThan(0);
+  await expect(page.locator('#achCount')).toHaveText(/\d+\/\d+/);
+});
+
+test('completed campaigns can inspect each playable chapter without offering credits mastery', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+  await page.evaluate(() => {
+    CR.save.campaign.done = [
+      'mine_obsidian', 'portal', 'fortress', 'stronghold', 'dragon',
+      'endcity', 'bastion', 'skulls', 'wither', 'credits',
+    ];
+    CR.save.mastery = {
+      chapters: {
+        portal: { bestGrade: 'A', bestCrowd: 44, badges: ['clean_line'] },
+        wither: { bestGrade: 'S+', bestCrowd: 88, badges: ['clean_line', 'golem_ace'] },
+      },
+    };
+    CR.commit();
+  });
+
+  await page.locator('#navMore').click();
+  await page.locator('#btnGoals').click();
+
+  const selector = page.locator('#goalsChapterSelect');
+  await expect(selector).toHaveValue('wither');
+  await expect(page.locator('#masteryBestGrade')).toHaveText('S+');
+  await expect(page.locator('#masteryBestCrowd')).toHaveText('88');
+  await expect(selector.locator('option[value="credits"]')).toHaveCount(0);
+  expect(await selector.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+
+  await selector.selectOption('portal');
+  await expect(page.locator('#masteryBestGrade')).toHaveText('A');
+  await expect(page.locator('#masteryBestCrowd')).toHaveText('44');
+
+  const geometry = await page.evaluate(() => {
+    const stage = document.querySelector('#stage').getBoundingClientRect();
+    const panel = document.querySelector('#achievements .panel').getBoundingClientRect();
+    return {
+      left: panel.left - stage.left,
+      top: panel.top - stage.top,
+      right: panel.right - stage.right,
+      bottom: panel.bottom - stage.bottom,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  expect(geometry.left).toBeGreaterThanOrEqual(-1);
+  expect(geometry.top).toBeGreaterThanOrEqual(-1);
+  expect(geometry.right).toBeLessThanOrEqual(1);
+  expect(geometry.bottom).toBeLessThanOrEqual(1);
+  expect(geometry.overflow).toBeLessThanOrEqual(1);
+});
+
+test('mastery surfaces stay inside an iPhone-size stage', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.locator('#btnPlayShooter').waitFor();
+
+  const expectInsideStage = async (selector) => {
+    const geometry = await page.evaluate((target) => {
+      const stage = document.querySelector('#stage').getBoundingClientRect();
+      const box = document.querySelector(target).getBoundingClientRect();
+      return {
+        left: box.left - stage.left,
+        top: box.top - stage.top,
+        right: box.right - stage.right,
+        bottom: box.bottom - stage.bottom,
+        pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    }, selector);
+    expect(geometry.left).toBeGreaterThanOrEqual(-1);
+    expect(geometry.top).toBeGreaterThanOrEqual(-1);
+    expect(geometry.right).toBeLessThanOrEqual(1);
+    expect(geometry.bottom).toBeLessThanOrEqual(1);
+    expect(geometry.pageOverflow).toBeLessThanOrEqual(1);
+  };
+
+  await expectInsideStage('#menu');
+  await page.locator('#navMore').click();
+  await page.locator('#btnGoals').click();
+  await expectInsideStage('#achievements .panel');
+
+  await page.evaluate(() => {
+    CR.nav.result = {
+      id: 'iphone-mastery-result',
+      win: true,
+      level: 1,
+      emeralds: 42,
+      bonus: 12,
+      emeraldMul: 1,
+      rods: 2,
+      kills: 15,
+      bestCrowd: 321,
+      biome: 'Grassy Plains',
+      mode: 'shooter',
+      mastery: {
+        grade: 'S',
+        label: 'AMAZING!',
+        praise: 'No runners lost',
+        newBadges: ['clean_line', 'golem_ace', 'untouched'],
+        record: { bestGrade: 'S', bestCrowd: 321 },
+        nextTarget: { label: 'Build a crowd of 322' },
+      },
+    };
+  });
+  await expect(page.locator('#result')).toBeVisible();
+  await expectInsideStage('#result .panel');
 });
 
 test('pause and resume work', async ({ page }) => {

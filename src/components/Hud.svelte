@@ -13,7 +13,12 @@
   const h = $derived(nav.hud ?? {});
   const power = $derived(h.power ?? {});
   const pct = $derived(h.redstoneMax ? (h.redstone ?? 0) / h.redstoneMax : 0);
-  const ready = $derived(pct >= 1);
+  const ready = $derived(h.golemReady ?? pct >= 1);
+  const golemLabel = $derived.by(() => {
+    const percent = Math.floor(pct * 100);
+    if (h.autoGolem) return ready ? 'CALM · GOLEM SENDING' : `CALM · AUTO AT 100% · ${percent}%`;
+    return ready ? 'GOLEM READY · TAP' : `GOLEM ${percent}%`;
+  });
 
   const chips = $derived.by(() => {
     const c = [];
@@ -41,7 +46,7 @@
   <div id="powerChips">{chips}</div>
   <div id="golemMeter" class:ready>
     <div id="golemFill" style="width:{(pct * 100).toFixed(0)}%"></div>
-    <span id="golemLabel">{ready ? (h.autoGolem ? 'GOLEM INCOMING!' : 'TAP TO SEND GOLEM') : `GOLEM ${Math.floor(pct * 100)}%`}</span>
+    <span id="golemLabel">{golemLabel}</span>
   </div>
   {#if h.objectiveText}
     <div id="runObjective" class:done={h.objectiveDone}>
