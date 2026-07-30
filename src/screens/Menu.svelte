@@ -6,20 +6,29 @@
   are short of something, it says exactly how short.
 -->
 <script>
-  import { tick } from 'svelte';
-  import { save, nav, commit } from '../lib/store.svelte.js';
+  import { onMount, tick } from 'svelte';
+  import { save, nav, commit, go, toast } from '../lib/store.svelte.js';
   import { Audio } from '../../js/audio.js';
   import {
     VERSION, BIOMES, CAMPAIGN, RESOURCES, currentChapter, chapterMissing,
-    dailyExpedition, expeditionStatus,
+    dailyExpedition, expeditionStatus, importSave,
   } from '../../js/config.js';
   import { masteryChapterEligible, nextMasteryTarget } from '../../js/mastery.js';
+  import { isStandaloneApp, shouldOfferLegacyRestore } from '../../js/pwa-safety.js';
   import Sprite from '../lib/Sprite.svelte';
 
   let { game } = $props();
 
   let panel = $state(null);
   let tier = $state('');          // '', 'compact' or 'compact tight'
+  let standalone = $state(false);
+  let restoreBusy = $state(false);
+  let restoreMessage = $state('');
+  let restoreDone = $state(false);
+  let restoreOfferLatched = $state(false);
+
+  const LEGACY_RESTORE_DONE_KEY = 'craftrush_legacy_restore_done_v1';
+  const LEGACY_RESTORE_OFFER_KEY = 'craftrush_legacy_restore_offer_v1';
 
   const done = $derived(save.campaign?.done ?? []);
   const chapter = $derived(currentChapter(save));
@@ -36,6 +45,43 @@
   const masteryTarget = $derived(
     masteryChapterEligible(chapter) ? nextMasteryTarget(save, chapter.id) : null,
   );
+  const offerLegacyRestore = $derived(
+    standalone
+      && !restoreDone
+      && (restoreOfferLatched || shouldOfferLegacyRestore(save, standalone)),
+  );
+
+  onMount(() => {
+    standalone = isStandaloneApp();
+    if (!standalone) return;
+    try {
+      restoreDone = localStorage.getItem(LEGACY_RESTORE_DONE_KEY) === '1';
+      restoreOfferLatched = localStorage.getItem(LEGACY_RESTORE_OFFER_KEY) === '1';
+      if (!restoreDone && !restoreOfferLatched && shouldOfferLegacyRestore(save, true)) {
+        localStorage.setItem(LEGACY_RESTORE_OFFER_KEY, '1');
+        restoreOfferLatched = true;
+      }
+    } catch {
+      // Private browsing can deny storage. Keep the recovery action available
+      // for this visit instead of hiding the only route to the old save.
+      restoreOfferLatched = !restoreDone && shouldOfferLegacyRestore(save, true);
+    }
+  });
+
+  function finishLegacyRestoreOffer() {
+    restoreDone = true;
+    restoreOfferLatched = false;
+    try {
+      localStorage.setItem(LEGACY_RESTORE_DONE_KEY, '1');
+      localStorage.removeItem(LEGACY_RESTORE_OFFER_KEY);
+    } catch { /* the in-memory dismissal still works for this visit */ }
+  }
+
+  function dismissLegacyRestore() {
+    Audio.unlock();
+    Audio.sfx('click');
+    finishLegacyRestoreOffer();
+  }
 
   function start(mode) {
     Audio.unlock();
@@ -60,12 +106,33 @@
     game.startRun(null, 'credits');
   }
 
+  async function restoreCopiedSave() {
+    Audio.unlock();
+    Audio.sfx('click');
+    restoreBusy = true;
+    restoreMessage = 'Checking your copied save…';
+    let code = '';
+    try {
+      code = await navigator.clipboard?.readText();
+    } catch { /* the paste screen below is the permission-safe fallback */ }
+    if (code && importSave(code)) {
+      finishLegacyRestoreOffer();
+      restoreMessage = 'Save restored! Restarting…';
+      setTimeout(() => location.reload(), 500);
+      return;
+    }
+    restoreBusy = false;
+    toast(code ? 'THAT WAS NOT A CRAFT RUSH SAVE' : 'PASTE YOUR OLD SAVE CODE');
+    nav.restoreIntent = true;
+    go('settings');
+  }
+
   // The menu must never scroll, and how tall it is depends on what is in it (a
   // quest card, a replay button) as much as on the screen. So it measures itself
   // after each render and steps down through two compact tiers until it fits.
   // A height breakpoint cannot do this: it does not know what is on the page.
   $effect(() => {
-    void [chapter, missing, exp, masteryTarget, save.level];   // re-measure when the content changes
+    void [chapter, missing, exp, masteryTarget, save.level, offerLegacyRestore];
     if (!panel) return;
     const el = panel;
     let cancelled = false;
@@ -90,6 +157,27 @@
   <div class="logo">CraftRush</div>
   <div class="panel" bind:this={panel}>
     <div class="levelChip" id="menuLevel">LV {save.level} · {biome.name.toUpperCase()}</div>
+
+    {#if offerLegacyRestore}
+      <div id="legacyRestore">
+        <div id="legacyRestoreText">
+          <b>PLAYED BEFORE THE MOVE?</b>
+          <span>Your old app and this one keep separate saves.</span>
+        </div>
+        <button
+          class="mcbtn small"
+          id="btnRestoreCopiedSave"
+          disabled={restoreBusy}
+          onclick={restoreCopiedSave}
+        >{restoreBusy ? restoreMessage : 'RESTORE COPIED SAVE'}</button>
+        <button
+          class="legacyDismiss"
+          id="btnDismissLegacyRestore"
+          disabled={restoreBusy}
+          onclick={dismissLegacyRestore}
+        >NOT MY OLD APP</button>
+      </div>
+    {/if}
 
     <div id="questCard">
       <div id="questHead">YOUR QUEST<span id="questStep">{done.length} OF {CAMPAIGN.length}</span></div>

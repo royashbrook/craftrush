@@ -16,8 +16,8 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.7**, tag `v1.7`, deployed builds count up from it
-(`v1.7.1` and so on). `main` is the deployed branch.
+Current release: **v1.7.1**, tag `v1.7.1`, deployed builds count up from it
+(`v1.7.2` and so on). `main` is the deployed branch.
 
 ## The standalone deploy and old-address handoff
 
@@ -33,9 +33,19 @@ CI refuses to deploy one.
 
 The companion **`royashbrook/royashbrook.com`** repo no longer builds the game.
 Its `/craftrush/` page stays as a first-party save handoff because localStorage
-cannot cross origins. That page may retire only the historical `/craftrush/`
-service-worker scope and `craftrush-*` caches. It must never touch another app
-on the old origin.
+cannot cross origins. The handoff does not retire the historical
+`/craftrush/` worker or its caches before the replacement save is verified.
+The old installed app is the last rescue copy and must remain reopenable,
+including offline. Any later cleanup must never touch another app on the old
+origin.
+
+The old handoff must never auto-navigate. On iPhone, following its link from an
+installed app opens the new origin in a Safari view, and a later Home Screen
+installation gets another isolated storage container. The handoff therefore
+requires a portable copy before opening the new home and tells the player to
+keep the old icon until the installed replacement shows the right progress. A
+fresh installed replacement surfaces `RESTORE COPIED SAVE` on its menu and uses
+the existing verified import and rollback path.
 
 Watch the deploy with `gh run list --repo royashbrook/craftrush --limit 1` and
 verify the live hostname afterwards, never just the CI status.
@@ -148,7 +158,9 @@ asserting it fetches nothing external.
 two different saves. The rescue page says which one you are in, and the QR
 transfer exists to move progress between them. An installed app also has no
 address bar, which is why `src/app.html` carries an inline watchdog that offers
-a way out when the app fails to mount.
+a way out when the app fails to mount. This also means an origin-migration link
+opened in a Safari view cannot seed a later Home Screen installation. Copy the
+portable save first and restore it from inside the installed app.
 
 **Cloudflare serves `.html` at the extensionless path.** Link to `./rescue.html`,
 not `./rescue`: the bare path 404s on any plain static server including
@@ -183,7 +195,8 @@ Plains, Forest, and Desert pilot each has a distinct run and boss identity
 CALM auto-release, persistent per-chapter records and skill badges, one compact
 next target, and restrained impact feedback (#94). It also removed the duplicate
 About-page version while keeping the menu as the canonical release display
-(#89).
+(#89). v1.7.1 made the old iPhone handoff explicitly recoverable and restored
+the always-visible menu wallet (#98, #99, royashbrook/royashbrook.com#9).
 
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker

@@ -54,6 +54,43 @@ export function ownsCraftRushRegistration(registration, pageHref) {
   }
 }
 
+/**
+ * Home Screen apps on iOS keep storage separate from Safari. Keep this check
+ * browser-agnostic so the menu can offer the old-save recovery path only inside
+ * an installed app, while ordinary browser players keep the compact menu.
+ */
+export function isStandaloneApp(
+  navigatorLike = globalThis.navigator,
+  matchMediaLike = globalThis.matchMedia,
+) {
+  if (navigatorLike?.standalone === true) return true;
+  try {
+    return matchMediaLike?.('(display-mode: standalone)')?.matches === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A newly installed app has no signal from the old origin because that storage
+ * boundary is the problem. Offer recovery while the local game is still close
+ * to its untouched starting state, then step out of the way once it is clearly
+ * an established save.
+ */
+export function shouldOfferLegacyRestore(save, standalone) {
+  if (!standalone || !record(save)) return false;
+  const done = Array.isArray(save.campaign?.done) ? save.campaign.done : [];
+  const unlocked = Array.isArray(save.unlocked) ? save.unlocked : [];
+  const runs = Number.isFinite(save.stats?.runs) ? save.stats.runs : 0;
+  const earned = Number.isFinite(save.stats?.totalEmeralds) ? save.stats.totalEmeralds : 0;
+  return save.level === 1
+    && (save.bestLevel ?? 1) <= 1
+    && done.length === 0
+    && runs <= 1
+    && earned <= 50
+    && unlocked.every((skin) => skin === 'steve');
+}
+
 const record = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
 const stringArray = (value) => Array.isArray(value) && value.every((item) => typeof item === 'string');
 const finiteAtLeast = (value, min) => typeof value === 'number' && Number.isFinite(value) && value >= min;

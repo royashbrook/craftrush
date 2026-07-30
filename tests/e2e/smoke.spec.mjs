@@ -16,6 +16,8 @@ test('boots to the menu with no console errors', async ({ page }) => {
   // the app shell is always present outside a run
   await expect(page.locator('#appbar')).toBeVisible();
   await expect(page.locator('#navbar')).toBeVisible();
+  await expect(page.locator('#barWallet')).toBeVisible();
+  await expect(page.locator('#barEmeralds')).toHaveText('0');
   // menu fits without scrolling: the panel is within the viewport height
   const overflow = await page.evaluate(() => {
     const p = document.querySelector('#menu .panel');
@@ -23,6 +25,109 @@ test('boots to the menu with no console errors', async ({ page }) => {
   });
   expect(overflow).toBeLessThanOrEqual(1);
   expect(errors).toEqual([]);
+});
+
+test('a fresh installed app restores the save copied before relocation', async ({ page, context }) => {
+  const oldSave = {
+    level: 6,
+    bestLevel: 6,
+    emeralds: 606,
+    unlocked: ['steve', 'alex'],
+    campaign: { done: ['mine_obsidian'] },
+  };
+  const code = `CR1|${Buffer.from(JSON.stringify(oldSave), 'utf8').toString('base64')}`;
+  await context.addInitScript((copied) => {
+    Object.defineProperty(navigator, 'standalone', {
+      configurable: true,
+      get: () => true,
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { readText: async () => copied },
+    });
+  }, code);
+
+  await page.goto('/');
+  await expect(page.locator('#btnRestoreCopiedSave')).toBeVisible();
+  await page.locator('#btnRestoreCopiedSave').click();
+  await expect(page.locator('#menuLevel')).toContainText('LV 6');
+  await expect(page.locator('#barEmeralds')).toHaveText('606');
+  await expect(page.locator('#btnRestoreCopiedSave')).toHaveCount(0);
+  expect(await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('craftrush_save_v1')).level)).toBe(6);
+  expect(await page.evaluate(() =>
+    localStorage.getItem('craftrush_legacy_restore_done_v1'))).toBe('1');
+});
+
+test('installed-app restore focuses a persistent manual paste path and completes it', async ({ page, context }) => {
+  const oldSave = {
+    level: 4,
+    bestLevel: 4,
+    emeralds: 404,
+    unlocked: ['steve', 'alex'],
+    campaign: { done: ['mine_obsidian'] },
+  };
+  const code = `CR1|${Buffer.from(JSON.stringify(oldSave), 'utf8').toString('base64')}`;
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'standalone', {
+      configurable: true,
+      get: () => true,
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { readText: async () => { throw new Error('clipboard denied'); } },
+    });
+  });
+
+  await page.goto('/');
+  await expect(page.locator('#btnRestoreCopiedSave')).toBeVisible();
+  await page.locator('#btnRestoreCopiedSave').click();
+  await expect(page.locator('#settings')).toBeVisible();
+  await expect(page.locator('#toast')).toContainText('PASTE YOUR OLD SAVE CODE');
+  await expect(page.locator('#legacyRestoreHint')).toContainText('then tap LOAD CODE');
+  await expect(page.locator('#saveImport')).toBeFocused();
+  expect(await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('craftrush_save_v1')).level)).toBe(1);
+
+  await page.locator('#saveImport').fill(code);
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.locator('#btnLoadSave').click();
+  await expect(page.locator('#menuLevel')).toContainText('LV 4');
+  await expect(page.locator('#barEmeralds')).toHaveText('404');
+  await expect(page.locator('#btnRestoreCopiedSave')).toHaveCount(0);
+});
+
+test('installed-app restore offer stays recoverable, dismissible, and fits a short iPhone', async ({ page, context }) => {
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'standalone', {
+      configurable: true,
+      get: () => true,
+    });
+  });
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto('/');
+  await expect(page.locator('#btnRestoreCopiedSave')).toBeVisible();
+
+  const overflow = await page.evaluate(() => {
+    const panel = document.querySelector('#menu .panel');
+    return panel.scrollHeight - panel.clientHeight;
+  });
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  // Once offered on a fresh install, a run cannot silently make the recovery
+  // route disappear before the player restores or explicitly dismisses it.
+  await page.evaluate(() => {
+    CR.save.stats.runs = 4;
+    CR.save.stats.totalEmeralds = 400;
+    CR.commit();
+  });
+  await page.reload();
+  await expect(page.locator('#btnRestoreCopiedSave')).toBeVisible();
+
+  await page.locator('#btnDismissLegacyRestore').click();
+  await expect(page.locator('#btnRestoreCopiedSave')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('#btnRestoreCopiedSave')).toHaveCount(0);
 });
 
 test('an earned achievement clears instead of covering later screens', async ({ page }) => {
