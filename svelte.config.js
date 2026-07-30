@@ -1,18 +1,5 @@
 import adapter from '@sveltejs/adapter-static';
-import { execSync } from 'node:child_process';
-
-// major.minor from the last tag, patch from commits since it. Also what the
-// corner of the menu shows, so a player reading out a version number is naming
-// the same build the cache is keyed on.
-function appVersion() {
-  try {
-    const tag = execSync('git describe --tags --abbrev=0', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-    const since = execSync(`git rev-list ${tag}..HEAD --count`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-    return `${tag.replace(/^v/, '')}.${since}`;
-  } catch {
-    return '0.0.0-dev';
-  }
-}
+import { appVersion } from './tools/version.mjs';
 
 /** @type {import('@sveltejs/kit').Config} */
 export default {

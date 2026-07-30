@@ -16,8 +16,8 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.7.1**, tag `v1.7.1`, deployed builds count up from it
-(`v1.7.2` and so on). `main` is the deployed branch.
+Current release: **v1.7.2**, tag `v1.7.2`, deployed builds count up from it
+(`v1.7.3` and so on). `main` is the deployed branch.
 
 ## The standalone deploy and old-address handoff
 
@@ -197,6 +197,7 @@ next target, and restrained impact feedback (#94). It also removed the duplicate
 About-page version while keeping the menu as the canonical release display
 (#89). v1.7.1 made the old iPhone handoff explicitly recoverable and restored
 the always-visible menu wallet (#98, #99, royashbrook/royashbrook.com#9).
+v1.7.2 kept semantic version stamping valid after patch release tags (#102).
 
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker
