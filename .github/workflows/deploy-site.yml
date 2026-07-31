@@ -29,10 +29,10 @@ jobs:
       # the commits since it (see appVersion() in svelte.config.js), and a shallow
       # clone has neither, so the build would stamp 0.0.0-dev and every client's
       # cache key would stop moving.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
