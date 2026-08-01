@@ -57,38 +57,29 @@
   .rowBtn { display: flex; align-items: center; gap: 10px; text-align: left; }
   .rowBtn .icon { flex: 0 0 auto; }
 
-  #playHero { width: 100%; padding: 10px; border: 3px solid #2a7fd4;
-    background: linear-gradient(145deg, rgba(18,63,103,0.92), rgba(28,25,38,0.96));
-    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.14), 0 5px 0 rgba(0,0,0,0.36);
-    display: flex; flex-direction: column; gap: 9px; }
-  #playHero.gateMode { border-color: #d39b24;
-    background: linear-gradient(145deg, rgba(92,61,12,0.92), rgba(28,25,38,0.96)); }
-  #playHeroCopy { display: flex; align-items: center; gap: 10px; min-width: 0; text-align: left; }
-  #playHeroIcon { flex: 0 0 52px; width: 52px; height: 52px; padding: 5px; border: 2px solid #000;
-    background: rgba(0,0,0,0.34); }
-  #playHeroCopy > div { min-width: 0; }
-  #playHeroCopy span { display: block; color: #7ee0ff; font-size: 9px; font-weight: 900; letter-spacing: 1.5px; }
-  #playHero.gateMode #playHeroCopy span { color: #ffd94d; }
-  #playHeroCopy strong { display: block; color: #fff; font-size: 20px; line-height: 1.05;
-    letter-spacing: 1px; text-shadow: 2px 2px 0 #000; }
-  #playHeroCopy small { display: block; margin-top: 3px; color: #cfc9d8; font-size: 10px; line-height: 1.25; }
-  #playHero .mcbtn { min-height: 50px; font-size: 15px; }
-  #modePicker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; width: 100%; }
-  #modePicker button { min-width: 0; min-height: 44px; border: 2px solid #000; padding: 4px 6px;
-    background: #302b3a; color: #8f88a0; cursor: pointer;
-    font: 900 10px/1 'Courier New', Courier, monospace;
-    display: flex; align-items: center; justify-content: center; gap: 5px;
-    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1); }
-  #modePicker button.sel { background: #2a6f86; color: #fff; box-shadow: inset 0 -3px 0 #7ee0ff; }
-  #modePicker button:last-child.sel { background: #765411; box-shadow: inset 0 -3px 0 #ffd94d; }
-  #modePicker .icon { width: 20px; height: 20px; }
+  #modeLaunchers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; width: 100%; }
+  .modeLaunch { min-width: 0; min-height: 82px; border: 3px solid #000; padding: 7px 4px;
+    cursor: pointer; font-family: inherit; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; color: #fff;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.16), inset -2px -2px 0 rgba(0,0,0,0.34), 0 4px 0 rgba(0,0,0,0.34); }
+  .modeLaunch.shooter { border-color: #2a7fd4;
+    background: linear-gradient(145deg, #245f87, #1d3046); }
+  .modeLaunch.gates { border-color: #d39b24;
+    background: linear-gradient(145deg, #82601b, #3d301b); }
+  .modeLaunch:active { transform: translateY(2px); box-shadow: inset 2px 2px 0 rgba(0,0,0,0.3); }
+  .modeLaunchIcon { width: 34px; height: 34px; image-rendering: pixelated; }
+  .modeLaunch span { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .modeLaunch strong { font-size: 12px; line-height: 1; letter-spacing: 0.2px;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.7); white-space: nowrap; }
+  .modeLaunch small { color: #bfefff; font-size: 8px; font-weight: 900; line-height: 1; letter-spacing: 0.7px; }
+  .modeLaunch.gates small { color: #ffe68a; }
   /* The menu must never scroll, but how tall it is depends on what is in it
      (a quest card, a replay button) as much as on the screen. So the app
      measures after each render and steps down through these two tiers until
      it fits, rather than guessing from a height breakpoint. */
-  #menu.compact #playHeroCopy small, #menu.compact #questDesc { display: none; }
-  #menu.compact #playHero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 7px; }
-  #menu.compact #playHero .mcbtn { width: auto; min-height: 44px; padding: 7px 10px; font-size: 12px; }
+  #menu.compact #questDesc { display: none; }
+  #menu.compact .modeLaunch { min-height: 68px; padding: 4px; }
+  #menu.compact .modeLaunchIcon { width: 28px; height: 28px; }
 
   #menu.tight .levelChip { padding: 3px 10px; font-size: 12px; }
   #menu.tight #expDesc { display: none; }
@@ -97,8 +88,9 @@
   #menu.tight .panel { gap: 5px; padding-top: 8px; padding-bottom: 8px; }
   #menu.tight #questCard { gap: 4px; padding: 6px; }
   #menu.tight #btnQuestReplay { padding: 5px 8px; font-size: 11px; }
-  #menu.tight #playHeroIcon { width: 40px; height: 40px; flex-basis: 40px; }
-  #menu.tight #playHeroCopy strong { font-size: 16px; }
+  #menu.tight .modeLaunch { min-height: 56px; flex-direction: row; gap: 4px; }
+  #menu.tight .modeLaunchIcon { width: 24px; height: 24px; }
+  #menu.tight .modeLaunch small { display: none; }
 
   #legacyRestore { display: grid; grid-template-columns: minmax(0, 1fr) auto;
     align-items: center; gap: 4px 8px; width: 100%;
