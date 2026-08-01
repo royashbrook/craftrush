@@ -1,6 +1,6 @@
-<!-- The runner is the product. One large action starts the selected mode; the
-  quest and expedition sit behind it as reasons to run, never destinations that
-  compete with it. -->
+<!-- The runner is the product. Each game mode is its own play button; the quest
+  and expedition sit behind them as reasons to run, never destinations that
+  compete with them. -->
 <script>
   import { onMount, tick } from 'svelte';
   import { save, nav, commit, go, toast } from '../lib/store.svelte.js';
@@ -86,13 +86,6 @@
     commit();
     nav.playing = true;
     game.startRun();
-  }
-
-  function selectMode(mode) {
-    Audio.unlock();
-    Audio.sfx('click');
-    save.mode = mode;
-    commit();
   }
 
   function startExpedition() {
@@ -182,30 +175,14 @@
       </div>
     {/if}
 
-    <section id="playHero" class:gateMode={save.mode === 'gates'}>
-      <div id="playHeroCopy">
-        <Sprite name={save.mode === 'shooter' ? 'ui_bow' : 'ui_door'} id="playHeroIcon" scale={5} />
-        <div>
-          <span>READY TO RUN</span>
-          <strong>{save.mode === 'shooter' ? 'BOW BLITZ' : 'GATE DASH'}</strong>
-          <small>{save.mode === 'shooter'
-            ? 'Steer the archers, multiply the volley, break the boss.'
-            : 'Choose the gates, dodge the danger, grow the crowd.'}</small>
-        </div>
-      </div>
-      {#if save.mode === 'shooter'}
-        <button class="mcbtn primary" id="btnPlayShooter" onclick={() => start('shooter')}>▶ PLAY BOW BLITZ</button>
-      {:else}
-        <button class="mcbtn primary" id="btnPlayGates" onclick={() => start('gates')}>▶ PLAY GATE DASH</button>
-      {/if}
-    </section>
-
-    <div id="modePicker" aria-label="Game mode">
-      <button class:sel={save.mode === 'shooter'} id="btnModeShooter" onclick={() => selectMode('shooter')}>
-        <Sprite name="ui_bow" />BOW BLITZ
+    <div id="modeLaunchers" aria-label="Choose a game">
+      <button class="modeLaunch shooter" id="btnPlayShooter" onclick={() => start('shooter')}>
+        <Sprite name="ui_bow" class="modeLaunchIcon" scale={4} />
+        <span><strong>▶ BOW BLITZ</strong><small>AIM + FIRE</small></span>
       </button>
-      <button class:sel={save.mode === 'gates'} id="btnModeGates" onclick={() => selectMode('gates')}>
-        <Sprite name="ui_door" />GATE DASH
+      <button class="modeLaunch gates" id="btnPlayGates" onclick={() => start('gates')}>
+        <Sprite name="ui_door" class="modeLaunchIcon" scale={4} />
+        <span><strong>▶ GATE DASH</strong><small>PICK + GROW</small></span>
       </button>
     </div>
 

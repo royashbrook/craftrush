@@ -16,9 +16,10 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.8**, tag `v1.8`. The core reset retires the town, houses,
-playroom, village, mine, and idle emeralds without rewriting their old save
-fields. `main` is the deployed branch.
+Current release: **v1.8.1**, tag `v1.8.1`. The core reset retires the town,
+houses, playroom, village, mine, and idle emeralds without rewriting their old
+save fields. Bow Blitz and Gate Dash are direct play buttons, with no separate
+mode-selection step. `main` is the deployed branch.
 
 ## The standalone deploy and old-address handoff
 

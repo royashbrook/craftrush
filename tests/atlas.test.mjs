@@ -4,6 +4,7 @@ import { contentKey, paletteKey } from '../js/atlaskey.js';
 import { enumerateVariants } from '../js/variants.js';
 import { SKINS, COSMETICS, TIERS, THEME_ART } from '../js/config.js';
 import { readFileSync } from 'node:fs';
+import { decodePNG } from '../tools/png.mjs';
 
 const ART = JSON.parse(readFileSync(new URL('sprites.json', THEME_ART + '/'), 'utf8'));
 
@@ -57,4 +58,27 @@ test('a theme that ships fewer sprites asks for fewer variants, and does not thr
 test('retired side-system art is not packed into the runtime atlas', () => {
   const ids = ['pm_torso', 'room_rug', 'villager_body', 'oak_tree'];
   assert.deepEqual(enumerateVariants(cfg, ids).map((v) => v.id), ['oak_tree']);
+});
+
+test('the pickaxe point curves down on the left of its handle', () => {
+  const { w, h, rgba } = decodePNG(readFileSync(new URL('ui_pickaxe.png', THEME_ART + '/')));
+  assert.deepEqual([w, h], [13, 13]);
+
+  const metal = new Set([ART.ui_pickaxe.palette.g, ART.ui_pickaxe.palette.G].map((hex) => {
+    const value = parseInt(hex.slice(1), 16);
+    return `${value >> 16},${(value >> 8) & 255},${value & 255}`;
+  }));
+  const isMetal = (x, y) => {
+    const i = (y * w + x) * 4;
+    return rgba[i + 3] > 0 && metal.has(`${rgba[i]},${rgba[i + 1]},${rgba[i + 2]}`);
+  };
+
+  let lowerLeftMetal = 0;
+  let lowerRightMetal = 0;
+  for (let y = 5; y < 8; y++) {
+    for (let x = 0; x < 5; x++) lowerLeftMetal += Number(isMetal(x, y));
+    for (let x = 9; x < w; x++) lowerRightMetal += Number(isMetal(x, y));
+  }
+  assert.ok(lowerLeftMetal >= 3, 'the pointed end descends on the left');
+  assert.equal(lowerRightMetal, 0, 'the right side stays a straight tool head');
 });

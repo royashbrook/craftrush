@@ -12,6 +12,8 @@ test('boots to the menu with no console errors', async ({ page }) => {
 
   await page.goto('/');
   await expect(page.locator('#btnPlayShooter')).toBeVisible();
+  await expect(page.locator('#btnPlayGates')).toBeVisible();
+  await expect(page.locator('#modePicker')).toHaveCount(0);
   await expect(page.locator('#menu')).toBeVisible();
   // the app shell is always present outside a run
   await expect(page.locator('#appbar')).toBeVisible();
@@ -25,6 +27,54 @@ test('boots to the menu with no console errors', async ({ page }) => {
   });
   expect(overflow).toBeLessThanOrEqual(1);
   expect(errors).toEqual([]);
+});
+
+test('each game mode launches in one tap with no selector step', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#btnPlayShooter')).toBeVisible();
+  await expect(page.locator('#btnPlayGates')).toBeVisible();
+
+  await page.locator('#btnPlayGates').click();
+  await expect(page.locator('#hud')).toBeVisible();
+  expect(await page.evaluate(() => CR.save.mode)).toBe('gates');
+
+  await page.reload();
+  await page.locator('#btnPlayShooter').click();
+  await expect(page.locator('#hud')).toBeVisible();
+  expect(await page.evaluate(() => CR.save.mode)).toBe('shooter');
+});
+
+test('the direct-play menu does not overlap on an iPhone Air viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 420, height: 912 });
+  await page.goto('/');
+  await expect(page.locator('#btnPlayShooter')).toBeVisible();
+  await expect(page.locator('#btnPlayGates')).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const rect = (selector) => document.querySelector(selector).getBoundingClientRect();
+    const overlay = rect('#menu');
+    const logo = rect('#menu .logo');
+    const panel = rect('#menu .panel');
+    const shooter = rect('#btnPlayShooter');
+    const gates = rect('#btnPlayGates');
+    const panelEl = document.querySelector('#menu .panel');
+    return {
+      overflow: panelEl.scrollHeight - panelEl.clientHeight,
+      logoClearsPanel: logo.bottom <= panel.top,
+      panelInsideOverlay: panel.top >= overlay.top && panel.bottom <= overlay.bottom,
+      shooterInsidePanel: shooter.top >= panel.top && shooter.bottom <= panel.bottom,
+      gatesInsidePanel: gates.top >= panel.top && gates.bottom <= panel.bottom,
+      buttonsDoNotOverlap: shooter.right <= gates.left,
+    };
+  });
+  expect(layout).toEqual({
+    overflow: 0,
+    logoClearsPanel: true,
+    panelInsideOverlay: true,
+    shooterInsidePanel: true,
+    gatesInsidePanel: true,
+    buttonsDoNotOverlap: true,
+  });
 });
 
 test('a fresh installed app restores the save copied before relocation', async ({ page, context }) => {

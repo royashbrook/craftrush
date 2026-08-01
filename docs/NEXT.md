@@ -46,6 +46,11 @@ paces; CALM retains auto-fire. Gate gains expand and flash the crowd, large powe
 has a bounded physical read, and every standard boss has at least three damage
 stages with visible armor breaks.
 
+v1.8.1 restores the direct-play home screen after the core reset briefly added
+a selected-mode hero and an extra selector tap. Bow Blitz and Gate Dash are now
+the two primary launch buttons, the menu is covered at the iPhone Air viewport,
+and the shared Obsidian Hunt pickaxe silhouette is corrected at its source.
+
 The next decision is empirical, not another feature brainstorm: run the five
 player first-run protocol in `docs/PLAYTEST.md`. Do not add another side system
 until at least three players voluntarily choose another run and can explain one
