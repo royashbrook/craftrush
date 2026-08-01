@@ -2,12 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { contentKey, paletteKey } from '../js/atlaskey.js';
 import { enumerateVariants } from '../js/variants.js';
-import { SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS, THEME_ART } from '../js/config.js';
+import { SKINS, COSMETICS, TIERS, THEME_ART } from '../js/config.js';
 import { readFileSync } from 'node:fs';
 
 const ART = JSON.parse(readFileSync(new URL('sprites.json', THEME_ART + '/'), 'utf8'));
 
-const cfg = { SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS };
+const cfg = { SKINS, COSMETICS, TIERS };
 
 test('a sprite with no palette keys as its own name', () => {
   assert.equal(contentKey('oak_tree', null), 'oak_tree');
@@ -52,4 +52,9 @@ test('a theme that ships fewer sprites asks for fewer variants, and does not thr
   const vs = enumerateVariants(cfg, ['oak_tree']);
   assert.deepEqual(vs.map((v) => v.id), ['oak_tree'], 'nothing is invented for art that is absent');
   assert.deepEqual(enumerateVariants({}, []), [], 'an empty theme is empty, not an error');
+});
+
+test('retired side-system art is not packed into the runtime atlas', () => {
+  const ids = ['pm_torso', 'room_rug', 'villager_body', 'oak_tree'];
+  assert.deepEqual(enumerateVariants(cfg, ids).map((v) => v.id), ['oak_tree']);
 });

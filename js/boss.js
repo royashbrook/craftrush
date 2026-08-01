@@ -38,7 +38,9 @@ export const BossMixin = {
     const reaction = this.bossReactionScale();
     this.bossArrivalCrowd = this.armyPower();
     const ch = this.chapter || null;
-    const phases = (ch && ch.phases) || 1;
+    // Every boss earns a beginning, middle, and finish. Authored campaign
+    // finales may ask for more, but no boss can evaporate in one damage spike.
+    const phases = Math.max(3, (ch && ch.phases) || 1);
     this.boss = {
       id: this.biome.boss, type: bt, name: bt.name,
       hp, maxHp: hp,
@@ -179,12 +181,15 @@ export const BossMixin = {
     const should = Math.min(b.phases, Math.max(1, Math.ceil((b.maxHp - b.hp + 1) / step)));
     if (should > b.phase) {
       b.phase = should;
-      b.shielded = 0.9;
+      b.shielded = 0.55;
       b.attackT = 0.5;
       this.cam.shake = 1;
-      this.burst(b.x, 2.4, b.z, ['#ff5545', '#ffd94d', '#ffffff'], 26, 9);
-      this.floaty(`PHASE ${b.phase}!`, b.x, b.z, '#ff8d7a', 2);
-      Audio.sfx('boss_roar');
+      this.freeze = Math.max(this.freeze || 0, 0.08);
+      this.flashFx = Math.max(this.flashFx || 0, 0.28);
+      this.ring(b.x, b.z, 3.4);
+      this.burst(b.x, 2.4, b.z, ['#ff5545', '#ffd94d', '#ffffff'], 34, 10);
+      this.floaty(`ARMOR BREAK ${b.phase - 1}/${b.phases - 1}!`, b.x, b.z, '#ffd94d', 2.15);
+      Audio.sfx('bigboom');
     }
   },
 

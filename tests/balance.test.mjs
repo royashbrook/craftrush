@@ -170,6 +170,7 @@ function simulate(mode, level, active, speed = 'normal') {
     game.startRun();
     let ticks = 0;
     while ((game.state === 'run' || game.state === 'boss') && !game.bossDead && ticks < 18000) {
+      if (active && game.mode === 'shooter') game.firing = true;
       if (typeof active === 'function') active(game);
       else if (active) steerCompetently(game);
       game.update(1 / 60);
@@ -209,6 +210,7 @@ function measureBoss(mode, level, speed, arrivalMultiple) {
     while (game.state === 'boss' && !game.bossDead && ticks < 1800) {
       game.boss.attackT = 999;
       game.targetX = game.boss.x;
+      if (game.mode === 'shooter') game.firing = true;
       game.update(1 / 60);
       ticks++;
     }
@@ -286,6 +288,23 @@ test('passive, greedy, and competent players separate across the normal campaign
   }
 });
 
+test('normal Bow Blitz waits for intentional fire while CALM keeps auto fire', () => {
+  for (const [speed, expectedWithoutTouch] of [['normal', 0], ['calm', 1]]) {
+    const game = makeGame('shooter', 1, speed);
+    game.startRun();
+    let volleys = 0;
+    game.fireVolley = () => { volleys++; };
+    game.volleyT = 0;
+    game.update(1 / 60);
+    assert.equal(volleys, expectedWithoutTouch, `${speed} passive volleys`);
+    game.firing = true;
+    game.volleyT = 0;
+    game.update(1 / 60);
+    assert.ok(volleys >= 1, `${speed} fires while held`);
+    game.destroy();
+  }
+});
+
 test('boss health is expected-power based and a strong arrival keeps its advantage', () => {
   for (const mode of ['shooter', 'gates']) {
     const weak = makeGame(mode, 6);
@@ -303,6 +322,7 @@ test('boss health is expected-power based and a strong arrival keeps its advanta
       game.boss.entering = false;
       game.boss.z = game.boss.targetZ;
       game.boss.attackT = 999;
+      if (game.mode === 'shooter') game.firing = true;
       for (let tick = 0; tick < 90 && !game.bossDead && game.state === 'boss'; tick++) game.update(1 / 60);
     }
     const weakDamage = weak.boss.maxHp - Math.max(0, weak.boss.hp);
@@ -360,12 +380,16 @@ test('boss duration stays active, monotonic, and pace-independent above par', ()
               `${mode} level ${level} ${speed} stays monotonic at ${multiples[i]}x`);
           }
         }
-        assert.ok(samples[0].seconds >= 8 && samples[0].seconds <= 10.5,
+        // Three staged armor beats keep a par fight legible without turning it
+        // into a slog. Surplus arrivals still earn a faster clear below.
+        assert.ok(samples[0].seconds >= 8 && samples[0].seconds <= 12,
           `${mode} level ${level} ${speed} par boss lasts ${samples[0].seconds.toFixed(1)}s`);
         assert.ok(samples[1].seconds >= 6,
           `${mode} level ${level} ${speed} 2x boss lasts ${samples[1].seconds.toFixed(1)}s`);
         assert.ok(samples[3].seconds >= 4.5,
           `${mode} level ${level} ${speed} 5x boss lasts ${samples[3].seconds.toFixed(1)}s`);
+        assert.ok(samples[3].seconds <= samples[0].seconds - 2.5,
+          `${mode} level ${level} ${speed} 5x arrival earns a meaningfully faster clear`);
       }
       const normal = bySpeed.get('normal');
       // CALM intentionally auto-releases a ready golem. The active paces do not,
@@ -398,6 +422,19 @@ test('multi-phase damage stops at each shield threshold', () => {
   game.damageBoss(999);
   assert.equal(game.boss.hp, 100);
   assert.equal(game.boss.phase, 3);
+  game.destroy();
+});
+
+test('every standard boss has three readable damage stages', () => {
+  const game = makeGame('shooter', 1);
+  game.startRun();
+  game.startBoss();
+  assert.equal(game.boss.phases, 3);
+  game.boss.entering = false;
+  game.damageBoss(game.boss.maxHp * 10);
+  assert.equal(game.boss.phase, 2);
+  assert.ok(game.boss.hp > 0, 'one hit cannot erase the boss');
+  assert.ok(game.boss.shielded > 0, 'the armor break creates a readable beat');
   game.destroy();
 });
 

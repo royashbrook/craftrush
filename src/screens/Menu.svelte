@@ -1,10 +1,6 @@
-<!--
-  The menu: where you are in the quest, the two modes, and today's expedition.
-
-  The quest card names the chapter the next START will actually play, so the
-  campaign is something you can see yourself walking through. When it says you
-  are short of something, it says exactly how short.
--->
+<!-- The runner is the product. One large action starts the selected mode; the
+  quest and expedition sit behind it as reasons to run, never destinations that
+  compete with it. -->
 <script>
   import { onMount, tick } from 'svelte';
   import { save, nav, commit, go, toast } from '../lib/store.svelte.js';
@@ -90,6 +86,13 @@
     commit();
     nav.playing = true;
     game.startRun();
+  }
+
+  function selectMode(mode) {
+    Audio.unlock();
+    Audio.sfx('click');
+    save.mode = mode;
+    commit();
   }
 
   function startExpedition() {
@@ -179,7 +182,34 @@
       </div>
     {/if}
 
-    <div id="questCard">
+    <section id="playHero" class:gateMode={save.mode === 'gates'}>
+      <div id="playHeroCopy">
+        <Sprite name={save.mode === 'shooter' ? 'ui_bow' : 'ui_door'} id="playHeroIcon" scale={5} />
+        <div>
+          <span>READY TO RUN</span>
+          <strong>{save.mode === 'shooter' ? 'BOW BLITZ' : 'GATE DASH'}</strong>
+          <small>{save.mode === 'shooter'
+            ? 'Steer the archers, multiply the volley, break the boss.'
+            : 'Choose the gates, dodge the danger, grow the crowd.'}</small>
+        </div>
+      </div>
+      {#if save.mode === 'shooter'}
+        <button class="mcbtn primary" id="btnPlayShooter" onclick={() => start('shooter')}>▶ PLAY BOW BLITZ</button>
+      {:else}
+        <button class="mcbtn primary" id="btnPlayGates" onclick={() => start('gates')}>▶ PLAY GATE DASH</button>
+      {/if}
+    </section>
+
+    <div id="modePicker" aria-label="Game mode">
+      <button class:sel={save.mode === 'shooter'} id="btnModeShooter" onclick={() => selectMode('shooter')}>
+        <Sprite name="ui_bow" />BOW BLITZ
+      </button>
+      <button class:sel={save.mode === 'gates'} id="btnModeGates" onclick={() => selectMode('gates')}>
+        <Sprite name="ui_door" />GATE DASH
+      </button>
+    </div>
+
+    <div id="questCard" class="menuSupportCard">
       <div id="questHead">YOUR QUEST<span id="questStep">{done.length} OF {CAMPAIGN.length}</span></div>
       <div id="questBody">
         <Sprite name={chapter ? chapter.icon : 'ui_trophy'} class="" id="questIcon" scale={4} />
@@ -206,19 +236,7 @@
       {/if}
     </div>
 
-    <div class="gameCard" id="cardShooter" class:sel={save.mode === 'shooter'}>
-      <div class="gameHead"><Sprite name="ui_bow" />BOW BLITZ</div>
-      <div class="gameDesc">Your crowd auto-fires arrows. Blast mobs, shoot gates to boost them.</div>
-      <button class="mcbtn small primary" id="btnPlayShooter" onclick={() => start('shooter')}>START</button>
-    </div>
-
-    <div class="gameCard" id="cardGates" class:sel={save.mode === 'gates'}>
-      <div class="gameHead"><Sprite name="ui_door" />GATE DASH</div>
-      <div class="gameDesc">No shooting. Pure gates, dodging, and the golem. Grow a giant crowd.</div>
-      <button class="mcbtn small primary" id="btnPlayGates" onclick={() => start('gates')}>START</button>
-    </div>
-
-    <div id="expCard">
+    <div id="expCard" class="menuSupportCard">
       <div id="expHead">
         TODAY'S EXPEDITION<span id="expStreak">{expStat.streak > 0 ? `${expStat.streak} DAY STREAK` : ''}</span>
       </div>

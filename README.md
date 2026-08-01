@@ -80,7 +80,9 @@ an offline fullscreen app.
 
 ## Play
 
-- **Drag anywhere** (or A/D / arrow keys) to steer the crowd.
+- **Bow Blitz:** hold and drag to fire and steer. Release to stop firing. CALM
+  keeps automatic fire as its accessibility option.
+- **Gate Dash:** drag anywhere (or use A/D / arrow keys) to steer the crowd.
 - **Gates**: blue = good (+N, ×N), red = bad (−N, ÷N). In Bow Blitz you can
   SHOOT gates: good gates grow, bad gates shrink toward harmless.
 - **Iron Golem** readiness arrives at one-third, two-thirds, and boss arrival,
@@ -108,7 +110,7 @@ an offline fullscreen app.
 
 ## Two game modes, one engine
 
-- **BOW BLITZ** — the shooter version: crowd auto-fires arrows, powerups
+- **BOW BLITZ** — the shooter version: hold and drag to fire arrows, powerups
   (triple/rapid/power shot), bosses with attack patterns.
 - **GATE DASH** — the classic gate-multiplier version: no shooting; gates,
   dodging and the golem are everything. Bosses still attack, so steer through
@@ -122,7 +124,7 @@ systems switch off cleanly.
 Everything visual is data:
 
 - `themes/<id>/` — what the game looks like and what is in it. Biomes, skins,
-  cosmetics, mobs, the campaign and the mine tiles, all as JSON, plus the art.
+  cosmetics, mobs, the campaign, and expeditions, all as JSON, plus the art.
   The engine reads a theme; it does not contain one. `?theme=neon` in the
   browser or `CRAFTRUSH_THEME=neon` in node picks a different one.
 - `themes/<id>/art/*.png` — one file per sprite, frames left to right. Open any

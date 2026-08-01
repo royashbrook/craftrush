@@ -8,7 +8,7 @@
 // assets/ is build output. Nobody edits it. To change how something looks, open
 // art/<id>.png in any image editor and run this again.
 //
-// Palette variants (skins, capes, villager robes, town houses) are generated
+// Palette variants (skins and capes) are generated
 // here by exact colour replacement: an override keyed by a matrix character
 // resolves through the base palette to the colour that character used to be,
 // and every pixel of that colour is swapped. That is sound because the sprites
@@ -32,7 +32,7 @@ const ART = arg('--art', fileURLToPath(THEME_ART));
 const OUT = arg('--out', fileURLToPath(THEME_ATLAS));
 
 const meta = JSON.parse(readFileSync(`${ART}/sprites.json`, 'utf8'));
-const { SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS } = await import('../js/config.js');
+const { SKINS, COSMETICS, TIERS } = await import('../js/config.js');
 
 const rgb = (hex) => {
   const v = parseInt(hex.slice(1), 16);
@@ -88,7 +88,7 @@ function recolour(px, base, override) {
   return out;
 }
 
-const variants = enumerateVariants({ SKINS, COSMETICS, VILLAGERS, TOWNS, TIERS }, Object.keys(meta));
+const variants = enumerateVariants({ SKINS, COSMETICS, TIERS }, Object.keys(meta));
 
 const cells = [];
 for (const { key, id, palette } of variants) {

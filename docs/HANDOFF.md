@@ -16,8 +16,9 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.7.2**, tag `v1.7.2`, deployed builds count up from it
-(`v1.7.3` and so on). `main` is the deployed branch.
+Current release: **v1.8**, tag `v1.8`. The core reset retires the town, houses,
+playroom, village, mine, and idle emeralds without rewriting their old save
+fields. `main` is the deployed branch.
 
 ## The standalone deploy and old-address handoff
 
@@ -71,7 +72,7 @@ alternate theme.
 ```
 js/            the engine. Canvas only, touches no DOM but the one canvas.
                game, render, levelgen, encounters, combat, boss, crowd,
-               minegame, townscene, config (rules + save schema), theme,
+               config (rules + save schema), theme,
                assets, atlaskey, variants
 src/           the SvelteKit app. One route, one screen stack, no URLs.
   routes/+page.svelte   boots the game, owns the stage and canvas
@@ -90,8 +91,8 @@ with a `// @ts-check` pragma; the data layer is checked, the rest is not.
 
 ## Themes are the big idea
 
-A theme is a folder. Biomes, skins, cosmetics, mobs, the campaign, the village,
-the mine and the expeditions are all data. `config.js` re-exports it so every
+A theme is a folder. Biomes, skins, cosmetics, mobs, the campaign, and the
+expeditions are all data. `config.js` re-exports it so every
 call site is untouched, which is what makes a theme swap a folder swap.
 
 The line to hold: **if changing it changes how the game PLAYS it is engine; if
@@ -127,10 +128,9 @@ server. That combination shipped the bug above. `npm run test:build` and the
 
 **Reactivity is for what a screen draws.** Three separate infinite loops and one
 frozen HUD came from getting this wrong. `hudState()` reuses one object per frame
-on purpose, so assigning it to `$state` never looks like a change. `migrateWorld()`
-mutates the save, so calling it inside `$derived` writes what it reads.
-`MineWorld` and `TownScene` are created inside effects, so making them `$state`
-loops. See `docs/SVELTE_PORT.md`.
+on purpose, so assigning it to `$state` never looks like a change. The retired
+world migration also proved why a derived read must not mutate the save. See
+`docs/SVELTE_PORT.md` for the historical scars.
 
 **Do not rename the service worker** without leaving a tombstone at the old path.
 `static/sw.js` is one: a registration whose script 404s can leave an old worker
@@ -198,6 +198,10 @@ About-page version while keeping the menu as the canonical release display
 (#89). v1.7.1 made the old iPhone handoff explicitly recoverable and restored
 the always-visible menu wallet (#98, #99, royashbrook/royashbrook.com#9).
 v1.7.2 kept semantic version stamping valid after patch release tags (#102).
+v1.8 makes the runner the whole product: only Play and Shop remain
+in primary navigation, old side-system data stays opaque and transferable, Bow
+Blitz requires intentional fire outside CALM, crowd gains have stronger impact,
+and every standard boss has at least three damage stages.
 
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker

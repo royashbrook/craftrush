@@ -42,6 +42,7 @@ function makeGame(overrides = {}, hookOverrides = {}) {
 
 function runToBossDeath(g, maxTicks = 8000) {
   let ticks = 0;
+  if (g.mode === 'shooter') g.firing = true;
   // steer toward good gates so the crowd grows
   while (g.state === 'run' && ticks < maxTicks) {
     const ng = g.gates.filter((x) => !x.used && x.z > g.playerZ).sort((a, b) => a.z - b.z)[0];
@@ -182,6 +183,31 @@ test('a multiply gate scales the whole army worth (end to end)', () => {
   assert.ok(Math.abs(g.armyPower() - before * 2) <= 3, `power ${g.armyPower()} ~= ${before * 2}`);
 });
 
+test('a good gate creates a visible crowd-impact beat', () => {
+  const g = makeGame({ mode: 'gates', level: 1 });
+  g.startRun();
+  const before = g.worth();
+  g.applyGate({ x: 0, z: g.playerZ, halfW: 2, op: 'mul', val: 2, used: false });
+  assert.equal(g.worth(), before * 2);
+  assert.equal(g.crowdPulse, 1);
+  assert.ok(g.freeze > 0);
+  assert.ok(g.rings.length > 0);
+  assert.ok(g.particles.length >= 20);
+});
+
+test('one crowded volley emits one gate spark instead of one per arrow', () => {
+  const g = makeGame({ mode: 'shooter', level: 1 });
+  g.startRun();
+  const gate = { x: 0, z: g.playerZ + 5, op: 'add', val: 2, hits: 0, pulse: 0 };
+  g.volleysFired = 1;
+  for (let i = 0; i < 4; i++) g.shootGate(gate);
+  assert.equal(g.particles.length, 3);
+  g.volleysFired = 2;
+  g.shootGate(gate);
+  assert.equal(gate.val, 3);
+  assert.ok(g.particles.length <= 20, 'the upgrade adds one bounded celebration');
+});
+
 test('a giant-heavy army collects emeralds it runs over (integration)', () => {
   const g = makeGame({ mode: 'shooter', level: 1 });
   g.startRun();
@@ -207,6 +233,7 @@ for (const mode of ['shooter', 'gates']) {
       inventory: { enderEyes: 12 },
     });
     g.startRun();
+    if (mode === 'shooter') g.firing = true;
     assert.equal(g.chapter && g.chapter.id, 'dragon', 'this is her fight');
     g.playerZ = g.length;
     g.setWorth(20000);

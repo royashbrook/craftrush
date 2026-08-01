@@ -102,6 +102,9 @@ export class Game {
     this.redstone = 0;
     this.runEmeralds = 0; this.kills = 0; this.bestCrowd = 0; this.runRods = 0;
     this.volleyT = 0; this.chargeT = 0;
+    this.firing = false;
+    this.volleysFired = 0;
+    this.crowdPulse = 0;
     this.power = { triple: 0, rapid: 0, power: 0, sword: 0, axe: 0 };
     this.events = [];
     this.eventIdx = 0;
@@ -153,7 +156,7 @@ export class Game {
     this.applyCamera();
     this.refreshCosmetics();
     Audio.music('run');
-    if (!this.save.tutorialSeen) this.hooks.onTutorial('steer');
+    if (!this.save.tutorialSeen) this.hooks.onTutorial(this.mode === 'shooter' ? 'aim_fire' : 'steer');
   }
 
   levelDiff() { return 1 + (this.level - 1) * 0.35; }
@@ -161,7 +164,7 @@ export class Game {
   // ---------- input ----------
   _initInput() {
     const c = this.canvas;
-    let dragging = false, lastX = null, downX = null, downY = null, moved = false;
+    let dragging = false, lastX = null, downX = null, downY = null, downAt = 0, moved = false;
     // relative steer from a pointer delta (blocks per on-screen pixel)
     const steer = (px) => {
       if (this.paused || (this.state !== 'run' && this.state !== 'boss')) { lastX = px; return; }
@@ -178,7 +181,21 @@ export class Game {
       moved = false;
       downX = e.clientX;
       downY = e.clientY ?? 0;
+      downAt = Number.isFinite(e.timeStamp) ? e.timeStamp : performance.now();
       lastX = e.clientX;
+      const running = !this.paused && (this.state === 'run' || this.state === 'boss');
+      if (running && this.mode === 'shooter') {
+        // The touch that aims the crowd also fires it. Start with an immediate
+        // volley so input and consequence share the same frame, then the normal
+        // cadence continues while the finger stays down.
+        this.firing = true;
+        this.volleyT = TUNE.volleyInterval * (this.power.rapid > 0 ? 0.55 : 1);
+        this.fireVolley();
+        if (!this.save.tutorialSeen) {
+          this.save.tutorialSeen = true;
+          this.hooks.onTutorial(null);
+        }
+      }
     };
     const onPointerMove = (e) => {
       // mouse steers on plain movement (no button); touch/pen require a drag
@@ -189,12 +206,19 @@ export class Game {
     const onPointerUp = (e) => {
       if (dragging && downX !== null && downY !== null
         && Math.hypot((e.clientX ?? downX) - downX, (e.clientY ?? downY) - downY) >= 8) moved = true;
-      const tapped = dragging && !moved;
+      const upAt = Number.isFinite(e.timeStamp) ? e.timeStamp : performance.now();
+      // A firing hold is not a tap just because the finger stayed still. Keep
+      // the Golem gesture quick so releasing a long volley cannot spend it.
+      const tapped = dragging && !moved && upAt - downAt <= 280;
       dragging = false;
-      downX = null; downY = null;
-      if (tapped && this.save.speed !== 'calm') this.summonGolem();
+      this.firing = false;
+      downX = null; downY = null; downAt = 0;
+      if (tapped && this.save.speed !== 'calm' && this.redstone >= TUNE.redstoneMax) this.summonGolem();
     };
-    const onPointerCancel = () => { dragging = false; downX = null; downY = null; moved = false; };
+    const onPointerCancel = () => {
+      dragging = false; downX = null; downY = null; downAt = 0; moved = false; this.firing = false;
+    };
+    const onBlur = () => { onPointerCancel(); this.keys.KeyF = false; };
     // reset the reference point when the mouse leaves, so re-entry doesn't jump
     const onPointerLeave = (e) => { if (e.pointerType === 'mouse') lastX = null; };
     this.keys = {};
@@ -205,30 +229,45 @@ export class Game {
       const interactive = e.target?.isContentEditable
         || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON';
       const running = this.state === 'run' || this.state === 'boss';
+      if (e.code === 'KeyF' && running && !this.paused && this.mode === 'shooter') {
+        e.preventDefault();
+        if (!this.firing) {
+          this.firing = true;
+          this.volleyT = TUNE.volleyInterval * (this.power.rapid > 0 ? 0.55 : 1);
+          this.fireVolley();
+        }
+      }
       if (e.code === 'Space' && !e.repeat && running && !this.paused
         && !interactive && this.save.speed !== 'calm') {
         e.preventDefault();
         this.summonGolem();
       }
     };
-    const onKeyUp = (e) => { this.keys[e.code] = false; };
+    const onKeyUp = (e) => {
+      this.keys[e.code] = false;
+      if (e.code === 'KeyF') this.firing = false;
+    };
 
     c.addEventListener('pointerdown', onPointerDown);
     c.addEventListener('pointermove', onPointerMove);
     c.addEventListener('pointerup', onPointerUp);
     c.addEventListener('pointercancel', onPointerCancel);
+    c.addEventListener('lostpointercapture', onPointerCancel);
     c.addEventListener('pointerleave', onPointerLeave);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
 
     this._inputCleanup = () => {
       c.removeEventListener('pointerdown', onPointerDown);
       c.removeEventListener('pointermove', onPointerMove);
       c.removeEventListener('pointerup', onPointerUp);
       c.removeEventListener('pointercancel', onPointerCancel);
+      c.removeEventListener('lostpointercapture', onPointerCancel);
       c.removeEventListener('pointerleave', onPointerLeave);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     };
   }
 
@@ -275,6 +314,7 @@ export class Game {
     this.t += dt;
     if (this.freeze > 0) { this.freeze -= dt; return; }
     this.flashFx = Math.max(0, this.flashFx - dt * 3);
+    this.crowdPulse = Math.max(0, this.crowdPulse - dt * 2.4);
 
     const running = this.state === 'run' || this.state === 'boss';
     if (!running) {
@@ -338,7 +378,7 @@ export class Game {
     // powerup timers tick in both modes (gates mode has sword/axe)
     for (const k of Object.keys(this.power)) this.power[k] = Math.max(0, this.power[k] - dt);
     // shooting
-    if (this.mode === 'shooter') {
+    if (this.mode === 'shooter' && (this.firing || this.save.speed === 'calm')) {
       this.volleyT -= dt;
       const interval = TUNE.volleyInterval * (this.power.rapid > 0 ? 0.55 : 1);
       if (this.volleyT <= 0) { this.volleyT = interval; this.fireVolley(); }
@@ -397,7 +437,7 @@ export class Game {
 
   hudState() {
     // reuse one object + one nested boss object to avoid per-call allocation
-    const h = this._hud || (this._hud = { boss: { name: '', hp: 0, max: 1, needRunners: null } });
+    const h = this._hud || (this._hud = { boss: { name: '', hp: 0, max: 1, needRunners: null, phase: 1, phases: 1, shielded: false } });
     h.emeralds = this.save.emeralds + this.runEmeralds;
     h.crowd = this.armyPower(); h.stars = this.stars;
     h.progress = Math.min(1, this.playerZ / this.length);
@@ -406,6 +446,8 @@ export class Game {
     h.golemGrants = this.golemGrantIdx || 0;
     h.nextGolemGrant = GOLEM_GRANT_PROGRESS[this.golemGrantIdx || 0] ?? null;
     h.level = this.level; h.biome = this.biome.name; h.mode = this.mode;
+    h.firing = this.firing || this.save.speed === 'calm';
+    h.autoFire = this.mode === 'shooter' && this.save.speed === 'calm';
     h.autoGolem = this.save.speed === 'calm';
     h.power = this.power;
     const objective = objectiveState(this.mastery, {
@@ -418,6 +460,7 @@ export class Game {
       const b = h.boss;
       b.name = this.boss.name; b.hp = Math.max(0, this.boss.hp); b.max = this.boss.maxHp;
       b.needRunners = this.mode === 'gates' ? Math.ceil(this.boss.hp / 3) : null;
+      b.phase = this.boss.phase; b.phases = this.boss.phases; b.shielded = this.boss.shielded > 0;
       h.bossActive = true;
     } else {
       h.bossActive = false;

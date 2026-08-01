@@ -6,15 +6,10 @@
 // `refresh` hook that every screen entry had to remember to call, and forgetting
 // it was the recurring bug (stale prices after a back, blank tabs). There is
 // nothing left to forget.
-import { loadSave, persistSave, migrateWorld } from '../../js/config.js';
+import { loadSave, persistSave } from '../../js/config.js';
 
 /** @type {import('../../types/craftrush.js').Save} */
 export const save = $state(loadSave());
-
-// Run the world migration ONCE, here, before anything renders. It mutates the
-// save, so calling it from inside a $derived would write the state that derived
-// reads and loop forever. After this, everything just reads save.world.
-migrateWorld(save);
 
 /** Write to localStorage. Reads are reactive; saving is deliberate. */
 export function commit() {
@@ -49,11 +44,6 @@ export const SCREENS = {
   // dumping you out of the run.
   pause:     { title: 'Paused' },
   shop:      { tab: 'shop',  title: 'Skins & Shop' },
-  home:      { tab: 'home',  title: 'Your Village' },
-  world:     { tab: 'world', title: 'World' },
-  town:      { tab: 'world', title: 'Town', parent: 'world' },
-  playroom:  { tab: 'world', title: 'House', parent: 'world' },
-  mine:      { tab: 'mine',  title: 'The Mine' },
   more:      { title: 'More', parent: 'menu' },
   about:     { title: 'About', parent: 'more' },
   goals:     { title: 'Goals', parent: 'more' },

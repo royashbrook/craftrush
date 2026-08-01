@@ -10,6 +10,8 @@
 
   const text = $derived(nav.toast === 'steer'
     ? 'DRAG ANYWHERE TO STEER!'
+    : nav.toast === 'aim_fire'
+      ? 'HOLD AND DRAG TO AIM + FIRE!'
     : nav.toast === 'golem'
       ? 'GOLEM READY: TAP OR PRESS SPACE!'
       : nav.toast || '');

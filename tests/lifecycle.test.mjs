@@ -59,8 +59,8 @@ test('Game.destroy removes input listeners and pending callbacks, and is idempot
     onPause: noop,
   });
 
-  assert.equal(canvas.count(), 5);
-  assert.equal(browserWindow.count(), 2);
+  assert.equal(canvas.count(), 6);
+  assert.equal(browserWindow.count(), 3);
   game.state = 'run';
   game.save.speed = 'normal';
   game.redstone = 100;
@@ -78,6 +78,22 @@ test('Game.destroy removes input listeners and pending callbacks, and is idempot
   canvas.dispatch('pointerdown', { pointerId: 3, clientX: 100, clientY: 100 });
   canvas.dispatch('pointerup', { pointerId: 3, clientX: 100, clientY: 120 });
   assert.equal(game.summons.length, 1, 'vertical travel is not mistaken for a tap');
+
+  game.redstone = 100;
+  canvas.dispatch('pointerdown', { pointerId: 4, clientX: 100, clientY: 100, timeStamp: 1000 });
+  assert.equal(game.firing, true);
+  canvas.dispatch('pointerup', { pointerId: 4, clientX: 100, clientY: 100, timeStamp: 1600 });
+  assert.equal(game.firing, false);
+  assert.equal(game.summons.length, 1, 'releasing a long firing hold does not spend the Golem');
+
+  canvas.dispatch('pointerdown', { pointerId: 5, pointerType: 'touch', clientX: 100, timeStamp: 2000 });
+  canvas.dispatch('lostpointercapture');
+  assert.equal(game.firing, false, 'losing an interrupted touch stops firing');
+
+  browserWindow.dispatch('keydown', { code: 'KeyF', target: {}, preventDefault: noop });
+  assert.equal(game.firing, true);
+  browserWindow.dispatch('blur');
+  assert.equal(game.firing, false, 'focus loss stops keyboard firing');
 
   let interactivePrevented = false;
   browserWindow.dispatch('keydown', {

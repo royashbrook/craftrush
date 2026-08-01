@@ -2,8 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { THEME, THEME_INFO, THEME_ART, THEME_ATLAS } from '../js/theme.js';
-import { BIOMES, SKINS, COSMETICS, CAMPAIGN, ENEMY_TYPES, BOSS_TYPES, TILES,
-  VILLAGERS, TOWNS, DECOR, ROOM_TIERS, PICKAXES, EXPEDITIONS,
+import { BIOMES, SKINS, COSMETICS, CAMPAIGN, ENEMY_TYPES, BOSS_TYPES, EXPEDITIONS,
   loadSave, chapterUnlocked } from '../js/config.js';
 
 const artDir = new URL('./', THEME_ART + '/');
@@ -40,8 +39,6 @@ test('every name the theme references has a drawing behind it', () => {
   for (const s of SKINS) { need(s.head, `skin ${s.id} head`); need(s.body, `skin ${s.id} body`); }
   for (const list of Object.values(COSMETICS)) for (const c of list) need(c.sprite, `cosmetic ${c.id}`);
   for (const c of CAMPAIGN) need(c.icon, `chapter ${c.id} icon`);
-  for (const v of VILLAGERS) { need(v.head, `villager ${v.id} head`); need(v.body, `villager ${v.id} body`); }
-  for (const d of DECOR) need(d.sprite, `decor ${d.id}`);
   for (const e of EXPEDITIONS) need(e.icon, `expedition ${e.id} icon`);
 
   assert.deepEqual(missing, [], 'nothing points at art that is not there');
@@ -59,15 +56,6 @@ test('campaign run objectives are short, valid, and optional', () => {
     assert.ok(kinds.has(chapter.objective.kind), `${chapter.id} has a known objective`);
     assert.ok(chapter.objective.target > 0, `${chapter.id} has a reachable target`);
     assert.ok(chapter.objective.text.length <= 34, `${chapter.id} objective fits the HUD`);
-  }
-});
-
-test('the mine tiles the theme ships are shaped the way the digger expects', () => {
-  for (const [id, t] of Object.entries(TILES)) {
-    assert.equal(typeof t.color, 'string', `${id} has a colour`);
-    if (t.solid === false || t.hazard) continue;   // air and lava are never dug
-    assert.ok(t.hp > 0, `${id} takes at least one hit to break`);
-    assert.ok(Number.isFinite(t.tier), `${id} says which pickaxe it needs`);
   }
 });
 
@@ -97,7 +85,7 @@ test('every theme in the repo loads and carries what the engine needs', () => {
   for (const id of themes) {
     const t = JSON.parse(readFileSync(new URL(`../themes/${id}/theme.json`, import.meta.url), 'utf8'));
     assert.ok(t.name, `${id} has a name`);
-    for (const part of ['biomes', 'skins', 'cosmetics', 'enemies', 'campaign', 'mine']) {
+    for (const part of ['biomes', 'skins', 'cosmetics', 'enemies', 'campaign']) {
       assert.ok(t.data.includes(part), `${id} ships ${part}`);
       assert.doesNotThrow(
         () => JSON.parse(readFileSync(new URL(`../themes/${id}/${part}.json`, import.meta.url), 'utf8')),
@@ -119,39 +107,6 @@ test('every theme maps the three directed biome identities the same way', () => 
     }
     assert.equal(campaign.chapters[0]?.cycleBiomes, true,
       `${theme} exposes the pilot trio during the opening gathering loop`);
-  }
-});
-
-test('the village and world content the theme ships is usable', () => {
-  assert.ok(VILLAGERS.length >= 1, 'someone to hire');
-  for (const v of VILLAGERS) {
-    assert.ok(v.id && v.name, `${v.id} is named`);
-    assert.ok(v.base > 0 && v.income > 0, `${v.id} costs something and earns something`);
-  }
-  assert.equal(TOWNS[0].cost, 0, 'the first town is free, or there is no way in');
-  for (let i = 1; i < TOWNS.length; i++) {
-    assert.ok(TOWNS[i].cost > TOWNS[i - 1].cost, `${TOWNS[i].id} costs more than the one before`);
-    assert.ok(TOWNS[i].style, `${TOWNS[i].id} has materials to build in`);
-  }
-  assert.ok(ROOM_TIERS.length >= 1 && DECOR.length >= 1, 'a house can be furnished');
-});
-
-test('the pickaxe ladder climbs, so the mine has somewhere to go', () => {
-  assert.equal(PICKAXES[0].cost, 0, 'you start holding something');
-  for (let i = 1; i < PICKAXES.length; i++) {
-    const p = PICKAXES[i], prev = PICKAXES[i - 1];
-    assert.ok(p.cost > prev.cost, `${p.id} costs more than ${prev.id}`);
-    assert.ok(p.tier >= prev.tier, `${p.id} never breaks LESS than ${prev.id}`);
-    // gold is deliberately iron's tier and faster, the way it is in the game
-    // this is dressed as. So a step up has to buy reach or speed, not just tier.
-    assert.ok(p.tier > prev.tier || p.dmg > prev.dmg,
-      `${p.id} costs more than ${prev.id} but breaks nothing new and no faster`);
-  }
-  // every tier a tile asks for must be reachable by some pickaxe
-  const top = PICKAXES[PICKAXES.length - 1].tier;
-  for (const [id, t] of Object.entries(TILES)) {
-    if (t.hazard || t.solid === false) continue;
-    assert.ok((t.tier || 0) <= top, `${id} needs tier ${t.tier}, above every pickaxe`);
   }
 });
 

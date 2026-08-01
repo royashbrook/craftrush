@@ -120,7 +120,10 @@ export const CombatMixin = {
         this.arrows.push({ x, z, vx: aim(x, z), dmg: (u.worth + extra) * powerMul, big: true });
       }
     });
-    if (n > 0 || anyBig) Audio.sfx('shoot', 90);
+    if (n > 0 || anyBig) {
+      this.volleysFired = (this.volleysFired || 0) + 1;
+      Audio.sfx('shoot', 90);
+    }
   },
 
   ensureGolemMastery() {
@@ -237,10 +240,24 @@ export const CombatMixin = {
     else if (gt.op === 'mul') { this.addRunners(n * (gt.val - 1)); Audio.sfx('gate_good'); }
     else if (gt.op === 'sub') { if (gt.val > 0) { this.killRunners(gt.val, null, null, false); Audio.sfx('gate_bad'); this.floaty(`−${gt.val}`, gt.x, gt.z, '#ff6d5a', 1.5); } }
     else if (gt.op === 'div') { const k = n - Math.ceil(n / gt.val); if (k > 0) { this.killRunners(k, null, null, false); Audio.sfx('gate_bad'); this.floaty(`÷${gt.val}`, gt.x, gt.z, '#ff6d5a', 1.5); } }
-    if (this.gateGood(gt)) this.floaty(this.gateLabel(gt), gt.x, gt.z, '#7dcfff', 1.6);
+    const after = this.worth();
+    if (this.gateGood(gt)) {
+      this.crowdPulse = 1;
+      this.freeze = Math.max(this.freeze || 0, 0.045);
+      this.flashFx = Math.max(this.flashFx || 0, 0.12);
+      this.cam.shake = Math.min(1, this.cam.shake + 0.24);
+      this.ring(this.playerX, this.playerZ, 2.8);
+      this.burst(this.playerX, 1.15, this.playerZ, ['#7dcfff', '#7dff7d', '#ffffff'], 22, 8);
+      this.floaty(`${n} → ${after}`, this.playerX, this.playerZ + 1.4, '#ffffff', 1.75);
+      this.floaty(this.gateLabel(gt), gt.x, gt.z, '#7dcfff', 1.6);
+    } else if (after < n) {
+      this.cam.shake = Math.min(1, this.cam.shake + 0.32);
+      this.flashFx = Math.max(this.flashFx || 0, 0.08);
+    }
   },
 
   shootGate(gt) {
+    const before = this.gateLabel(gt);
     gt.hits++;
     gt.pulse = 0.15;
     const per = TUNE.gateHitsPerPlus;
@@ -248,6 +265,20 @@ export const CombatMixin = {
     else if (gt.op === 'sub' && gt.hits % per === 0 && gt.val > 0) gt.val--;
     else if (gt.op === 'mul' && gt.hits >= 14 && gt.val < 3) { gt.val++; gt.hits = -99; }
     else if (gt.op === 'div' && gt.hits >= 12 && gt.val > 1) { gt.val = 1; }
+    // A triple volley may land dozens of arrows on one gate in the same frame.
+    // One spark per volley reads as impact without flooding a phone with FX.
+    if (gt.sparkVolley !== this.volleysFired) {
+      gt.sparkVolley = this.volleysFired;
+      this.burst(gt.x, 1.1, gt.z, ['#7dcfff', '#ffffff'], 3, 4);
+    }
+    const after = this.gateLabel(gt);
+    if (after !== before) {
+      this.ring(gt.x, gt.z, 1.7);
+      this.burst(gt.x, 1.5, gt.z, ['#ffd94d', '#7dcfff', '#ffffff'], 14, 7);
+      this.floaty(`UPGRADED ${after}`, gt.x, gt.z, '#ffd94d', 1.55);
+      this.cam.shake = Math.min(1, this.cam.shake + 0.12);
+      Audio.sfx('gate_good', 55);
+    }
   },
 
   updateArrows(dt) {

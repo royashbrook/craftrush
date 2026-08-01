@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CrowdMixin } from '../js/crowd.js';
 import { TIERS } from '../js/config.js';
+import { crowdPowerVisualScale } from '../js/render.js';
 
 // A minimal object carrying the crowd methods; setWorth with fx=false touches
 // no fx/audio/cam, so no DOM is needed.
@@ -37,4 +38,11 @@ test('losing worth converges to zero, never negative', () => {
   g.setWorth(300);
   g.setWorth(g.worth() - 1000); // clamp at 0
   assert.equal(g.worth(), 0);
+});
+
+test('overflow power becomes visible without unbounded giant growth', () => {
+  assert.equal(crowdPowerVisualScale(0, 0), 1);
+  assert.ok(crowdPowerVisualScale(1000, 0) > 1);
+  assert.ok(crowdPowerVisualScale(1000, 2) > crowdPowerVisualScale(1000, 0));
+  assert.ok(crowdPowerVisualScale(1e12, 99) <= 1.65);
 });

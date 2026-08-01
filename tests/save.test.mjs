@@ -75,6 +75,26 @@ test('chapter mastery survives backup export and import', () => {
   });
 });
 
+test('retired village, world, room, and mine data survives load and transfer unchanged', () => {
+  const retired = {
+    home: { villagers: { farmer: 7, miner: 3 }, lastCollect: 12345 },
+    mine: { depth: 88, energy: 4, energyTs: 67890, pickaxe: 'diamond', dug: ['1,2'] },
+    roomTiersOwned: ['cabin', 'castle'],
+    decorOwned: { chair: 2 },
+    world: {
+      town: 'desert',
+      house: 2,
+      towns: { desert: { unlocked: true, houses: [{ style: 'sandstone', decor: [], people: [] }] } },
+    },
+  };
+  withStorage({ level: 9, unlocked: ['steve'], ...retired });
+  const loaded = loadSave();
+  for (const [key, value] of Object.entries(retired)) assert.deepEqual(loaded[key], value, `${key} loads opaque`);
+
+  const transferred = importSave(exportSave(loaded));
+  for (const [key, value] of Object.entries(retired)) assert.deepEqual(transferred[key], value, `${key} transfers opaque`);
+});
+
 test('an import preserves the exact prior save in the rollback slot', () => {
   withStorage({ emeralds: 55, level: 4, unlocked: ['steve'] });
   const before = localStorage.getItem('craftrush_save_v1');

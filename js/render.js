@@ -4,6 +4,11 @@ import { GOLEM_SMASH_WINDOW } from './combat.js';
 import { drawShadow, outlineText, hash2 } from './engine.js';
 import { getSprite, blit, hasSprite } from './assets.js';
 
+export function crowdPowerVisualScale(reserve = 0, stars = 0) {
+  const overflow = Math.log10(1 + Math.max(0, reserve) / 100) * 0.16;
+  return 1 + Math.min(0.65, overflow + Math.max(0, stars) * 0.07);
+}
+
 export const RenderMixin = {
   bb(q, spriteId, x, z, worldH, opts = {}) {
     const p = this.cam.project(x, 0, z);
@@ -161,6 +166,20 @@ export const RenderMixin = {
 
   renderBoss(q) {
     const b = this.boss;
+    const shield = b.shielded > 0 || b.guarded;
+    if (shield) {
+      const p = this.cam.project(b.x, 0, b.z);
+      if (p) q.add(b.z + 0.01, (ctx) => {
+        const pulse = 1 + Math.sin(this.t * 11) * 0.08;
+        ctx.globalAlpha = b.guarded ? 0.62 : 0.48;
+        ctx.strokeStyle = b.guarded ? '#c76bff' : '#ffd94d';
+        ctx.lineWidth = Math.max(3, p.s * 0.08);
+        ctx.beginPath();
+        ctx.ellipse(p.sx, p.sy - p.s * b.type.worldH * 0.48, p.s * b.type.worldH * 0.62 * pulse, p.s * b.type.worldH * 0.58 * pulse, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+    }
     const shakeX = b.lunge > 0 && b.lunge < 0.5 ? (Math.random() - 0.5) * 0.2 : 0;
     this.bb(q, b.id, b.x + shakeX, b.z, b.type.worldH, {
       frame: Math.floor(b.t * 3) % 2,
@@ -213,16 +232,23 @@ export const RenderMixin = {
       });
     };
 
+    const pulse = this.crowdPulse || 0;
+    const spread = 1 + pulse * 0.22;
+    const popScale = 1 + pulse * 0.1;
+    const powerScale = crowdPowerVisualScale(this.reserve, this.stars);
     for (const m of this.crowd) {
-      drawUnit(this.playerX + m.ox, this.playerZ + m.oz, 1.45,
+      drawUnit(this.playerX + m.ox * spread, this.playerZ + m.oz * spread, 1.45 * popScale,
         Math.floor(this.t * 8 + m.phase) % 2,
         Math.abs(Math.sin(this.t * 9 + m.phase)) * 0.12, m.phase, 0, false);
     }
     TIERS.units.forEach((u, i) => {
-      const scale = 1.45 * u.scale; // hard-capped; no runaway top-tier growth
+      // Overflow and graduation make the top giant visibly more imposing while
+      // staying bounded, so huge gains read without filling the whole screen.
+      const topScale = i === TIERS.units.length - 1 ? powerScale : 1;
+      const scale = 1.45 * u.scale * popScale * topScale;
       const rate = Math.max(3, 8 - i * 1.5);
       for (const g of this.bigs[i]) {
-        drawUnit(this.playerX + g.ox, this.playerZ + g.oz, scale,
+        drawUnit(this.playerX + g.ox * spread, this.playerZ + g.oz * spread, scale,
           Math.floor(this.t * rate + g.phase) % 2,
           Math.abs(Math.sin(this.t * rate + g.phase)) * (0.12 + i * 0.03), g.phase, i + 1, g.flash > 0);
       }

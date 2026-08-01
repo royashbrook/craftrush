@@ -117,6 +117,7 @@
 
       const onVisibility = () => {
         if (document.hidden && (g.state === 'run' || g.state === 'boss') && !g.paused) {
+          g.firing = false;
           g.paused = true;
           togglePause(true);
         }

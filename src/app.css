@@ -57,21 +57,38 @@
   .rowBtn { display: flex; align-items: center; gap: 10px; text-align: left; }
   .rowBtn .icon { flex: 0 0 auto; }
 
-  /* one card per game mode: what it is, then a single START */
-  .gameCard { width: 100%; border: 2px solid #000; background: rgba(58,52,68,0.75); padding: 8px;
-    display: flex; flex-direction: column; gap: 6px;
-    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.35); }
-  .gameHead { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 14px;
-    color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.6); letter-spacing: 1px; }
-  .gameDesc { font-size: 11px; color: #cfc9d8; line-height: 1.4; }
+  #playHero { width: 100%; padding: 10px; border: 3px solid #2a7fd4;
+    background: linear-gradient(145deg, rgba(18,63,103,0.92), rgba(28,25,38,0.96));
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.14), 0 5px 0 rgba(0,0,0,0.36);
+    display: flex; flex-direction: column; gap: 9px; }
+  #playHero.gateMode { border-color: #d39b24;
+    background: linear-gradient(145deg, rgba(92,61,12,0.92), rgba(28,25,38,0.96)); }
+  #playHeroCopy { display: flex; align-items: center; gap: 10px; min-width: 0; text-align: left; }
+  #playHeroIcon { flex: 0 0 52px; width: 52px; height: 52px; padding: 5px; border: 2px solid #000;
+    background: rgba(0,0,0,0.34); }
+  #playHeroCopy > div { min-width: 0; }
+  #playHeroCopy span { display: block; color: #7ee0ff; font-size: 9px; font-weight: 900; letter-spacing: 1.5px; }
+  #playHero.gateMode #playHeroCopy span { color: #ffd94d; }
+  #playHeroCopy strong { display: block; color: #fff; font-size: 20px; line-height: 1.05;
+    letter-spacing: 1px; text-shadow: 2px 2px 0 #000; }
+  #playHeroCopy small { display: block; margin-top: 3px; color: #cfc9d8; font-size: 10px; line-height: 1.25; }
+  #playHero .mcbtn { min-height: 50px; font-size: 15px; }
+  #modePicker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; width: 100%; }
+  #modePicker button { min-width: 0; min-height: 44px; border: 2px solid #000; padding: 4px 6px;
+    background: #302b3a; color: #8f88a0; cursor: pointer;
+    font: 900 10px/1 'Courier New', Courier, monospace;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1); }
+  #modePicker button.sel { background: #2a6f86; color: #fff; box-shadow: inset 0 -3px 0 #7ee0ff; }
+  #modePicker button:last-child.sel { background: #765411; box-shadow: inset 0 -3px 0 #ffd94d; }
+  #modePicker .icon { width: 20px; height: 20px; }
   /* The menu must never scroll, but how tall it is depends on what is in it
      (a quest card, a replay button) as much as on the screen. So the app
      measures after each render and steps down through these two tiers until
      it fits, rather than guessing from a height breakpoint. */
-  #menu.compact .gameDesc, #menu.compact #questDesc { display: none; }
-  #menu.compact .gameCard { flex-direction: row; align-items: center; gap: 10px; }
-  #menu.compact .gameHead { flex: 1 1 auto; min-width: 0; }
-  #menu.compact .gameCard .mcbtn { flex: 0 0 auto; width: auto; padding: 8px 14px; }
+  #menu.compact #playHeroCopy small, #menu.compact #questDesc { display: none; }
+  #menu.compact #playHero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 7px; }
+  #menu.compact #playHero .mcbtn { width: auto; min-height: 44px; padding: 7px 10px; font-size: 12px; }
 
   #menu.tight .levelChip { padding: 3px 10px; font-size: 12px; }
   #menu.tight #expDesc { display: none; }
@@ -80,7 +97,8 @@
   #menu.tight .panel { gap: 5px; padding-top: 8px; padding-bottom: 8px; }
   #menu.tight #questCard { gap: 4px; padding: 6px; }
   #menu.tight #btnQuestReplay { padding: 5px 8px; font-size: 11px; }
-  #menu.tight .gameCard { padding: 6px; }
+  #menu.tight #playHeroIcon { width: 40px; height: 40px; flex-basis: 40px; }
+  #menu.tight #playHeroCopy strong { font-size: 16px; }
 
   #legacyRestore { display: grid; grid-template-columns: minmax(0, 1fr) auto;
     align-items: center; gap: 4px 8px; width: 100%;
@@ -97,9 +115,6 @@
   #legacyRestore .legacyDismiss:disabled { opacity: 0.5; }
   #menu.compact #legacyRestoreText span, #menu.tight #legacyRestoreText span { display: none; }
   #menu.tight #legacyRestore { padding: 5px; }
-
-  #cardShooter { border-color: #2a7fd4; }
-  #cardGates { border-color: #b58a1a; }
 
   /* the wallet lives in the top bar, so the level banner gets the full width */
   .levelChip { width: 100%; background: rgba(0,0,0,0.5); border: 2px solid #000; padding: 7px 10px;
@@ -150,133 +165,6 @@
   .btnGrid .mcbtn { padding: 9px 4px; }
   .btnGrid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
   .btnGrid3 .mcbtn { padding: 10px 2px; font-size: 13px; }
-  #btnMine { position: relative; }
-
-  /* playroom */
-  #playroom .panel { width: min(360px, 94%); height: 100%; }
-  .playBtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
-  .playBtns .mcbtn { padding: 8px 2px; font-size: 12px; }
-  .playHint { font-size: 10px; color: #cfc9d8; text-align: center; }
-  .roomSwatch { width: 40px; height: 30px; border: 2px solid #000; }
-  .playScene { position: relative; width: 100%; flex: 1 1 auto; min-height: 260px; overflow: hidden;
-    border: 2px solid #000; border-radius: 2px; touch-action: none;
-    background: linear-gradient(#c9b28a 0%, #bda379 38%, #a98f66 38%, #6f7f4a 78%, #5f6f3e 78%);
-    box-shadow: inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -3px 0 rgba(0,0,0,0.3); }
-  /* world: a swipeable diorama per town */
-  .worldOverlay { justify-content: flex-start; gap: 8px; padding-left: 0; padding-right: 0; }
-  .worldWrap { position: relative; width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden;
-    border-top: 3px solid #000; border-bottom: 3px solid #000; touch-action: none; }
-  .townCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
-  .townArrow { position: absolute; top: 50%; transform: translateY(-50%); width: 38px; height: 46px;
-    background: rgba(20,17,26,0.66); border: 2px solid #000; cursor: pointer; z-index: 3;
-    display: flex; align-items: center; justify-content: center; padding: 0; }
-  .townArrow.left { left: 6px; }
-  .townArrow.right { right: 6px; }
-  .townArrow.right .icon { transform: scaleX(-1); }
-  .townArrow:disabled { opacity: 0.25; }
-  .townDots { position: absolute; left: 0; right: 0; bottom: 6px; display: flex; justify-content: center;
-    gap: 5px; z-index: 3; pointer-events: none; }
-  .townDots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.35);
-    border: 1px solid rgba(0,0,0,0.6); }
-  .townDots i.on { background: #7dff5a; }
-  .townDots i.locked { background: rgba(255,217,77,0.5); }
-  .worldBar { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0 12px; }
-  .worldName { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-  #worldTownName { font-weight: 900; font-size: 15px; color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.7); }
-  #worldTownSub { font-size: 11px; color: #b8f0c8; }
-  #btnTownAction { flex: 0 0 auto; width: auto; }
-
-  /* world map + town */
-  .townGrid { width: 100%; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
-    max-height: 56vh; overflow-y: auto; }
-  .townCard { font-family: inherit; background: #3a3444; border: 2px solid #000; cursor: pointer;
-    padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px;
-    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.14), inset -2px -2px 0 rgba(0,0,0,0.4); }
-  .townCard.here { background: #2a7fd4; }
-  .townCard.locked { opacity: 0.85; background: #2e2a36; }
-  .townCard.cant { opacity: 0.55; }
-  .townIcon { width: 26px; height: 26px; image-rendering: pixelated; display: block; }
-  .townName { font-weight: 900; color: #fff; font-size: 12px; text-shadow: 1px 1px 0 #000; text-align: center; }
-  .townMeta { font-size: 10px; color: #b8f0c8; font-weight: 900; }
-  .townMeta.cost { color: #ffd94d; }
-
-  /* carry a friend between houses */
-  .carryZone { right: 60px; }
-  .placeCarry { position: absolute; left: 50%; transform: translateX(-50%); bottom: 8px; z-index: 30;
-    font-family: inherit; font-weight: 900; font-size: 12px; color: #fff; cursor: pointer;
-    background: #b58a1a; border: 3px solid #000; padding: 8px 12px; text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
-    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.25), 0 4px 10px rgba(0,0,0,0.5); }
-
-  .roomWorld { position: absolute; top: 0; bottom: 0; left: 0; width: 100%; will-change: transform; }
-  .roomBg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
-  .roomItems { position: absolute; inset: 0; }
-  .panHint { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; z-index: 4;
-    font-size: 10px; font-weight: 900; color: rgba(255,255,255,0.55); text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
-    pointer-events: none; }
-  /* drag an item onto the bin to put it away (no permanent X clutter on every item) */
-  .trashZone { position: absolute; right: 8px; bottom: 8px; width: 46px; height: 46px; z-index: 30;
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
-    border: 3px solid #000; background: rgba(52,44,38,0.88); border-radius: 4px;
-    opacity: 0; transform: scale(0.8); pointer-events: none;
-    transition: opacity 0.15s, transform 0.15s, background 0.15s; }
-  .trashZone.show { opacity: 0.95; transform: scale(1); }
-  .trashZone.hot { background: #c8322a; transform: scale(1.2); }
-
-  .playmate { position: absolute; transform: translate(-50%, -100%); cursor: grab; touch-action: none;
-    transform-origin: 50% 12%; }
-  .playmate.dragging { cursor: grabbing; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.45)); z-index: 5; }
-  .playmate canvas { display: block; image-rendering: pixelated; pointer-events: none;
-    animation: idleSway 3.4s ease-in-out infinite; transform-origin: 50% 90%; }
-  .playmate.decor canvas, .playmate.dragging canvas { animation: none; }
-  @keyframes idleSway { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
-  .playEmpty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    color: #4a3a22; font-size: 13px; font-weight: 900; text-align: center; padding: 0 20px; }
-  .dressPanel { position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 62%; overflow-y: auto;
-    background: rgba(22,19,28,0.97); border: 3px solid #000; padding: 8px; display: flex; flex-direction: column; gap: 6px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.6); z-index: 20; }
-  .dressRow { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
-  .dressLabel { font-size: 11px; font-weight: 900; color: #ffd94d; text-shadow: 1px 1px 0 #000; }
-  .dressItem { flex: 0 0 auto; width: 48px; min-height: 58px; background: #3a3444; border: 2px solid #000; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative; padding: 2px; }
-  .dressItem.sel { background: #2a7fd4; }
-  .dressItem.cant { opacity: 0.5; }
-  .dItemCost { font-size: 9px; font-weight: 900; color: #b8f0c8; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
-  .dressItem canvas { image-rendering: pixelated; }
-  .dressItem .swatch { width: 30px; height: 30px; border: 2px solid #000; }
-  .dressItem .none { font-size: 9px; color: #cfc9d8; font-weight: 900; }
-  .dressClose { align-self: center; }
-
-  /* the mine: a shaft you dig down through */
-  #mine .panel { width: min(360px, 94%); height: 100%; }
-  .mineCanvas { display: block; width: 100%; flex: 1 1 auto; min-height: 220px;
-    image-rendering: pixelated; border: 2px solid #000; background: #171220; touch-action: none; }
-  .mineBag { width: 100%; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;
-    font-size: 10px; font-weight: 900; color: #cfc9d8; min-height: 16px; }
-  .bagItem { display: flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.4);
-    border: 1px solid #000; padding: 2px 5px; }
-  .bagDot { width: 8px; height: 8px; border: 1px solid rgba(0,0,0,0.6); }
-
-  /* mine minigame */
-  .mineStats { font-size: 12px; font-weight: 900; color: #ffd94d; text-shadow: 1px 1px 0 #000; text-align: center; }
-  .energyWrap { position: relative; width: 100%; height: 18px; background: #222; border: 2px solid #000; overflow: hidden; }
-  .energyBar { height: 100%; width: 0%; background: linear-gradient(#ffe14d, #f0a500); transition: width 0.15s; }
-  .energyText { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 900; color: #fff; text-shadow: 1px 1px 0 #000; }
-  .digFace { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
-    padding: 8px; background: rgba(0,0,0,0.35); border: 2px solid #000; }
-  .block { position: relative; aspect-ratio: 1; border: 2px solid rgba(0,0,0,0.55); cursor: pointer;
-    box-shadow: inset 3px 3px 0 rgba(255,255,255,0.22), inset -3px -4px 0 rgba(0,0,0,0.4); overflow: hidden;
-    image-rendering: pixelated; }
-  .block:active { transform: translateY(1px); }
-  .block .crack { position: absolute; inset: 0; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none;
-    clip-path: polygon(48% 0, 55% 30%, 80% 42%, 58% 55%, 66% 100%, 46% 62%, 20% 72%, 40% 48%, 15% 30%, 44% 34%); }
-  .block.pop { animation: blockPop 0.18s ease-out; }
-  @keyframes blockPop { 0% { filter: brightness(2.4); } 100% { filter: brightness(1); } }
-  .block .pay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: 13px; color: #eaffea; text-shadow: 1px 1px 0 #000, 0 0 4px #000; pointer-events: none;
-    animation: payFloat 0.7s ease-out forwards; }
-  @keyframes payFloat { 0% { opacity: 1; transform: translateY(4px); } 100% { opacity: 0; transform: translateY(-14px); } }
-  .digFace.spent .block { cursor: default; filter: saturate(0.4) brightness(0.7); }
   .saveBox { width: 100%; height: 46px; resize: none; font-family: monospace; font-size: 10px;
     background: rgba(0,0,0,0.45); color: #9fe6c0; border: 2px solid #000; padding: 5px; }
   .setLabel { font-size: 11px; color: #cfc9d8; align-self: flex-start; }
@@ -528,44 +416,6 @@
   .loadHelp a { color: #7ee0ff; }
   /* roy's maker's mark , the same colophon that rides every project (ported from royashbrook.com's
      Footer.astro to the game's monospace/dark theme). the red heart + gold sponsor stay literal. */
-  /* home hub */
-  #btnHome { position: relative; }
-  .homeBadge { position: absolute; top: 4px; right: 6px; width: 12px; height: 12px; border-radius: 50%;
-    background: #ffd94d; border: 2px solid #000; box-shadow: 0 0 6px #ffd94d; }
-  #home .panel { width: min(360px, 94%); }
-  .homeWelcome { width: 100%; border: 2px solid #ffd94d; background: rgba(40,32,10,0.6);
-    padding: 7px 8px; display: flex; align-items: center; gap: 8px;
-    font-size: 12px; font-weight: 900; color: #ffe14d; text-shadow: 1px 1px 0 #000; }
-  .homeWelcome > span { flex: 1 1 auto; min-width: 0; line-height: 1.25; }
-  .homeWelcome button { flex: 0 0 auto; width: auto; padding: 8px 12px; }
-  .homeIncome { font-size: 12px; color: #cfc9d8; text-align: center; }
-  .homeScene { width: 100%; height: clamp(72px, 11vh, 96px); display: flex; align-items: flex-end; justify-content: center;
-    gap: 4px; overflow: hidden; border: 2px solid #000; border-radius: 2px;
-    background: linear-gradient(#8fc7e8 0%, #a9d4ec 55%, #7a5a3a 55%, #6b4d30 100%);
-    box-shadow: inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -3px 0 rgba(0,0,0,0.3); }
-  .homeSprite { position: relative; display: flex; flex-direction: column; align-items: center; }
-  .homeSprite canvas { image-rendering: pixelated; animation: homeBob 1.6s ease-in-out infinite; height: 52px; width: auto; }
-  .homeSprite .cnt { font-size: 10px; font-weight: 900; color: #fff; text-shadow: 1px 1px 0 #000; margin-top: -4px; }
-  @keyframes homeBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-  /* the empty-town line sits over the scene, so it has to wrap inside the box
-     and carry its own contrast against whatever sky is behind it */
-  .homeEmpty { align-self: center; margin: 0 auto; max-width: 90%; text-align: center;
-    color: #fff; font-size: 12px; font-weight: 900; line-height: 1.35;
-    text-shadow: 1px 1px 0 rgba(0,0,0,0.85), -1px 1px 0 rgba(0,0,0,0.85),
-                 1px -1px 0 rgba(0,0,0,0.85), -1px -1px 0 rgba(0,0,0,0.85); }
-  .villagerList { width: 100%; display: flex; flex-direction: column; gap: 5px; }
-  .vCard { display: flex; align-items: center; gap: 8px; background: #3a3444; border: 2px solid #000; padding: 4px 8px;
-    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.12), inset -2px -2px 0 rgba(0,0,0,0.4); }
-  .vCard canvas { width: 30px; height: 42px; image-rendering: pixelated; flex: 0 0 auto; }
-  .vInfo { flex: 1 1 auto; text-align: left; min-width: 0; }
-  .vName { font-weight: 900; color: #fff; font-size: 12px; text-shadow: 1px 1px 0 #000; }
-  .vMeta { font-size: 9px; color: #b8f0c8; }
-  .vBuy { flex: 0 0 auto; font-family: inherit; font-weight: 900; font-size: 11px; color: #fff; cursor: pointer;
-    background: #3fae2a; border: 2px solid #000; padding: 7px 9px; text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
-    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.3), inset -2px -3px 0 rgba(0,0,0,0.35); }
-  .vBuy:active { transform: translateY(2px); }
-  .vBuy.cant { background: #5a5560; opacity: 0.7; }
-
   #verTag { position: absolute; top: 6px; right: 10px; z-index: 11;
     font-size: 10px; font-weight: 900; letter-spacing: 1px; color: rgba(255,255,255,0.4); pointer-events: none; }
   .makerMark { margin: 2px auto 0; text-align: center; font-family: inherit;
