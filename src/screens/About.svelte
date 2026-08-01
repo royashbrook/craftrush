@@ -7,7 +7,7 @@
     <div class="noAds">NO ADS. JUST FUN.</div>
     <div class="aboutText">
       <p>My kids loved playing these crowd runner games, but every one of them is packed with ads. So I made this one instead. No ads, nothing to buy, no timers pushing you to pay.</p>
-      <p>Then I added some mini games to spend the emeralds on: a village that earns while you are away, a mine to dig, and houses around the world to fill with friends and decorate.</p>
+      <p>The game gets back to the part that matters: steer, fire, grow a ridiculous crowd, and break the boss. Two ways to run, one shop for the things you earn, and no chores competing for your attention.</p>
       <p>Every sprite and sound is generated from code, original pixel art in the style of the blocky game we all love. It all works offline once loaded.</p>
     </div>
     <p class="makerMark">

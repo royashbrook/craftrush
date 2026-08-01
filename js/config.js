@@ -3,7 +3,6 @@
 // Everything gameplay-mechanical references ROLES (enemy ids, sprite ids) from
 // here, so a full reskin = new sprite packs + new tables. No engine changes.
 import { Audio } from './audio.js';
-import { hash2 } from './engine.js';
 import { normalizeMasterySave } from './mastery.js';
 import { saveSchemaError } from './pwa-safety.js';
 
@@ -128,7 +127,7 @@ export const CAMERAS = {
 export const TIERS = T('tiers', { units: [] });
 
 export const MODES = {
-  shooter: { id: 'shooter', label: 'BOW BLITZ', desc: 'Your crowd auto-fires arrows. Blast mobs, shoot gates to boost them!' },
+  shooter: { id: 'shooter', label: 'BOW BLITZ', desc: 'Hold and drag to fire. Blast mobs and shoot gates to boost them!' },
   gates:   { id: 'gates',   label: 'GATE DASH', desc: 'No bows — pick the best gates, dodge mobs, grow a giant crowd!' },
 };
 
@@ -201,251 +200,6 @@ export const SKINS = T('skins', []);
 // Cosmetics — all purchasable with emeralds. Capes/hats render on every runner
 // (camera sits behind the crowd, so capes are always on screen).
 export const COSMETICS = T('cosmetics', { cape: [], hat: [], trail: [], pet: [] });
-
-// Home hub: buy villager friends who populate the home and earn emeralds while
-// you're away. Each additional villager of a type costs base * costRate^owned
-// (the classic idle curve). Art reuses existing character skins — no new sprites.
-export const HOME = { costRate: 1.15, idleCapMs: 8 * 3600 * 1000, townCap: 8 };
-export const VILLAGERS = T('village', {}).villagers || [];
-
-// cost of the NEXT villager of `id` given how many are already owned
-export function villagerCost(id, owned) {
-  const v = VILLAGERS.find(x => x.id === id);
-  return v ? Math.round(v.base * Math.pow(HOME.costRate, owned)) : Infinity;
-}
-
-// total idle income in emeralds per hour
-export function homeIncomeRate(villagers) {
-  let r = 0;
-  for (const v of VILLAGERS) r += (villagers && villagers[v.id] || 0) * v.income;
-  return r;
-}
-
-// how many villagers live in a town, and whether there is room for one more
-export function townPop(rec) {
-  let n = 0;
-  for (const v of VILLAGERS) n += (rec && rec.villagers && rec.villagers[v.id]) || 0;
-  return n;
-}
-export const townHasRoom = (rec) => townPop(rec) < HOME.townCap;
-
-// every unlocked town earns on its own; the world rate is the sum
-export function worldIncomeRate(world) {
-  if (!world || !world.towns) return 0;
-  let r = 0;
-  for (const t of TOWNS) {
-    const rec = world.towns[t.id];
-    if (rec && rec.unlocked) r += homeIncomeRate(rec.villagers);
-  }
-  return r;
-}
-
-// idle earnings across the whole world, clamped to the same cap
-export function pendingIdleWorld(world, lastCollect, now) {
-  const elapsed = Math.max(0, Math.min(now - (lastCollect || now), HOME.idleCapMs));
-  return Math.floor(worldIncomeRate(world) * elapsed / 3600000);
-}
-
-// emeralds accrued since lastCollect, clamped to the idle cap. A falsy
-// lastCollect (fresh save) banks nothing until the home is first opened.
-export function pendingIdle(villagers, lastCollect, now) {
-  const elapsed = Math.max(0, Math.min(now - (lastCollect || now), HOME.idleCapMs));
-  return Math.floor(homeIncomeRate(villagers) * elapsed / 3600000);
-}
-
-// Playroom decorations: buyable placeable furniture (an emerald sink) and room
-// backdrops. Each buy drops one draggable instance into the playroom.
-export const DECOR = T('village', {}).decor || [];
-export const decorById = (id) => DECOR.find(d => d.id === id);
-// Room styles are real house interiors: a patterned wall, a floor with depth, and
-// baseboard trim, drawn to a pixel canvas. The first is free; the rest you keep.
-export const ROOM_TIERS = T('village', {}).roomTiers || [];
-export const roomTierById = (id) => ROOM_TIERS.find(r => r.id === id) || ROOM_TIERS[0];
-
-// ---------------------------------------------------------------------------
-// World: biome towns you unlock, each holding houses you buy and decorate.
-// Every town has a native interior style (free in that town) and a preset of
-// starting furniture, so an unlocked house is never an empty box.
-// ---------------------------------------------------------------------------
-const PRESET_COZY = [
-  { item: 'bed', x: 0.10, y: 0.80 }, { item: 'room_rug', x: 0.34, y: 0.95 },
-  { item: 'room_lamp', x: 0.56, y: 0.86 }, { item: 'crafting_table', x: 0.74, y: 0.95 },
-  { item: 'potted_plant', x: 0.90, y: 0.92 },
-];
-const PRESET_HALL = [
-  { item: 'room_shelf', x: 0.16, y: 0.70 }, { item: 'chest', x: 0.30, y: 0.93 },
-  { item: 'room_rug', x: 0.50, y: 0.96 }, { item: 'painting', x: 0.66, y: 0.66 },
-  { item: 'bed', x: 0.86, y: 0.82 },
-];
-const PRESET_PARTY = [
-  { item: 'cake', x: 0.22, y: 0.92 }, { item: 'torch', x: 0.40, y: 0.72 },
-  { item: 'room_rug', x: 0.56, y: 0.96 }, { item: 'room_lamp', x: 0.78, y: 0.88 },
-  { item: 'potted_plant', x: 0.92, y: 0.94 },
-];
-
-export const TOWNS = T('village', {}).towns || [];
-export const townById = (id) => TOWNS.find(t => t.id === id) || TOWNS[0];
-
-export const MAX_HOUSES = 4;
-// cost of the NEXT house in a town given how many it already has
-export const housePrice = (owned) => Math.round(400 * Math.pow(1.8, owned));
-
-// a fresh house for a town: town's native style, pre-decorated, nobody home yet
-export function makeHouse(townId) {
-  const t = townById(townId);
-  return { style: t.style.id, decor: t.preset.map(d => ({ ...d })), people: [] };
-}
-
-// resolve a house style id to materials: a bought ROOM_TIER, else the town's native
-export function styleById(id, townId) {
-  const t = townById(townId);
-  if (id === t.style.id) return t.style;
-  return ROOM_TIERS.find(r => r.id === id) || t.style;
-}
-
-// Build or repair save.world, folding a legacy flat playroom into plains house 0.
-// Idempotent: safe to call on every load.
-export function migrateWorld(save) {
-  const w = save.world && typeof save.world === 'object' ? save.world : (save.world = {});
-  if (!w.towns || typeof w.towns !== 'object') w.towns = {};
-  const normalizeHouse = (storedHouse, town) => {
-    const house = storedHouse && typeof storedHouse === 'object' && !Array.isArray(storedHouse)
-      ? storedHouse
-      : makeHouse(town.id);
-    if (typeof house.style !== 'string') house.style = town.style.id;
-    if (!Array.isArray(house.decor)) house.decor = [];
-    house.decor = house.decor.filter((d) =>
-      d && typeof d === 'object' && typeof d.item === 'string');
-    if (!Array.isArray(house.people)) house.people = [];
-    house.people = house.people.filter((p) =>
-      p && typeof p === 'object' && typeof p.skin === 'string');
-    for (const person of house.people) {
-      if (!person.cosmetics || typeof person.cosmetics !== 'object' || Array.isArray(person.cosmetics)) {
-        person.cosmetics = { cape: 'none', hat: 'none' };
-      }
-    }
-    return house;
-  };
-  for (const t of TOWNS) {
-    const stored = w.towns[t.id];
-    const rec = stored && typeof stored === 'object' && !Array.isArray(stored)
-      ? stored
-      : (w.towns[t.id] = { unlocked: t.cost === 0, houses: [] });
-    if (!Array.isArray(rec.houses)) rec.houses = [];
-    if (!rec.villagers || typeof rec.villagers !== 'object') rec.villagers = {};
-    for (const v of VILLAGERS) if (typeof rec.villagers[v.id] !== 'number') rec.villagers[v.id] = 0;
-    if (rec.unlocked && !rec.houses.length) rec.houses.push(makeHouse(t.id));
-    for (let i = 0; i < rec.houses.length; i++) {
-      rec.houses[i] = normalizeHouse(rec.houses[i], t);
-    }
-  }
-  // legacy flat playroom -> plains house 0 (only once; the flat keys are dropped)
-  const legacy = Array.isArray(save.playmates) || Array.isArray(save.decor);
-  if (legacy) {
-    const h = w.towns.plains.houses[0] || (w.towns.plains.houses[0] = makeHouse('plains'));
-    if (Array.isArray(save.playmates) && save.playmates.length) h.people = save.playmates;
-    if (Array.isArray(save.decor) && save.decor.length) h.decor = save.decor;
-    if (save.roomTier) h.style = save.roomTier;
-    w.towns.plains.houses[0] = normalizeHouse(h, townById('plains'));
-    delete save.playmates; delete save.decor; delete save.roomTier;
-  }
-  // the old single global village becomes the starter town's crew
-  if (save.home && save.home.villagers && !w._villagersMoved) {
-    const plains = w.towns.plains;
-    for (const v of VILLAGERS) plains.villagers[v.id] += save.home.villagers[v.id] || 0;
-    w._villagersMoved = true;
-    delete save.home.villagers;
-  }
-  // An unknown record can exist in a save from a removed theme or malformed
-  // import. Only known towns were normalized above, so never point a screen at
-  // an arbitrary record merely because it happens to exist.
-  if (!TOWNS.some((town) => town.id === w.town)) w.town = 'plains';
-  const houses = w.towns[w.town].houses;
-  if (typeof w.house !== 'number' || w.house < 0 || w.house >= houses.length) w.house = 0;
-  if (w.carry === undefined) w.carry = null;
-  else if (w.carry !== null
-      && (!w.carry || typeof w.carry !== 'object' || Array.isArray(w.carry)
-        || typeof w.carry.skin !== 'string')) w.carry = null;
-  else if (w.carry && (!w.carry.cosmetics || typeof w.carry.cosmetics !== 'object'
-      || Array.isArray(w.carry.cosmetics))) {
-    w.carry.cosmetics = { cape: 'none', hat: 'none' };
-  }
-  return w;
-}
-
-// Mining minigame: tap a dig face to break blocks for emeralds, dig endlessly
-// downward, upgrade the pickaxe. Energy-gated (refills over real time) so it
-// can't out-earn the runner and gives a recharge return-hook.
-export const MINE = { energyCap: 60, energyRefillMs: 20000, cols: 11, rows: 15 };
-
-// The underground is a real tile world: every block has a hardness, a tool tier that
-// can break it, and a worth. Ores come in veins rather than lone tiles, and the deeper
-// you go the better it gets. Generation is a pure function of (x, y) so the same shaft
-// always looks the same, no world to store.
-export const TILES = T('mine', {}).tiles || {};
-export const tileById = (id) => TILES[id] || TILES.stone;
-
-// which ores can appear at a depth, and how likely, deepest first
-/**
- * What can appear at what depth, and how often. Typed so the pairs stay pairs:
- * without it the tuples widen to (string|number)[] and the chance arithmetic
- * below silently accepts a name where a probability belongs.
- * @type {{at: number, ores: [string, number][]}[]}
- */
-const ORE_BANDS = [
-  { at: 110, ores: [['emeraldore', 0.030], ['diamond', 0.055], ['gold', 0.055], ['redstone', 0.075], ['lapis', 0.05]] },
-  { at: 70,  ores: [['diamond', 0.030], ['gold', 0.055], ['redstone', 0.075], ['lapis', 0.05], ['iron', 0.07]] },
-  { at: 40,  ores: [['gold', 0.035], ['redstone', 0.05], ['lapis', 0.045], ['iron', 0.08], ['coal', 0.09]] },
-  { at: 18,  ores: [['iron', 0.07], ['copper', 0.07], ['coal', 0.10]] },
-  { at: 0,   ores: [['coal', 0.09], ['copper', 0.05]] },
-];
-
-// The tile at a column/depth. Veins come from sampling the hash on a coarser grid, so
-// ore arrives in clumps you can chase instead of single lucky squares.
-export function mineTileAt(x, y) {
-  if (y < 0) return TILES.air;
-  if (y < 2) return TILES.dirt;
-
-  // caves: open pockets that make the shaft interesting to navigate
-  const cave = hash2(Math.floor(x / 3) + 41, Math.floor(y / 3) + 17);
-  if (y > 6 && cave > 0.93) return TILES.air;
-
-  if (y > 90 && hash2(x + 7, y + 3) > 0.985) return TILES.lava;
-  if (hash2(x + 13, y + 29) > 0.975) return TILES.gravel;
-
-  const band = ORE_BANDS.find((b) => y >= b.at) || ORE_BANDS[ORE_BANDS.length - 1];
-  const vein = hash2(Math.floor(x / 2) + 101, Math.floor(y / 2) + 211);
-  let acc = 0;
-  for (const [ore, chance] of band.ores) {
-    acc += chance;
-    if (vein < acc) return TILES[ore];
-  }
-  if (y > 60 && hash2(x + 3, y + 61) > 0.55) return TILES.deepslate;
-  if (y > 100 && hash2(x + 5, y + 71) > 0.9) return TILES.obsidian;
-  return TILES.stone;
-}
-export const PICKAXES = T('mine', {}).pickaxes || [];
-export const pickaxeTier = (id) => (PICKAXES.find((p) => p.id === id) || PICKAXES[0]).tier;
-export const canBreak = (pickId, tile) => !tile.hazard && tile.solid !== false && pickaxeTier(pickId) >= (tile.tier || 0);
-// strata by depth — deeper is rarer/prettier
-const MINE_STRATA = [
-  { at: 200, kind: 'emerald' }, { at: 100, kind: 'diamond' }, { at: 50, kind: 'gold' },
-  { at: 25, kind: 'iron' }, { at: 10, kind: 'coal' }, { at: 0, kind: 'stone' },
-];
-export const blockHp = (depth) => 1 + Math.floor(depth / 6);
-export const blockPay = (depth) => 1 + Math.floor(depth / 8);
-export const blockKind = (depth) => (MINE_STRATA.find(s => depth >= s.at) || MINE_STRATA[MINE_STRATA.length - 1]).kind;
-export const pickaxeDmg = (id) => (PICKAXES.find(p => p.id === id) || PICKAXES[0]).dmg;
-export const pickaxeCost = (id) => { const p = PICKAXES.find(x => x.id === id); return p ? p.cost : Infinity; };
-export function nextPickaxe(id) {
-  const i = PICKAXES.findIndex(p => p.id === id);
-  return (i >= 0 && i < PICKAXES.length - 1) ? PICKAXES[i + 1] : null;
-}
-// current energy given the stored value + real time since energyTs, capped
-export function mineEnergy(mine, now) {
-  const gained = Math.floor((now - (mine.energyTs || now)) / MINE.energyRefillMs);
-  return Math.max(0, Math.min(MINE.energyCap, (mine.energy ?? MINE.energyCap) + gained));
-}
 
 // ---------------------------------------------------------------------------
 // The campaign: a fixed chain of chapters you unlock in order, each gated by
@@ -594,12 +348,16 @@ export function loadSave() {
     expedition: { lastDay: null, streak: 0 },
     inventory: { blazeRods: 0, obsidian: 0, enderEyes: 0, elytra: 0, trims: 0, witherSkulls: 0 },
     campaign: { done: [] },
+    // Retired v1.7 fields remain additive defaults so importing an older save
+    // never discards data. Nothing in the current product reads or advances
+    // them; git history is the only route back to those systems.
     home: { villagers: { farmer: 0, miner: 0, fisher: 0, trader: 0, librarian: 0 }, lastCollect: 0 },
     mine: { depth: 0, energy: 60, energyTs: 0, pickaxe: 'wood' },
     roomTiersOwned: ['cabin'],
     music: true, sfx: true,   // music and effects toggle independently
     decorOwned: {},   // furniture bought but not currently placed (the bin refills this)
-    // world/towns/houses live here; migrateWorld() builds and repairs it on load
+    // Keep the old world payload opaque. Rebuilding it would mutate a retired
+    // system during an otherwise harmless load.
     world: null,
     // A short idempotency window for engine results. Additive only: old saves
     // receive the default and keep every existing field.
@@ -612,7 +370,6 @@ export function loadSave() {
   } catch { save = def; }
   normalizeUnlockedSkins(save);
   normalizeMasterySave(save);
-  migrateWorld(save); // build/repair the world, folding in any legacy flat playroom
   return save;
 }
 
@@ -622,9 +379,6 @@ export function winBonus(level, bestPower) {
   return TUNE.winBonusBase + level * TUNE.winBonusPerLevel
     + Math.round(Math.log10(Math.max(1, bestPower)) * TUNE.winBonusPowerK);
 }
-
-// clamp a normalized fraction (used for draggable playmate positions)
-export const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
 export function persistSave(save) {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* private mode */ }
@@ -644,7 +398,6 @@ export function importSave(code) {
     const merged = { ...loadSave(), ...obj }; // fill any missing fields with defaults
     normalizeUnlockedSkins(merged);
     normalizeMasterySave(merged);
-    migrateWorld(merged);
     const incoming = JSON.stringify(merged);
     const current = localStorage.getItem(SAVE_KEY);
     if (current !== null) {

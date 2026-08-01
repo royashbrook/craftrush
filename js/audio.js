@@ -86,28 +86,6 @@ const TRACKS = {
     lead: [12, 15, 17, 19, 17, 15, 12, null, 15, 17, 19, 22, 19, 17, 15, null],
     hat: [0, 2, 4, 6, 8, 10, 12, 14], leadType: 'square', bassType: 'triangle', leadVol: 0.07, bassVol: 0.13,
   },
-  // Original loops written for this game in the calm, sparse style the genre likes:
-  // long rests, a slow rocking bass, and a lead that wanders a few steps and waits.
-  village: {
-    bpm: 72,
-    bass: [0, null, null, null, null, null, 7, null, 5, null, null, null, null, null, 3, null],
-    lead: [12, null, null, 14, null, null, 12, null, 9, null, null, 7, null, null, null, null],
-    hat: [], leadType: 'triangle', bassType: 'triangle', leadVol: 0.075, bassVol: 0.1,
-  },
-  // deeper and cooler, for being underground with a pickaxe
-  mine: {
-    bpm: 66,
-    bass: [0, null, null, null, -5, null, null, null, -3, null, null, null, -7, null, null, null],
-    lead: [7, null, null, null, 5, null, null, 3, null, null, 7, null, null, null, null, null],
-    hat: [], leadType: 'sine', bassType: 'triangle', leadVol: 0.07, bassVol: 0.11,
-  },
-  // warmer and a little brighter, for pottering about indoors
-  cozy: {
-    bpm: 78,
-    bass: [0, null, 4, null, 7, null, 4, null, 2, null, 5, null, 9, null, 5, null],
-    lead: [16, null, null, 14, null, 12, null, null, 14, null, null, 16, null, null, null, null],
-    hat: [], leadType: 'triangle', bassType: 'sine', leadVol: 0.07, bassVol: 0.09,
-  },
   boss: {
     bpm: 150,
     bass: [0, 0, 0, 3, 0, 0, 0, 3, -2, -2, -2, 1, -2, -2, -2, 1],

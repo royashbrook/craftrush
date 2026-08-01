@@ -22,6 +22,7 @@
 
   const chips = $derived.by(() => {
     const c = [];
+    if (h.mode === 'shooter') c.push(h.autoFire ? 'CALM · AUTO FIRE' : (h.firing ? 'FIRING' : 'HOLD TO FIRE'));
     if (power.triple > 0) c.push(`3× ${Math.ceil(power.triple)}s`);
     if (power.rapid > 0) c.push(`RAPID ${Math.ceil(power.rapid)}s`);
     if (power.power > 0) c.push(`POWER ${Math.ceil(power.power)}s`);
@@ -29,8 +30,18 @@
     if (power.axe > 0) c.push(`AXE ${Math.ceil(power.axe)}s`);
     return c.join('  ');
   });
+  const bossHint = $derived.by(() => {
+    const b = h.boss ?? {};
+    const armorLeft = Math.max(0, (b.phases ?? 1) - (b.phase ?? 1));
+    const armor = b.shielded
+      ? 'ARMOR BROKEN!'
+      : (armorLeft > 0 ? `ARMOR ${armorLeft}/${b.phases - 1}` : '');
+    const crowd = b.needRunners ? `NEED ~${b.needRunners} RUNNERS!` : '';
+    return [armor, crowd].filter(Boolean).join(' · ');
+  });
 
   function pause() {
+    game.firing = false;
     game.paused = true;
     togglePause(true);
   }
@@ -58,5 +69,5 @@
 <div id="bossBar" class:hidden={!h.bossActive}>
   <div id="bossName">{h.boss?.name ?? 'BOSS'}</div>
   <div id="bossTrack"><div id="bossFill" style="width:{h.boss?.max ? (h.boss.hp / h.boss.max * 100).toFixed(1) : 0}%"></div></div>
-  <div id="bossHint">{h.boss?.needRunners ? `NEED ~${h.boss.needRunners} RUNNERS!` : ''}</div>
+  <div id="bossHint">{bossHint}</div>
 </div>

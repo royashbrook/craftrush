@@ -3,6 +3,9 @@
 export const FxMixin = {
   // ---------- fx ----------
   burst(x, y, z, colors, n = 8, spd = 5) {
+    // FX is feedback, not simulation. Bound the live pool so stacked volleys,
+    // gates, and a boss break cannot turn celebration into an iPhone frame drop.
+    n = Math.min(n, Math.max(0, 300 - this.particles.length));
     for (let i = 0; i < n; i++) {
       this.particles.push({
         x, y: y + Math.random() * 0.4, z,

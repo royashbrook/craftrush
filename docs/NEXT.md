@@ -1,6 +1,6 @@
 # What comes next
 
-Research and adversarial review, 2026-07-27.
+Research and adversarial review, updated 2026-08-01.
 
 ## Implementation status
 
@@ -36,6 +36,20 @@ distinct run and boss identities. v1.7 completed #89 and #94: three fixed Golem
 readiness points, manual timing feedback with CALM auto-release, persistent
 chapter records and badges, one next target, and a single canonical version
 display.
+
+The v1.8 core reset acts on the next playtest finding: the village,
+world, houses, playroom, mine, and idle emerald loop did not make children want
+another run. Those screens are retired from the product while their save fields
+remain untouched and transferable. The primary navigation is Play and Shop.
+Bow Blitz now fires only while the player holds the field on NORMAL and faster
+paces; CALM retains auto-fire. Gate gains expand and flash the crowd, large power
+has a bounded physical read, and every standard boss has at least three damage
+stages with visible armor breaks.
+
+The next decision is empirical, not another feature brainstorm: run the five
+player first-run protocol in `docs/PLAYTEST.md`. Do not add another side system
+until at least three players voluntarily choose another run and can explain one
+input-to-outcome relationship.
 
 ## Product direction
 

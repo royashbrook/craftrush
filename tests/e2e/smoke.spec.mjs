@@ -176,6 +176,72 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
   expect(errors).toEqual([]);
 });
 
+test('Bow Blitz fires only while the player holds and drags', async ({ page }) => {
+  await page.goto('/');
+  await page.click('#btnPlayShooter');
+  await page.waitForTimeout(550);
+  expect(await page.evaluate(() => CR.game.volleysFired)).toBe(0);
+  await expect(page.locator('#powerChips')).toContainText('HOLD TO FIRE');
+
+  const canvas = page.locator('#gameCanvas');
+  const box = await canvas.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.72);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.68, box.y + box.height * 0.72, { steps: 5 });
+  await page.waitForTimeout(550);
+  await expect(page.locator('#powerChips')).toContainText('FIRING');
+  const held = await page.evaluate(() => ({ volleys: CR.game.volleysFired, targetX: CR.game.targetX }));
+  expect(held.volleys).toBeGreaterThanOrEqual(2);
+  expect(held.targetX).toBeGreaterThan(0.2);
+
+  await page.mouse.up();
+  const released = await page.evaluate(() => CR.game.volleysFired);
+  await page.waitForTimeout(550);
+  expect(await page.evaluate(() => CR.game.volleysFired)).toBe(released);
+  await expect(page.locator('#powerChips')).toContainText('HOLD TO FIRE');
+
+  await page.evaluate(() => { CR.game.redstone = 100; });
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.72);
+  await page.mouse.down();
+  await page.waitForTimeout(550);
+  await page.mouse.up();
+  expect(await page.evaluate(() => ({ summons: CR.game.summons.length, redstone: CR.game.redstone })))
+    .toEqual({ summons: 0, redstone: 100 });
+
+  await page.mouse.down();
+  expect(await page.evaluate(() => CR.game.firing)).toBe(true);
+  await canvas.dispatchEvent('lostpointercapture');
+  expect(await page.evaluate(() => CR.game.firing)).toBe(false);
+  await page.mouse.up();
+
+  await page.keyboard.down('f');
+  expect(await page.evaluate(() => CR.game.firing)).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  expect(await page.evaluate(() => CR.game.firing)).toBe(false);
+  await page.keyboard.up('f');
+});
+
+test('a standard boss shows armor stages and survives a burst', async ({ page }) => {
+  await page.goto('/');
+  await page.click('#btnPlayShooter');
+  await page.evaluate(() => {
+    CR.game.playerZ = CR.game.length;
+    CR.game.update(1 / 60);
+    CR.game.boss.entering = false;
+  });
+  await expect(page.locator('#bossHint')).toContainText('ARMOR 2/2');
+
+  const result = await page.evaluate(() => {
+    const b = CR.game.boss;
+    CR.game.damageBoss(b.maxHp * 10);
+    return { hp: b.hp, phase: b.phase, shielded: b.shielded };
+  });
+  expect(result.phase).toBe(2);
+  expect(result.hp).toBeGreaterThan(0);
+  expect(result.shielded).toBeGreaterThan(0);
+  await expect(page.locator('#bossHint')).toContainText('ARMOR BROKEN');
+});
+
 test('CALM says clearly that the ready golem sends automatically', async ({ page }) => {
   await page.goto('/');
   await page.locator('#btnPlayShooter').waitFor();
@@ -417,38 +483,32 @@ test('pause and resume work', async ({ page }) => {
   await expect(page.locator('#pause')).toBeHidden();
 });
 
-test('every bottom-nav tab opens a screen with real content', async ({ page }) => {
+test('the focused bottom navigation exposes only Play and Shop', async ({ page }) => {
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
 
   await page.goto('/');
-  for (const [tab, screen] of [['shop', '#shop'], ['home', '#home'], ['mine', '#mine']]) {
-    await page.click(`.navTab[data-tab="${tab}"]`);
-    await expect(page.locator(screen)).toBeVisible();
-    // the tab must BUILD the screen, not just reveal an empty panel
-    const kids = await page.locator(`${screen} .panel > *`).count();
-    expect(kids, `${tab} tab renders content`).toBeGreaterThan(1);
-  }
-  // the world is a drawn scene rather than a panel: it must name a town and size its canvas
-  await page.click('.navTab[data-tab="world"]');
-  await expect(page.locator('#world')).toBeVisible();
-  await expect(page.locator('#worldTownName')).not.toBeEmpty();
-  const size = await page.locator('#townCanvas').evaluate((c) => c.width * c.height);
-  expect(size, 'the town diorama is drawn at a real size').toBeGreaterThan(1000);
+  await expect(page.locator('.navTab')).toHaveCount(2);
+  await expect(page.locator('.navTab[data-tab="play"]')).toBeVisible();
+  await page.click('.navTab[data-tab="shop"]');
+  await expect(page.locator('#shop')).toBeVisible();
+  const kids = await page.locator('#shop .panel > *').count();
+  expect(kids, 'shop tab renders content').toBeGreaterThan(1);
+  await expect(page.locator('[data-tab="home"], [data-tab="world"], [data-tab="mine"]')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
-test('the bottom-left tab becomes BACK inside a stack and walks back out', async ({ page }) => {
+test('the bottom-left tab becomes BACK inside the More stack and walks back out', async ({ page }) => {
   await page.goto('/');
-  await page.click('.navTab[data-tab="world"]');
-  await expect(page.locator('#tabPlayLabel')).toHaveText('Play');   // world is a tab root
-  await page.click('#btnTownAction');                               // VISIT the town's house
-  await expect(page.locator('#playroom')).toBeVisible();
+  await page.click('#navMore');
+  await page.click('#btnAbout');
+  await expect(page.locator('#about')).toBeVisible();
   await expect(page.locator('#tabPlayLabel')).toHaveText('Back');
-  await page.click('.navTab[data-tab="play"]');                     // back out
-  await expect(page.locator('#world')).toBeVisible();
-  await expect(page.locator('#tabPlayLabel')).toHaveText('Play');
+  await page.click('.navTab[data-tab="play"]');
+  await expect(page.locator('#more')).toBeVisible();
+  await page.click('.navTab[data-tab="play"]');
+  await expect(page.locator('#menu')).toBeVisible();
 });
 
 test('the HUD chips stay readable over a dark biome sky', async ({ page }) => {
@@ -528,12 +588,12 @@ test('the system back gesture walks the screen stack instead of leaving the game
   await page.goto('/');
   await page.locator('#btnPlayShooter').waitFor();
 
-  await page.click('.navTab[data-tab="world"]');
-  await page.click('#btnTownAction');                 // into a house
-  await expect(page.locator('#playroom')).toBeVisible();
+  await page.click('#navMore');
+  await page.click('#btnAbout');
+  await expect(page.locator('#about')).toBeVisible();
 
   await page.goBack();
-  await expect(page.locator('#world')).toBeVisible();  // up one, not out of the app
+  await expect(page.locator('#more')).toBeVisible();
   await page.goBack();
   await expect(page.locator('#menu')).toBeVisible();
 
@@ -640,28 +700,6 @@ test('the rescue page pulls in nothing at runtime', async ({ page }) => {
   await page.goto('/rescue.html');
   await page.waitForTimeout(500);
   expect(extra, 'the rescue page loaded something external').toEqual([]);
-});
-
-test('real-time village and mine notices update without navigation', async ({ page }) => {
-  await page.goto('/');
-  await page.locator('#btnPlayShooter').waitFor();
-
-  await page.evaluate(() => {
-    const town = CR.save.world.towns[CR.save.world.town];
-    town.villagers.farmer = 10000;
-    CR.save.home.lastCollect = Date.now();
-    CR.save.mine.energy = 59;
-    CR.save.mine.energyTs = Date.now() - 19_900;
-    CR.commit();
-  });
-
-  await expect(page.locator('#navDotHome')).toBeHidden();
-  await expect(page.locator('#navDotMine')).toBeHidden();
-  await expect(page.locator('#navDotHome')).toBeVisible({ timeout: 2500 });
-  await expect(page.locator('#navDotMine')).toBeVisible({ timeout: 2500 });
-
-  await page.click('.navTab[data-tab="home"]');
-  await expect(page.locator('#homeWelcome')).toBeVisible();
 });
 
 test('runtime themes ship only their atlas files', async ({ request }) => {

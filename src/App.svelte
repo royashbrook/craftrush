@@ -11,16 +11,10 @@
 <script>
   import { save, nav, go, back, canGoBack, SCREENS } from './lib/store.svelte.js';
   import { Audio } from '../js/audio.js';
-  import { VERSION, townById, pendingIdleWorld, mineEnergy, MINE } from '../js/config.js';
   import Sprite from './lib/Sprite.svelte';
 
   import Menu from './screens/Menu.svelte';
   import Shop from './screens/Shop.svelte';
-  import Village from './screens/Village.svelte';
-  import World from './screens/World.svelte';
-  import Town from './screens/Town.svelte';
-  import Playroom from './screens/Playroom.svelte';
-  import Mine from './screens/Mine.svelte';
   import More from './screens/More.svelte';
   import About from './screens/About.svelte';
   import Goals from './screens/Goals.svelte';
@@ -32,33 +26,16 @@
   import AchPop from './components/AchPop.svelte';
 
   let { game } = $props();
-  let clock = $state(Date.now());
-  $effect(() => {
-    const id = setInterval(() => { clock = Date.now(); }, 500);
-    return () => clearInterval(id);
-  });
 
   const TABS = [
     { tab: 'play',  screen: 'menu',  icon: 'ui_play',    label: 'Play' },
     { tab: 'shop',  screen: 'shop',  icon: 'ui_person',  label: 'Shop' },
-    { tab: 'home',  screen: 'home',  icon: 'ui_house',   label: 'Village' },
-    { tab: 'world', screen: 'world', icon: 'ui_world',   label: 'World' },
-    { tab: 'mine',  screen: 'mine',  icon: 'ui_pickaxe', label: 'Mine' },
   ];
 
   const def = $derived(SCREENS[nav.screen] || {});
   const backable = $derived(canGoBack());
 
-  // a couple of screens name themselves after where you actually are
-  const title = $derived.by(() => {
-    if (nav.screen === 'town') return townById(save.world.town).name;
-    if (nav.screen === 'playroom') return `House ${save.world.house + 1}`;
-    return def.title || 'CraftRush';
-  });
-
-  // "come back" dots: villagers have earned something, or the pickaxe has energy
-  const villageDot = $derived(pendingIdleWorld(save.world, save.home?.lastCollect ?? 0, clock) > 0);
-  const mineDot = $derived(mineEnergy(save.mine, clock) >= MINE.energyCap);
+  const title = $derived(def.title || 'CraftRush');
 
   // A run only takes the whole screen while it is actually running. Paused, the
   // bars come back so you can step into the shop or your goals and come back.
@@ -88,11 +65,6 @@
 <main id="screens" class:hidden={immersive}>
   {#if nav.screen === 'menu'}<Menu {game} />
   {:else if nav.screen === 'shop'}<Shop {game} />
-  {:else if nav.screen === 'home'}<Village {game} now={clock} />
-  {:else if nav.screen === 'world'}<World {game} />
-  {:else if nav.screen === 'town'}<Town {game} />
-  {:else if nav.screen === 'playroom'}<Playroom {game} />
-  {:else if nav.screen === 'mine'}<Mine {game} />
   {:else if nav.screen === 'more'}<More {game} />
   {:else if nav.screen === 'about'}<About />
   {:else if nav.screen === 'goals'}<Goals />
@@ -121,8 +93,6 @@
         <Sprite name={t.icon} />
         <span>{t.label}</span>
       {/if}
-      {#if t.tab === 'home'}<i class="navDot" id="navDotHome" class:hidden={!villageDot}></i>{/if}
-      {#if t.tab === 'mine'}<i class="navDot" id="navDotMine" class:hidden={!mineDot}></i>{/if}
     </button>
   {/each}
 </nav>
