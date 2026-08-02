@@ -25,7 +25,7 @@
   import Toast from './components/Toast.svelte';
   import AchPop from './components/AchPop.svelte';
 
-  let { game } = $props();
+  let { game, pauseGame } = $props();
 
   const TABS = [
     { tab: 'play',  screen: 'menu',  icon: 'ui_play',    label: 'Play' },
@@ -73,7 +73,7 @@
   {/if}
 </main>
 
-{#if nav.playing}<Hud {game} />{/if}
+{#if nav.playing}<Hud {game} {pauseGame} />{/if}
 {#if nav.result}<Result {game} />{/if}
 <Toast />
 <AchPop />

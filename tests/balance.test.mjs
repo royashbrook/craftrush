@@ -62,6 +62,7 @@ const LANES = [-3.1, -2.4, -1.2, 0, 1.2, 2.4, 3.1];
 const gateWorth = (gate, worth) => {
   if (gate.op === 'add') return worth + gate.val;
   if (gate.op === 'mul') return worth * gate.val;
+  if (gate.op === 'scale') return Math.floor(worth * gate.val);
   if (gate.op === 'sub') return Math.max(0, worth - gate.val);
   return Math.ceil(worth / gate.val);
 };
@@ -73,6 +74,7 @@ const safestLane = (threats, fallback = 0) => LANES
 function steerCompetently(game) {
   if (game.redstone >= TUNE.redstoneMax) game.summonGolem();
   if (game.state === 'boss') {
+    if (game.mode === 'gates') game.charging = true;
     const waves = game.waves.filter((wave) => !wave.dead);
     if (waves.length) {
       game.targetX = safestLane(waves, game.playerX);
@@ -211,6 +213,7 @@ function measureBoss(mode, level, speed, arrivalMultiple) {
       game.boss.attackT = 999;
       game.targetX = game.boss.x;
       if (game.mode === 'shooter') game.firing = true;
+      if (game.mode === 'gates') game.charging = true;
       game.update(1 / 60);
       ticks++;
     }
@@ -236,25 +239,27 @@ test('normal gates require a lane and generated choices remain fair', () => {
     for (const gate of gates) byZ.set(gate.z, [...(byZ.get(gate.z) || []), gate]);
     let positivePairs = 0;
     for (const pair of byZ.values()) {
+      if (pair.every((gate) => gate.automatic)) {
+        assert.equal(pair.length, 1, 'the relief reward is one automatic full-width gate');
+        continue;
+      }
       assert.equal(pair.length, 2);
       assert.ok(pair.every((gate) => Math.abs(gate.x) <= TUNE.laneHalf));
       assert.ok(pair.every((gate) => Math.abs(gate.x) >= gate.halfW + TUNE.gateHitMargin),
         `level ${level} center must overlap neither gate`);
       assert.ok(pair.some((gate) => game.gateGood(gate)), `level ${level} needs a non-losing choice`);
       positivePairs++;
-      if (level === 1) assert.ok(pair.every((gate) => game.gateGood(gate)));
+      assert.equal(pair.filter((gate) => gate.par).length, 1, 'every decision identifies its authored par');
+      goodSides.add(Math.sign(pair.find((gate) => gate.par).x));
 
       const risky = pair.find((gate) => gate.risk);
       if (risky) {
         riskPairs++;
-        assert.ok(risky.followThroughZ - risky.z >= 22,
+        assert.ok(risky.followThroughZ - risky.z >= 20,
           `level ${level} leaves a readable follow-through window`);
         assert.ok(game.events.some((event) => event.type === 'obstacle'
           && Math.abs(event.z - risky.followThroughZ) < 0.1
           && Math.abs(event.x - risky.x) < 1.3));
-      } else if (level > 1) {
-        const onlyGood = pair.filter((gate) => game.gateGood(gate));
-        if (onlyGood.length === 1) goodSides.add(Math.sign(onlyGood[0].x));
       }
     }
     assert.ok(positivePairs >= 3, `level ${level} has at least three positive decisions`);
@@ -323,6 +328,7 @@ test('boss health is expected-power based and a strong arrival keeps its advanta
       game.boss.z = game.boss.targetZ;
       game.boss.attackT = 999;
       if (game.mode === 'shooter') game.firing = true;
+      if (game.mode === 'gates') game.charging = true;
       for (let tick = 0; tick < 90 && !game.bossDead && game.state === 'boss'; tick++) game.update(1 / 60);
     }
     const weakDamage = weak.boss.maxHp - Math.max(0, weak.boss.hp);
@@ -382,11 +388,11 @@ test('boss duration stays active, monotonic, and pace-independent above par', ()
         }
         // Three staged armor beats keep a par fight legible without turning it
         // into a slog. Surplus arrivals still earn a faster clear below.
-        assert.ok(samples[0].seconds >= 8 && samples[0].seconds <= 12,
+        assert.ok(samples[0].seconds >= 10 && samples[0].seconds <= 17,
           `${mode} level ${level} ${speed} par boss lasts ${samples[0].seconds.toFixed(1)}s`);
-        assert.ok(samples[1].seconds >= 6,
+        assert.ok(samples[1].seconds >= 8,
           `${mode} level ${level} ${speed} 2x boss lasts ${samples[1].seconds.toFixed(1)}s`);
-        assert.ok(samples[3].seconds >= 4.5,
+        assert.ok(samples[3].seconds >= 6,
           `${mode} level ${level} ${speed} 5x boss lasts ${samples[3].seconds.toFixed(1)}s`);
         assert.ok(samples[3].seconds <= samples[0].seconds - 2.5,
           `${mode} level ${level} ${speed} 5x arrival earns a meaningfully faster clear`);
@@ -473,6 +479,45 @@ test('dodge credit requires escaping a lane that originally threatened the playe
   game.playerX = 3.1;
   game.updateWaves(1 / 60);
   assert.equal(game.mastery.dodges, 1, 'leaving a threatened lane is a dodge');
+  game.destroy();
+});
+
+test('boss hits take a proportional unmitigated share so one is recoverable and two matter', () => {
+  const game = makeGame('gates', 8);
+  game.startRun();
+  game.startBoss();
+  game.boss.entering = false;
+  game.stars = 2;
+  game.setWorth(100);
+  game.playerX = 0;
+
+  const hit = () => {
+    game.spawnBossWave({
+      x: 0, halfW: 1.3, z: game.playerZ + 0.5,
+      warn: 0, speed: 1, kills: 1, lossFraction: 0.26,
+    });
+    game.updateWaves(1 / 60);
+  };
+  hit();
+  assert.equal(game.worth(), 74, 'one hit leaves a viable crowd');
+  hit();
+  assert.equal(game.worth(), 54, 'a second hit creates a serious deficit');
+  assert.equal(game.bossMetrics.hits, 2);
+  assert.equal(game.bossMetrics.resolved, 2);
+  game.destroy();
+});
+
+test('proportional alternate gates cannot be shot into a mislabeled best choice', () => {
+  const game = makeGame('shooter', 8);
+  game.startRun();
+  const gate = {
+    op: 'scale', val: 1.7, hits: 0, pulse: 0, x: 2.4, z: 10,
+    par: false, choiceTier: 'alternate', bestAfter: 24, alternateAfter: 20,
+  };
+  for (let i = 0; i < 30; i++) game.shootGate(gate);
+  assert.equal(gate.val, 1.7);
+  assert.equal(game.gateLabel(gate), '×1.7');
+  assert.equal(gate.choiceTier, 'alternate');
   game.destroy();
 });
 

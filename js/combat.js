@@ -226,18 +226,19 @@ export const CombatMixin = {
 
   // ---------- gates ----------
   gateLabel(gt) {
-    return gt.op === 'add' ? `+${gt.val}` : gt.op === 'mul' ? `×${gt.val}` : gt.op === 'sub' ? `−${gt.val}` : `÷${gt.val}`;
+    return gt.op === 'add' ? `+${gt.val}` : ['mul', 'scale'].includes(gt.op) ? `×${gt.val}` : gt.op === 'sub' ? `−${gt.val}` : `÷${gt.val}`;
   },
 
-  gateGood(gt) { return gt.op === 'add' || gt.op === 'mul'; },
+  gateGood(gt) { return gt.op === 'add' || gt.op === 'mul' || gt.op === 'scale'; },
 
   applyGate(gt) {
     gt.used = true;
-    this.noteGate?.(this.gateGood(gt), gt.risk);
+    if (!gt.automatic) this.noteGate?.(this.gateGood(gt), gt.risk, gt.choiceTier);
     // multiply/divide act on the WHOLE army worth, not just the rendered runners
     const n = this.worth();
     if (gt.op === 'add') { this.addRunners(gt.val); Audio.sfx('gate_good'); }
     else if (gt.op === 'mul') { this.addRunners(n * (gt.val - 1)); Audio.sfx('gate_good'); }
+    else if (gt.op === 'scale') { this.setWorth(Math.floor(n * gt.val), true); Audio.sfx('gate_good'); }
     else if (gt.op === 'sub') { if (gt.val > 0) { this.killRunners(gt.val, null, null, false); Audio.sfx('gate_bad'); this.floaty(`−${gt.val}`, gt.x, gt.z, '#ff6d5a', 1.5); } }
     else if (gt.op === 'div') { const k = n - Math.ceil(n / gt.val); if (k > 0) { this.killRunners(k, null, null, false); Audio.sfx('gate_bad'); this.floaty(`÷${gt.val}`, gt.x, gt.z, '#ff6d5a', 1.5); } }
     const after = this.worth();
@@ -597,7 +598,6 @@ export const CombatMixin = {
           const progress = 1 - w.warn / Math.max(0.001, w.warnTotal);
           const eased = progress * progress * (3 - 2 * progress);
           w.x = w.sweep.fromX + (w.sweep.toX - w.sweep.fromX) * eased;
-          if (Math.abs(this.playerX - w.x) < w.halfW + 0.4) w.threatened = true;
         }
         if (w.warn > 0) continue;
         // A regular wave starts travelling on the next frame. A forest warning
@@ -608,6 +608,7 @@ export const CombatMixin = {
       if (w.ambush) {
         for (const enemy of w.ambush) this.spawnEnemy(enemy.id, enemy.x, enemy.z);
         w.dead = true;
+        this.recordBossWaveOutcome?.(w, false);
         this.floaty?.('AMBUSH!', w.x, this.playerZ + 4, '#8fe388', 1.4);
         Audio.sfx('boss_roar');
         continue;
@@ -617,13 +618,17 @@ export const CombatMixin = {
         w.dead = true;
         const inBand = Math.abs(this.playerX - w.x) < w.halfW + 0.4;
         if (inBand) {
-          this.killRunners(w.kills, w.x, this.playerZ);
+          const damage = w.lossFraction
+            ? Math.max(w.kills || 0, Math.ceil(this.worth() * w.lossFraction))
+            : w.kills;
+          this.killRunners(damage, w.x, this.playerZ, !w.lossFraction);
           Audio.sfx('hurt', 100);
           this.cam.shake = Math.min(1, this.cam.shake + 0.3);
         } else if (w.threatened) {
           const edge = Math.abs(Math.abs(this.playerX - w.x) - (w.halfW + 0.4));
           this.noteDodge?.(edge <= 0.75);
         }
+        this.recordBossWaveOutcome?.(w, inBand);
       }
     }
     this.waves = this.waves.filter(w => !w.dead);

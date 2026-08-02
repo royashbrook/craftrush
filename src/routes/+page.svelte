@@ -31,6 +31,14 @@
   let game = $state(null);
   let failed = $state('');
 
+  function pauseGame(force) {
+    if (!game) return;
+    const open = force ?? !nav.paused;
+    game.releaseAction();
+    game.paused = open;
+    togglePause(open);
+  }
+
   onMount(() => {
     let stop = () => {};
     let cancelled = false;
@@ -105,7 +113,7 @@
           nav.result = settled.result;
         },
         onTutorial: (k) => toast(k),
-        onPause: () => { if (nav.playing) togglePause(); },
+        onPause: () => { if (nav.playing) pauseGame(); },
       });
 
       // back-fill achievements a returning player already earned, silently
@@ -113,13 +121,11 @@
       persistSave(save);
 
       game = g;
-      const stopHistory = initHistory(pushState);   // the system back gesture walks the screen stack
+      const stopHistory = initHistory(pushState, () => pauseGame(true));
 
       const onVisibility = () => {
         if (document.hidden && (g.state === 'run' || g.state === 'boss') && !g.paused) {
-          g.firing = false;
-          g.paused = true;
-          togglePause(true);
+          pauseGame(true);
         }
       };
       document.addEventListener('visibilitychange', onVisibility);
@@ -203,7 +209,7 @@
 <div id="stage" bind:this={stage}>
   <canvas id="gameCanvas" bind:this={canvas}></canvas>
   {#if game}
-    <App {game} />
+    <App {game} {pauseGame} />
   {:else}
     <div id="loading">
       {#if failed}

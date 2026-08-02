@@ -51,6 +51,16 @@ a selected-mode hero and an extra selector tap. Bow Blitz and Gate Dash are now
 the two primary launch buttons, the menu is covered at the iPhone Air viewport,
 and the shared Obsidian Hunt pickaxe silhouette is corrected at its source.
 
+v1.9 completes #112, #113, and #114. The release now has a reproducible
+five-cohort, 800-run NORMAL balance matrix; every cohort meets its declared win
+band and equivalent modes stay within ten percentage points. Gate rows are
+three actual decisions plus one explicit automatic relief reward. One mistake
+retains roughly 85% of par, two compound to a threatening deficit, and later
+best routes ask for a follow-through dodge. Gate Dash boss damage requires a
+held field outside CALM, boss hits scale with the current crowd, and intrinsic
+TTK lands near 12–14 seconds at par, 9–10 seconds at 2×, and 7–8 seconds at 5×.
+The full methods, caveats, and findings are in `docs/BALANCE.md`.
+
 The next decision is empirical, not another feature brainstorm: run the five
 player first-run protocol in `docs/PLAYTEST.md`. Do not add another side system
 until at least three players voluntarily choose another run and can explain one

@@ -6,9 +6,9 @@
   refresh: this just derives off whatever nav.hud currently holds.
 -->
 <script>
-  import { nav, togglePause } from '../lib/store.svelte.js';
+  import { nav } from '../lib/store.svelte.js';
 
-  let { game } = $props();
+  let { game, pauseGame } = $props();
 
   const h = $derived(nav.hud ?? {});
   const power = $derived(h.power ?? {});
@@ -23,6 +23,7 @@
   const chips = $derived.by(() => {
     const c = [];
     if (h.mode === 'shooter') c.push(h.autoFire ? 'CALM · AUTO FIRE' : (h.firing ? 'FIRING' : 'HOLD TO FIRE'));
+    if (h.mode === 'gates' && h.bossActive) c.push(h.autoCharge ? 'CALM · AUTO CHARGE' : (h.charging ? 'CHARGING' : 'HOLD TO CHARGE'));
     if (power.triple > 0) c.push(`3× ${Math.ceil(power.triple)}s`);
     if (power.rapid > 0) c.push(`RAPID ${Math.ceil(power.rapid)}s`);
     if (power.power > 0) c.push(`POWER ${Math.ceil(power.power)}s`);
@@ -41,9 +42,7 @@
   });
 
   function pause() {
-    game.firing = false;
-    game.paused = true;
-    togglePause(true);
+    pauseGame(true);
   }
 </script>
 

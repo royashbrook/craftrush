@@ -91,7 +91,8 @@ for (const mode of ['shooter', 'gates']) {
 
     game.updateWaves(wave.warnTotal / 2);
     assert.ok(Math.abs(wave.x) < 0.01, 'the visible warning crosses the center');
-    assert.equal(wave.threatened, true, 'crossing the player lane records a real timing threat');
+    assert.equal(wave.threatened, false,
+      'warning paint crossing a stationary player is not credited as a dodge');
     game.updateWaves(wave.warnTotal / 2);
     assert.equal(wave.warn, 0);
     assert.ok(Math.abs(wave.x - toX) < 0.001, 'the sweep locks at its deterministic endpoint');

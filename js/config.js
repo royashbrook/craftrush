@@ -88,13 +88,14 @@ export const TUNE = {
 
   // boss arena (blocks past the track end)
   bossSpawnZ: 17, bossHoldZ: 10,
-  bossShooterHpPerParPower: 21,
-  bossGatesHpPerParPower: 2.1,
-  bossGatesHpPerLevel: 0.06,
-  bossGatesHpBonusCap: 0.24,
-  bossGatesBaseHpCap: 2.4,
-  bossSurplusLogScale: 0.38,
-  chargeSpendDivisor: 84, // gates-mode charge: worth spent per tick = worth/this
+  bossShooterHpPerParPower: 30,
+  bossGatesHpPerParPower: 2.5,
+  bossGatesHpPerLevel: -0.02,
+  bossGatesHpBonusCap: 0.4,
+  bossGatesBaseHpCap: 2.15,
+  bossSurplusLogScale: 0.55,
+  bossShooterSurplusLogScale: 0.65,
+  chargeSpendDivisor: 122, // slower spend exposes the full boss rhythm without raising the crowd required to win
 };
 
 // Run pace, chosen by the player. Going faster is harder to read and react to, so it

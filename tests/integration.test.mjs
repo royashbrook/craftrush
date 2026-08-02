@@ -27,7 +27,7 @@ globalThis.window = { addEventListener: noop, removeEventListener: noop };
 
 const { initAssets } = await import('../js/assets.js');
 const { Game } = await import('../js/game.js');
-const { BIOMES, CAMPAIGN, loadSave } = await import('../js/config.js');
+const { BIOMES, CAMPAIGN, TUNE, loadSave } = await import('../js/config.js');
 const { finishRunSettlement } = await import('../js/settlement.js');
 await initAssets();
 
@@ -43,12 +43,13 @@ function makeGame(overrides = {}, hookOverrides = {}) {
 function runToBossDeath(g, maxTicks = 8000) {
   let ticks = 0;
   if (g.mode === 'shooter') g.firing = true;
+  if (g.mode === 'gates') g.charging = true;
   // steer toward good gates so the crowd grows
   while (g.state === 'run' && ticks < maxTicks) {
     const ng = g.gates.filter((x) => !x.used && x.z > g.playerZ).sort((a, b) => a.z - b.z)[0];
     if (ng) {
       const pair = g.gates.filter((x) => x.z === ng.z);
-      const good = pair.filter((x) => x.op === 'add' || x.op === 'mul');
+      const good = pair.filter((x) => x.op === 'add' || x.op === 'mul' || x.op === 'scale');
       if (good.length) g.targetX = good[0].x;
     }
     g.update(1 / 60); g.render(); ticks++;
@@ -195,6 +196,27 @@ test('a good gate creates a visible crowd-impact beat', () => {
   assert.ok(g.particles.length >= 20);
 });
 
+test('the automatic relief gate catches every lane without pretending to be a choice', () => {
+  for (const x of [-3.1, 0, 3.1]) {
+    const g = makeGame({ mode: 'gates', level: 8 });
+    g.startRun();
+    g.setWorth(10);
+    g.playerX = x;
+    g.targetX = x;
+    g.gates = [{
+      x: 0, z: g.playerZ, halfW: TUNE.laneHalf + TUNE.gateHitMargin,
+      op: 'mul', val: 3, automatic: true, used: false, pulse: 0,
+    }];
+    const choices = g.mastery.gateChoices;
+    g.updateGatesObstaclesPickups(1 / 60);
+    assert.equal(g.worth(), 30, `lane ${x} receives the relief reward`);
+    assert.equal(g.mastery.gateChoices, choices, 'automatic growth is not mastery credit');
+    g.updateGatesObstaclesPickups(1 / 60);
+    assert.equal(g.worth(), 30, 'the reward applies exactly once');
+    g.destroy();
+  }
+});
+
 test('one crowded volley emits one gate spark instead of one per arrow', () => {
   const g = makeGame({ mode: 'shooter', level: 1 });
   g.startRun();
@@ -234,6 +256,7 @@ for (const mode of ['shooter', 'gates']) {
     });
     g.startRun();
     if (mode === 'shooter') g.firing = true;
+    if (mode === 'gates') g.charging = true;
     assert.equal(g.chapter && g.chapter.id, 'dragon', 'this is her fight');
     g.playerZ = g.length;
     g.setWorth(20000);

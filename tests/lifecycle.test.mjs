@@ -95,6 +95,17 @@ test('Game.destroy removes input listeners and pending callbacks, and is idempot
   browserWindow.dispatch('blur');
   assert.equal(game.firing, false, 'focus loss stops keyboard firing');
 
+  game.mode = 'gates';
+  canvas.dispatch('pointerdown', { pointerId: 6, clientX: 100, timeStamp: 3000 });
+  assert.equal(game.charging, true, 'Gate Dash captures the hold before the boss transition');
+  canvas.dispatch('pointerup', { pointerId: 6, clientX: 100, timeStamp: 3600 });
+  assert.equal(game.charging, false, 'releasing the pointer stops charging');
+  browserWindow.dispatch('keydown', { code: 'KeyF', target: {}, preventDefault: noop });
+  assert.equal(game.charging, true, 'keyboard hold charges Gate Dash');
+  browserWindow.dispatch('blur');
+  assert.equal(game.charging, false, 'focus loss stops charging');
+  game.mode = 'shooter';
+
   let interactivePrevented = false;
   browserWindow.dispatch('keydown', {
     code: 'Space',

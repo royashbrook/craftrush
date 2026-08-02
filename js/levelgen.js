@@ -54,7 +54,10 @@ export const LevelMixin = {
       if (e.type === 'gate') {
         this.gates.push({
           x: e.x, z: e.z, halfW: e.halfW, op: e.op, val: e.val,
-          risk: !!e.risk, followThroughZ: e.followThroughZ,
+          risk: !!e.risk, par: !!e.par, automatic: !!e.automatic,
+          meaningful: !!e.meaningful, choiceTier: e.choiceTier || null,
+          parBefore: e.parBefore, bestAfter: e.bestAfter, alternateAfter: e.alternateAfter,
+          followThroughZ: e.followThroughZ,
           encounterId: e.encounterId, hits: 0, used: false, pulse: 0,
         });
       } else if (e.type === 'enemy') {
