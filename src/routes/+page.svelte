@@ -17,7 +17,11 @@
   import { persistSave, THEME_ERROR } from '../../js/config.js';
   import { finishRunSettlement } from '../../js/settlement.js';
   import { checkAchievements } from '../../js/achievements.js';
-  import { updateReloadIsSafe } from '../../js/pwa-safety.js';
+  import {
+    UPDATE_SUPPORT_ACK,
+    UPDATE_SUPPORT_QUERY,
+    updateReloadIsSafe,
+  } from '../../js/pwa-safety.js';
   import { consumeMigration, takePendingToast } from '../../js/migrate.js';
   import { Game } from '../../js/game.js';
   import { Audio } from '../../js/audio.js';
@@ -115,6 +119,11 @@
         }
       };
       applyWaitingUpdate = activateWaitingWorker;
+      const onWorkerMessage = (event) => {
+        if (event.data?.type === UPDATE_SUPPORT_QUERY) {
+          event.ports[0]?.postMessage({ type: UPDATE_SUPPORT_ACK });
+        }
+      };
       onControllerChange = () => {
         // First install should not bounce a page the player just opened. Once
         // that worker claims it, though, later deploys in this same long-lived
@@ -128,6 +137,7 @@
         updateState = 'applying';
         reloadUpdatedAppIfSafe();
       };
+      navigator.serviceWorker.addEventListener('message', onWorkerMessage);
       navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
       window.addEventListener('focus', checkForUpdate);
       window.addEventListener('online', checkForUpdate);
@@ -149,6 +159,7 @@
         window.removeEventListener('focus', checkForUpdate);
         window.removeEventListener('online', checkForUpdate);
         document.removeEventListener('visibilitychange', checkWhenVisible);
+        navigator.serviceWorker.removeEventListener('message', onWorkerMessage);
         registration?.removeEventListener?.('updatefound', onUpdateFound);
         installingWorker?.removeEventListener?.('statechange', onInstallingState);
         if (applyWaitingUpdate === activateWaitingWorker) applyWaitingUpdate = () => {};

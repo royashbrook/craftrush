@@ -4,6 +4,39 @@
 
 export const CRAFTRUSH_CACHE_PREFIX = 'craftrush-';
 export const CRAFTRUSH_APP_ORIGIN = 'https://craftrush.royashbrook.com';
+export const UPDATE_SUPPORT_QUERY = 'CRAFTRUSH_CAN_WAIT_FOR_UPDATE';
+export const UPDATE_SUPPORT_ACK = 'CRAFTRUSH_WAITING_UPDATES_SUPPORTED';
+
+/**
+ * Ask the pages already using this registration whether one of them knows how
+ * to surface a waiting worker. Legacy pages never answer, so a short bounded
+ * timeout lets the new worker activate through their old safe-reload path.
+ */
+export async function anyClientSupportsWaitingUpdates(
+  clients,
+  { MessageChannelClass = globalThis.MessageChannel, timeoutMs = 250 } = {},
+) {
+  if (!Array.isArray(clients) || clients.length === 0 || !MessageChannelClass) return false;
+  const answers = await Promise.all(clients.map((client) => new Promise((resolve) => {
+    const channel = new MessageChannelClass();
+    let settled = false;
+    const finish = (supported) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      channel.port1.close?.();
+      resolve(supported);
+    };
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    channel.port1.onmessage = (event) => finish(event.data?.type === UPDATE_SUPPORT_ACK);
+    try {
+      client.postMessage({ type: UPDATE_SUPPORT_QUERY }, [channel.port2]);
+    } catch {
+      finish(false);
+    }
+  })));
+  return answers.some(Boolean);
+}
 
 export function ownsCraftRushCache(name) {
   return typeof name === 'string' && name.startsWith(CRAFTRUSH_CACHE_PREFIX);
