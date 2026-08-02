@@ -9,10 +9,19 @@ export function crowdPowerVisualScale(reserve = 0, stars = 0) {
   return 1 + Math.min(0.65, overflow + Math.max(0, stars) * 0.07);
 }
 
-// Gate copy is painted onto a perspective-scaled panel. It deliberately has
-// no fixed pixel minimum: a distant gate and its lettering grow together,
-// instead of a 20px HUD label floating over a tiny object on the horizon.
-export function gateSignFontSize(text, widthPx, heightPx, heightRatio = 0.36) {
+// Mobile gives a true-perspective gate only a handful of pixels at first sight.
+// Exaggerate the WHOLE gate at distance, then converge smoothly to the camera's
+// real projection. The curve is continuous with a continuous slope at 30px per
+// world block: panels, posts, lane separation and copy grow as one object.
+export function gateVisualScale(projectedScale) {
+  const scale = Math.max(0, Number(projectedScale) || 0);
+  return scale < 30 ? 15 + (scale * scale) / 60 : scale;
+}
+
+// Gate copy is painted and clipped inside that projected panel. Width fitting
+// keeps a fractional multiplier such as ×1.7 on its board without shrinking it
+// below a short multiplier unless the board really is width-constrained.
+export function gateSignFontSize(text, widthPx, heightPx, heightRatio = 0.4) {
   const glyphs = Math.max(1, String(text).length);
   const widthFit = (Math.max(0, widthPx) * 0.82) / (glyphs * 0.62);
   return Math.max(1, Math.min(Math.max(0, heightPx) * heightRatio, widthFit));
@@ -57,14 +66,18 @@ export const RenderMixin = {
       if (!p) continue;
       const good = this.gateGood(gt);
       q.add(gt.z, (ctx) => {
-        const wPx = gt.halfW * 2 * p.s;
-        const hPx = 2.3 * p.s * (1 + gt.pulse * 1.4);
-        const x0 = p.sx - wPx / 2, y0 = p.sy - hPx;
+        const gateS = gateVisualScale(p.s);
+        // Shift each board outward by the same exaggerated scale used for its
+        // width. Otherwise two readable boards would overlap at the horizon.
+        const gateX = p.sx + (gt.x - this.cam.x) * (gateS - p.s);
+        const wPx = gt.halfW * 2 * gateS;
+        const hPx = 2.3 * gateS * (1 + gt.pulse * 1.4);
+        const x0 = gateX - wPx / 2, y0 = p.sy - hPx;
         // posts
         ctx.fillStyle = '#241b2e';
-        ctx.fillRect(x0 - p.s * 0.18, y0, p.s * 0.22, hPx);
-        ctx.fillRect(x0 + wPx - p.s * 0.04, y0, p.s * 0.22, hPx);
-        ctx.fillRect(x0 - p.s * 0.18, y0 - p.s * 0.2, wPx + p.s * 0.4, p.s * 0.24);
+        ctx.fillRect(x0 - gateS * 0.18, y0, gateS * 0.22, hPx);
+        ctx.fillRect(x0 + wPx - gateS * 0.04, y0, gateS * 0.22, hPx);
+        ctx.fillRect(x0 - gateS * 0.18, y0 - gateS * 0.2, wPx + gateS * 0.4, gateS * 0.24);
         // portal fill
         ctx.globalAlpha = 0.5;
         ctx.fillStyle = good ? '#3fa9ff' : '#ff5533';
@@ -74,7 +87,7 @@ export const RenderMixin = {
         const sh = ((this.t * 2 + gt.z) % 1) * hPx;
         ctx.fillRect(x0, y0 + sh, wPx, Math.max(2, hPx * 0.08));
         ctx.globalAlpha = 1;
-        const frame = Math.max(1, p.s * 0.08);
+        const frame = Math.max(1, gateS * 0.08);
         const label = this.gateLabel(gt);
         const secondary = gt.risk
           ? 'DANGER AHEAD'
@@ -94,7 +107,7 @@ export const RenderMixin = {
         outlineText(
           ctx,
           label,
-          p.sx,
+          gateX,
           y0 + hPx * 0.31,
           gateSignFontSize(label, wPx, hPx),
           good ? '#eaf6ff' : '#ffe3dc',
@@ -105,9 +118,9 @@ export const RenderMixin = {
           outlineText(
             ctx,
             secondary,
-            p.sx,
+            gateX,
             y0 + hPx * 0.79,
-            gateSignFontSize(secondary, wPx, hPx, 0.13),
+            gateSignFontSize(secondary, wPx, hPx, 0.18),
             '#ffd94d',
           );
         }
