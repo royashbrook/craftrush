@@ -68,6 +68,7 @@
       let waitingWorker = null;
       let updateInterval = 0;
       let activationTimer = 0;
+      let updateCheckPending = false;
 
       const clearActivationTimer = () => {
         clearTimeout(activationTimer);
@@ -90,9 +91,24 @@
         onInstallingState();
       };
       const onUpdateFound = () => trackInstallingWorker();
-      const checkForUpdate = () => {
+      const syncRegistrationWorkers = () => {
+        showWaitingWorker(registration?.waiting);
+        trackInstallingWorker();
+      };
+      const checkForUpdate = async () => {
         if (!registration || updateState === 'applying') return;
-        registration.update?.().catch?.(() => {});
+        // WebKit can finish installing an update while a Home Screen app is
+        // suspended. On resume `registration.waiting` is already populated, so
+        // no new updatefound event is guaranteed. Read the registration both
+        // before and after the network check instead of relying on that event.
+        syncRegistrationWorkers();
+        if (updateCheckPending) return;
+        updateCheckPending = true;
+        try {
+          await registration.update?.();
+        } catch { /* offline: the next lifecycle/poll check retries */ }
+        updateCheckPending = false;
+        if (!cancelled) syncRegistrationWorkers();
       };
       const checkWhenVisible = () => {
         if (document.visibilityState === 'visible') checkForUpdate();
@@ -140,16 +156,19 @@
       navigator.serviceWorker.addEventListener('message', onWorkerMessage);
       navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
       window.addEventListener('focus', checkForUpdate);
+      window.addEventListener('pageshow', checkForUpdate);
       window.addEventListener('online', checkForUpdate);
       document.addEventListener('visibilitychange', checkWhenVisible);
-      updateInterval = window.setInterval(checkForUpdate, 10 * 60 * 1000);
-      navigator.serviceWorker.register(`${base}/service-worker.js`, { type: 'module' })
+      updateInterval = window.setInterval(checkForUpdate, 2 * 60 * 1000);
+      navigator.serviceWorker.register(`${base}/service-worker.js`, {
+        type: 'module',
+        updateViaCache: 'none',
+      })
         .then((nextRegistration) => {
           if (cancelled) return;
           registration = nextRegistration;
           registration.addEventListener?.('updatefound', onUpdateFound);
-          showWaitingWorker(registration.waiting);
-          trackInstallingWorker();
+          syncRegistrationWorkers();
           checkForUpdate();
         })
         .catch(() => {});
@@ -157,6 +176,7 @@
         clearActivationTimer();
         clearInterval(updateInterval);
         window.removeEventListener('focus', checkForUpdate);
+        window.removeEventListener('pageshow', checkForUpdate);
         window.removeEventListener('online', checkForUpdate);
         document.removeEventListener('visibilitychange', checkWhenVisible);
         navigator.serviceWorker.removeEventListener('message', onWorkerMessage);

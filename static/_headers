@@ -19,7 +19,7 @@
 /_app/version.json
   Cache-Control: no-store
 /service-worker.js
-  Cache-Control: no-cache
+  Cache-Control: no-store
 /manifest.webmanifest
   Cache-Control: no-cache
 

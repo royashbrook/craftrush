@@ -57,10 +57,12 @@ test('the direct-play menu does not overlap on an iPhone Air viewport', async ({
     const panel = rect('#menu .panel');
     const shooter = rect('#btnPlayShooter');
     const gates = rect('#btnPlayGates');
+    const logo = rect('#menu .logo');
     const panelEl = document.querySelector('#menu .panel');
     return {
       overflow: panelEl.scrollHeight - panelEl.clientHeight,
-      duplicatedLogoGone: !document.querySelector('#menu .logo'),
+      oneMenuLogo: document.querySelectorAll('#menu .logo').length === 1,
+      logoAbovePanel: logo.bottom <= panel.top,
       panelInsideOverlay: panel.top >= overlay.top && panel.bottom <= overlay.bottom,
       shooterInsidePanel: shooter.top >= panel.top && shooter.bottom <= panel.bottom,
       gatesInsidePanel: gates.top >= panel.top && gates.bottom <= panel.bottom,
@@ -69,7 +71,8 @@ test('the direct-play menu does not overlap on an iPhone Air viewport', async ({
   });
   expect(layout).toEqual({
     overflow: 0,
-    duplicatedLogoGone: true,
+    oneMenuLogo: true,
+    logoAbovePanel: true,
     panelInsideOverlay: true,
     shooterInsidePanel: true,
     gatesInsidePanel: true,
