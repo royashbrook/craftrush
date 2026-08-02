@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import {
+  UPDATE_SUPPORT_ACK,
+  UPDATE_SUPPORT_QUERY,
+  anyClientSupportsWaitingUpdates,
   CRAFTRUSH_APP_ORIGIN,
   craftRushScopePath,
   isStandaloneApp,
@@ -193,6 +196,29 @@ test('an update waits through a run and its result', () => {
   assert.equal(updateReloadIsSafe({ playing: true, result: null }), false);
   assert.equal(updateReloadIsSafe({ playing: false, result: {} }), false);
   assert.equal(updateReloadIsSafe({ playing: false, result: null }), true);
+});
+
+test('a current client tells an installing worker it can surface a waiting update', async () => {
+  let query = null;
+  const supported = await anyClientSupportsWaitingUpdates([{
+    postMessage(message, ports) {
+      query = message;
+      ports[0].postMessage({ type: UPDATE_SUPPORT_ACK });
+      ports[0].close();
+    },
+  }], { timeoutMs: 20 });
+
+  assert.equal(supported, true);
+  assert.deepEqual(query, { type: UPDATE_SUPPORT_QUERY });
+});
+
+test('legacy and absent clients cannot strand an update they do not know how to show', async () => {
+  const legacy = await anyClientSupportsWaitingUpdates([{
+    postMessage(_message, ports) { ports[0].close(); },
+  }], { timeoutMs: 5 });
+
+  assert.equal(legacy, false);
+  assert.equal(await anyClientSupportsWaitingUpdates([], { timeoutMs: 5 }), false);
 });
 
 test('the legacy worker tombstone retires only Craft Rush caches and never navigates clients', async () => {

@@ -7,7 +7,11 @@
 // the theme data come along for free), and `version` changes per build, which
 // is what retires the old cache.
 import { build, files, prerendered, version } from '$service-worker';
-import { ownsCraftRushCache, replayableCachedResponse } from '../js/pwa-safety.js';
+import {
+  anyClientSupportsWaitingUpdates,
+  ownsCraftRushCache,
+  replayableCachedResponse,
+} from '../js/pwa-safety.js';
 
 const CACHE = `craftrush-${version}`;
 
@@ -20,9 +24,19 @@ const ASSETS = [...build, ...files, ...prerendered];
 self.addEventListener('install', (event) => {
   // all or nothing on purpose: a partial precache fails the install, so the old
   // worker keeps serving and the browser retries, rather than a quietly broken
-  // cache. Do not skip waiting here: the page offers the player an Update button
-  // and only activates this worker when reloading cannot eat a run or result.
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+  // cache. A current page answers the capability probe and leaves this worker
+  // waiting for its Update button. A legacy page cannot answer, so activate once
+  // through that page's existing safe controller-change reload and bridge it
+  // into the new update UI instead of parking forever behind code it cannot see.
+  event.waitUntil((async () => {
+    await caches.open(CACHE).then((cache) => cache.addAll(ASSETS));
+    let canWait = false;
+    try {
+      const pages = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      canWait = await anyClientSupportsWaitingUpdates(pages);
+    } catch { /* capability detection must never strand a successfully cached update */ }
+    if (!canWait) await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('message', (event) => {
