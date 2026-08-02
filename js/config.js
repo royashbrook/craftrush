@@ -143,7 +143,7 @@ export const BOSS_TYPES = T('enemies', {}).bosses || {};
 // shot open, not collected by touch (chests). magnet = drawn toward the crowd.
 export const PICKUPS = {
   emerald: {
-    sprite: 'emerald', worldH: 0.72, magnet: true,
+    sprite: 'emerald', worldH: 0.95, magnet: true,
     onCollect(g, p) {
       g.runEmeralds += TUNE.emeraldPickup;
       Audio.sfx('emerald', 60);
@@ -151,11 +151,11 @@ export const PICKUPS = {
     },
   },
   apple: {
-    sprite: 'golden_apple', worldH: 0.72,
+    sprite: 'golden_apple', worldH: 1.0,
     onCollect(g) { g.addRunners(3); Audio.sfx('apple'); },
   },
   tnt: {
-    sprite: 'tnt_block', worldH: 0.72,
+    sprite: 'tnt_block', worldH: 1.0,
     onCollect(g) {
       g.flashFx = 0.8; g.freeze = 0.09; Audio.sfx('bigboom'); g.cam.shake = 1;
       for (const e of g.enemies) if (!e.dead && e.z > g.playerZ - 2 && e.z < g.playerZ + 30) g.damageEnemy(e, 999, true);
@@ -164,7 +164,7 @@ export const PICKUPS = {
     },
   },
   chest: {
-    sprite: 'chest', worldH: 1.0, grounded: true, shooterAuto: false,
+    sprite: 'chest', worldH: 1.2, grounded: true, shooterAuto: false,
     onCollect(g, p) { g.openChest(p); },
   },
 };
@@ -172,7 +172,7 @@ export const PICKUPS = {
 // Campaign resource: blaze rods drop from blazes in the Nether Fortress and
 // bank into the save inventory (the first step toward the structure campaign).
 PICKUPS.blaze_rod = {
-  sprite: 'blaze_rod', worldH: 0.7, magnet: true,
+  sprite: 'blaze_rod', worldH: 0.95, magnet: true,
   onCollect(g, p) {
     g.runRods = (g.runRods || 0) + 1;
     Audio.sfx('emerald', 60);
@@ -184,7 +184,7 @@ PICKUPS.blaze_rod = {
 const POWERUP_NAMES = { triple: 'TRIPLE SHOT!', rapid: 'RAPID FIRE!', power: 'POWER SHOT!', sword: 'SWORD TIME!', axe: 'AXE TIME!' };
 for (const k of Object.keys(POWERUP_NAMES)) {
   PICKUPS['powerup_' + k] = {
-    sprite: 'powerup_' + k, worldH: 0.72,
+    sprite: 'powerup_' + k, worldH: 1.1,
     onCollect(g, p) {
       g.power[k] = TUNE.powerupDur;
       Audio.sfx('powerup');

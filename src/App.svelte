@@ -11,6 +11,7 @@
 <script>
   import { save, nav, go, back, canGoBack, SCREENS } from './lib/store.svelte.js';
   import { Audio } from '../js/audio.js';
+  import { VERSION } from '../js/config.js';
   import Sprite from './lib/Sprite.svelte';
 
   import Menu from './screens/Menu.svelte';
@@ -31,12 +32,11 @@
   const TABS = [
     { tab: 'play',  screen: 'menu',  icon: 'ui_play',    label: 'Play' },
     { tab: 'shop',  screen: 'shop',  icon: 'ui_person',  label: 'Shop' },
+    { tab: 'settings', screen: 'more', icon: 'ui_gear', label: 'Settings' },
   ];
 
   const def = $derived(SCREENS[nav.screen] || {});
   const backable = $derived(canGoBack());
-
-  const title = $derived(def.title || 'CraftRush');
 
   // A run only takes the whole screen while it is actually running. Paused, the
   // bars come back so you can step into the shop or your goals and come back.
@@ -53,15 +53,12 @@
   }
 </script>
 
-<header id="appbar">
-  <span id="appTitle">{title}</span>
+<div id="appMeta" aria-label="Game status">
   <span class="chip green" id="barWallet">
     <span class="em"></span> <span id="barEmeralds">{save.emeralds}</span>
   </span>
-  <button id="navMore" class="barBtn" onclick={() => { Audio.sfx('click'); go('more'); }}>
-    <Sprite name="ui_gear" />
-  </button>
-</header>
+  <span id="verTag">v{VERSION}</span>
+</div>
 
 <main id="screens" class:hidden={immersive}>
   {#if nav.screen === 'menu'}<Menu {game} />
@@ -86,6 +83,7 @@
       class="navTab"
       class:sel={def.tab === t.tab}
       data-tab={t.tab}
+      id={t.tab === 'settings' ? 'navMore' : undefined}
       onclick={() => tap(t)}
     >
       {#if t.tab === 'play'}

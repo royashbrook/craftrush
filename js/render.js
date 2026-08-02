@@ -18,6 +18,18 @@ export function gateVisualScale(projectedScale) {
   return scale < 30 ? 15 + (scale * scale) / 60 : scale;
 }
 
+// Approaching gameplay objects need to read before the player commits to a
+// lane. Enlarge their whole billboard at distance, including lane position,
+// then meet true perspective smoothly at 24px per world block.
+export function gameplayVisualScale(projectedScale) {
+  const scale = Math.max(0, Number(projectedScale) || 0);
+  return scale < 24 ? 12 + (scale * scale) / 48 : scale;
+}
+
+export function gameplayVisualX(projectedX, worldX, cameraX, projectedScale) {
+  return projectedX + (worldX - cameraX) * (gameplayVisualScale(projectedScale) - projectedScale);
+}
+
 // Gate copy is painted and clipped inside that projected panel. Width fitting
 // keeps a fractional multiplier such as ×1.7 on its board without shrinking it
 // below a short multiplier unless the board really is width-constrained.
@@ -33,10 +45,12 @@ export const RenderMixin = {
     if (!p || p.sy < this.cam.horizon - 200) return;
     const spr = getSprite(spriteId, opts.palette, opts.palKey);
     q.add(z + (opts.zBias || 0), (ctx) => {
-      const hPx = worldH * p.s;
-      if (opts.shadow !== false) drawShadow(ctx, p, hPx * spr.w / spr.h * 0.8);
-      const yOff = (opts.yOff || 0) * p.s;
-      blit(ctx, spr, opts.frame || 0, p.sx, p.sy - yOff, hPx, opts);
+      const visualS = opts.readable ? gameplayVisualScale(p.s) : p.s;
+      const visualX = opts.readable ? gameplayVisualX(p.sx, x, this.cam.x, p.s) : p.sx;
+      const hPx = worldH * visualS;
+      if (opts.shadow !== false) drawShadow(ctx, p, hPx * spr.w / spr.h * 0.8, visualX);
+      const yOff = (opts.yOff || 0) * visualS;
+      blit(ctx, spr, opts.frame || 0, visualX, p.sy - yOff, hPx, opts);
     });
   },
 
@@ -131,19 +145,24 @@ export const RenderMixin = {
 
   renderObstacles(q) {
     for (const o of this.obstacles) {
-      if (o.directed) {
-        const p = this.cam.project(o.x, 0, o.z);
-        if (p) q.add(o.z + 0.02, (ctx) => {
-          ctx.globalAlpha = 0.55 + Math.sin(this.t * 8 + o.z) * 0.12;
-          ctx.strokeStyle = o.motion ? '#ff9d3c' : '#ffd94d';
-          ctx.lineWidth = Math.max(2, p.s * 0.08);
-          ctx.beginPath();
-          ctx.ellipse(p.sx, p.sy, p.s * 0.72, p.s * 0.28, 0, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.globalAlpha = 1;
-        });
-      }
-      this.bb(q, o.sprite, o.x + Math.sin(o.wobble * 40) * 0.06, o.z, 1.15, {});
+      const x = o.x + Math.sin(o.wobble * 40) * 0.06;
+      const p = this.cam.project(x, 0, o.z);
+      if (p) q.add(o.z + 0.02, (ctx) => {
+        const s = gameplayVisualScale(p.s);
+        const sx = gameplayVisualX(p.sx, x, this.cam.x, p.s);
+        const pulse = 1 + Math.sin(this.t * 8 + o.z) * 0.08;
+        ctx.globalAlpha = o.directed ? 0.24 : 0.17;
+        ctx.fillStyle = o.motion ? '#ff9d3c' : '#ff5545';
+        ctx.beginPath();
+        ctx.ellipse(sx, p.sy, s * 0.92 * pulse, s * 0.34 * pulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = o.directed ? 0.82 : 0.66;
+        ctx.strokeStyle = o.motion ? '#ffb35c' : '#ff8d7a';
+        ctx.lineWidth = Math.max(2, s * 0.08);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+      this.bb(q, o.sprite, x, o.z, 1.35, { readable: true });
     }
   },
 
@@ -153,7 +172,26 @@ export const RenderMixin = {
       const def = PICKUPS[p.kind] || PICKUPS.emerald;
       const bob = def.grounded ? 0 : Math.sin(p.t * 3 + p.z) * 0.12 + 0.5;
       const frame = Math.floor(p.t * 3) % 2;
-      this.bb(q, def.sprite, p.x, p.z, def.worldH, { yOff: bob, frame, zBias: -0.01 });
+      const projected = this.cam.project(p.x, 0, p.z);
+      if (projected) q.add(p.z + 0.02, (ctx) => {
+        const s = gameplayVisualScale(projected.s);
+        const sx = gameplayVisualX(projected.sx, p.x, this.cam.x, projected.s);
+        const powerup = p.kind.startsWith('powerup_');
+        const pulse = 1 + Math.sin(this.t * 7 + p.z) * 0.1;
+        ctx.globalAlpha = powerup ? 0.28 : 0.2;
+        ctx.fillStyle = powerup ? '#7ee0ff' : '#7dff5a';
+        ctx.beginPath();
+        ctx.ellipse(sx, projected.sy, s * 0.82 * pulse, s * 0.28 * pulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = powerup ? 0.9 : 0.68;
+        ctx.strokeStyle = powerup ? '#d8f7ff' : '#b8ff9f';
+        ctx.lineWidth = Math.max(2, s * 0.07);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+      this.bb(q, def.sprite, p.x, p.z, def.worldH, {
+        yOff: bob, frame, zBias: -0.01, readable: true,
+      });
     }
   },
 
@@ -167,6 +205,7 @@ export const RenderMixin = {
         frame: Math.floor(e.t * 5) % 2,
         flash: e.flash > 0 || fuseFlash,
         yOff: hop + fl,
+        readable: true,
       });
       // hp pips for tougher enemies
       if (e.maxHp >= 10 && e.hp < e.maxHp) {

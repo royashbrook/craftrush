@@ -44,10 +44,10 @@ export const SCREENS = {
   // dumping you out of the run.
   pause:     { title: 'Paused' },
   shop:      { tab: 'shop',  title: 'Skins & Shop' },
-  more:      { title: 'More', parent: 'menu' },
-  about:     { title: 'About', parent: 'more' },
-  goals:     { title: 'Goals', parent: 'more' },
-  settings:  { title: 'Save & Data', parent: 'more' },
+  more:      { tab: 'settings', title: 'Settings' },
+  about:     { tab: 'settings', title: 'About', parent: 'more' },
+  goals:     { tab: 'settings', title: 'Goals', parent: 'more' },
+  settings:  { tab: 'settings', title: 'Save & Data', parent: 'more' },
 };
 
 /**

@@ -6,7 +6,7 @@
   import { save, nav, commit, go, toast } from '../lib/store.svelte.js';
   import { Audio } from '../../js/audio.js';
   import {
-    VERSION, BIOMES, CAMPAIGN, RESOURCES, currentChapter, chapterMissing,
+    BIOMES, CAMPAIGN, RESOURCES, currentChapter, chapterMissing,
     dailyExpedition, expeditionStatus, importSave,
   } from '../../js/config.js';
   import { masteryChapterEligible, nextMasteryTarget } from '../../js/mastery.js';
@@ -149,8 +149,6 @@
 </script>
 
 <div id="menu" class="overlay {tier}">
-  <div id="verTag">v{VERSION}</div>
-  <div class="logo">CraftRush</div>
   <div class="panel" bind:this={panel}>
     <div class="levelChip" id="menuLevel">LV {save.level} · {biome.name.toUpperCase()}</div>
 

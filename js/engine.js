@@ -270,11 +270,11 @@ export class DrawQueue {
   }
 }
 
-export function drawShadow(ctx, p, wPx) {
+export function drawShadow(ctx, p, wPx, screenX = p.sx) {
   ctx.globalAlpha = 0.25;
   ctx.fillStyle = '#000';
   ctx.beginPath();
-  ctx.ellipse(p.sx, p.sy, wPx / 2, wPx / 5, 0, 0, Math.PI * 2);
+  ctx.ellipse(screenX, p.sy, wPx / 2, wPx / 5, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 }

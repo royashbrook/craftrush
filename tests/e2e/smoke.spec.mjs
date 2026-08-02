@@ -15,8 +15,9 @@ test('boots to the menu with no console errors', async ({ page }) => {
   await expect(page.locator('#btnPlayGates')).toBeVisible();
   await expect(page.locator('#modePicker')).toHaveCount(0);
   await expect(page.locator('#menu')).toBeVisible();
-  // the app shell is always present outside a run
-  await expect(page.locator('#appbar')).toBeVisible();
+  // compact status corners and bottom navigation stay present outside a run
+  await expect(page.locator('#appbar')).toHaveCount(0);
+  await expect(page.locator('#appMeta')).toBeVisible();
   await expect(page.locator('#navbar')).toBeVisible();
   await expect(page.locator('#barWallet')).toBeVisible();
   await expect(page.locator('#barEmeralds')).toHaveText('0');
@@ -53,14 +54,13 @@ test('the direct-play menu does not overlap on an iPhone Air viewport', async ({
   const layout = await page.evaluate(() => {
     const rect = (selector) => document.querySelector(selector).getBoundingClientRect();
     const overlay = rect('#menu');
-    const logo = rect('#menu .logo');
     const panel = rect('#menu .panel');
     const shooter = rect('#btnPlayShooter');
     const gates = rect('#btnPlayGates');
     const panelEl = document.querySelector('#menu .panel');
     return {
       overflow: panelEl.scrollHeight - panelEl.clientHeight,
-      logoClearsPanel: logo.bottom <= panel.top,
+      duplicatedLogoGone: !document.querySelector('#menu .logo'),
       panelInsideOverlay: panel.top >= overlay.top && panel.bottom <= overlay.bottom,
       shooterInsidePanel: shooter.top >= panel.top && shooter.bottom <= panel.bottom,
       gatesInsidePanel: gates.top >= panel.top && gates.bottom <= panel.bottom,
@@ -69,7 +69,7 @@ test('the direct-play menu does not overlap on an iPhone Air viewport', async ({
   });
   expect(layout).toEqual({
     overflow: 0,
-    logoClearsPanel: true,
+    duplicatedLogoGone: true,
     panelInsideOverlay: true,
     shooterInsidePanel: true,
     gatesInsidePanel: true,
@@ -193,7 +193,7 @@ test('an earned achievement clears instead of covering later screens', async ({ 
   await expect(page.locator('#achPop')).toBeHidden({ timeout: 5000 });
 });
 
-test('the menu is the one canonical version display and About keeps only its credits', async ({ page }) => {
+test('the top-right status corner is the one canonical version display and About keeps only its credits', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#verTag')).toHaveCount(1);
   await expect(page.locator('#verTag')).toHaveText(/^v\d+\.\d+\.\d+(?:-dev)?$/);
@@ -219,9 +219,9 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
   await expect(page.locator('#golemMeter')).toBeVisible();
   await expect(page.locator('#steerL')).toHaveCount(0);
   await expect(page.locator('#golemBtn')).toHaveCount(0);
-  // a run takes the whole screen: the bars step out of the way
+  // a run takes the whole screen: the shell steps out of the way
   await expect(page.locator('#navbar')).toBeHidden();
-  await expect(page.locator('#appbar')).toBeHidden();
+  await expect(page.locator('#appMeta')).toBeHidden();
   await page.waitForTimeout(2500); // let the run play a couple seconds
   expect(errors).toEqual([]);
 });
@@ -606,14 +606,15 @@ test('pause and resume work', async ({ page }) => {
   expect(await page.evaluate(() => CR.game.paused)).toBe(false);
 });
 
-test('the focused bottom navigation exposes only Play and Shop', async ({ page }) => {
+test('the focused bottom navigation exposes Play, Shop, and Settings', async ({ page }) => {
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
 
   await page.goto('/');
-  await expect(page.locator('.navTab')).toHaveCount(2);
+  await expect(page.locator('.navTab')).toHaveCount(3);
   await expect(page.locator('.navTab[data-tab="play"]')).toBeVisible();
+  await expect(page.locator('.navTab[data-tab="settings"]')).toBeVisible();
   await page.click('.navTab[data-tab="shop"]');
   await expect(page.locator('#shop')).toBeVisible();
   const kids = await page.locator('#shop .panel > *').count();
