@@ -16,7 +16,7 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.9**, tag `v1.9`. The core reset retires the town,
+Current release: **v1.9.1**, tag `v1.9.1`. The core reset retires the town,
 houses, playroom, village, mine, and idle emeralds without rewriting their old
 save fields. Bow Blitz and Gate Dash are direct play buttons, with no separate
 mode-selection step. `main` is the deployed branch.
@@ -208,6 +208,8 @@ and every standard boss has at least three damage stages. v1.9 completes #112,
 mistakes compound predictably, later choices carry follow-through hazards,
 Gate Dash bosses require a held attack, and proportional boss hits remain
 relevant to large crowds. Exact methods and results live in `docs/BALANCE.md`.
+v1.9.1 completes #116: wider gates keep a forced lane read, and their clipped
+sign panels and perspective-scaled labels remove the distant floating-text bug.
 
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker

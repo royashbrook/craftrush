@@ -61,6 +61,12 @@ held field outside CALM, boss hits scale with the current crowd, and intrinsic
 TTK lands near 12–14 seconds at par, 9–10 seconds at 2×, and 7–8 seconds at 5×.
 The full methods, caveats, and findings are in `docs/BALANCE.md`.
 
+v1.9.1 completes #116. Gate faces remain broad through late levels, while a
+small center gap still requires an actual lane choice. The label now lives on a
+clipped inset panel and scales continuously in perspective; the old 20px floor
+that made distant text overrun the gate is gone. The wider read also makes
+imprecise play slightly tougher without moving skilled completion out of band.
+
 The next decision is empirical, not another feature brainstorm: run the five
 player first-run protocol in `docs/PLAYTEST.md`. Do not add another side system
 until at least three players voluntarily choose another run and can explain one

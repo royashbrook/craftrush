@@ -10,7 +10,7 @@ import {
 
 const LEVEL_BANDS = Object.freeze([
   { name: 'early', levels: [1, 2, 3], low: 0.8, high: 1 },
-  { name: 'mid', levels: [4, 5, 6, 7, 8, 9, 10], low: 0.75, high: 1 },
+  { name: 'mid', levels: [4, 5, 6, 7, 8, 9, 10], low: 0.7, high: 1 },
   { name: 'late', levels: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20], low: 0.45, high: 0.7 },
 ]);
 

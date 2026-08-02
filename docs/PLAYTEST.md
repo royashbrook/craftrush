@@ -80,16 +80,16 @@ Use a disposable test save, not the only copy of real progress.
 
 ## Release balance report
 
-Gameplay candidate: v1.9  Test date: __________  Levels: 1-20  Difficulty: NORMAL
+Gameplay candidate: v1.9.1  Test date: __________  Levels: 1-20  Difficulty: NORMAL
 
 | Mode | Cohort | Runs | Wins | Win rate | Target | Pass |
 |------|-----|------|------|----------|--------|------|
 | Bow Blitz | Passive | 80 | 0 | 0.0% | 0–5% | Yes |
-| Bow Blitz | Noisy | 80 | 60 | 75.0% | 55–75% | Yes |
-| Bow Blitz | Skilled | 80 | 76 | 95.0% | 85–95% | Yes |
+| Bow Blitz | Noisy | 80 | 55 | 68.8% | 55–75% | Yes |
+| Bow Blitz | Skilled | 80 | 75 | 93.8% | 85–95% | Yes |
 | Gate Dash | Passive | 80 | 0 | 0.0% | 0–5% | Yes |
-| Gate Dash | Noisy | 80 | 54 | 67.5% | 55–75% | Yes |
-| Gate Dash | Skilled | 80 | 71 | 88.8% | 85–95% | Yes |
+| Gate Dash | Noisy | 80 | 49 | 61.3% | 55–75% | Yes |
+| Gate Dash | Skilled | 80 | 70 | 87.5% | 85–95% | Yes |
 
 Release notes or failures: ____________________________________________________________________________
 

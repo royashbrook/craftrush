@@ -25,7 +25,7 @@ export const COHORT_ORDER = Object.freeze(['passive', 'lazy', 'noisy', 'greedy',
 
 export const TARGET_WIN_BANDS = Object.freeze({
   passive: [0, 0.05],
-  lazy: [0.2, 0.4],
+  lazy: [0.15, 0.4],
   greedy: [0.35, 0.6],
   noisy: [0.55, 0.75],
   skilled: [0.85, 0.95],
