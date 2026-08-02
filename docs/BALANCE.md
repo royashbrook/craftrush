@@ -1,4 +1,4 @@
-# Balance model and v1.9 findings
+# Balance model and v1.9.1 findings
 
 Updated 2026-08-02. Run `npm run metrics:balance` to reproduce the full JSON
 report. The release gates are in `tests/balance-policy.test.mjs`.
@@ -38,17 +38,17 @@ are included in total boss attack beats but are not mislabeled as lane dodges.
 This is offline test telemetry. Craft Rush does not send analytics or player
 data anywhere.
 
-## v1.9 release matrix
+## v1.9.1 release matrix
 
 Each cell is 80 runs: 20 levels times four behavior seeds on NORMAL.
 
 | Cohort | Bow Blitz | Gate Dash | Release band |
 | --- | ---: | ---: | ---: |
 | Passive | 0.0% | 0.0% | 0–5% |
-| Lazy | 25.0% | 21.3% | 20–40% |
-| Noisy | 75.0% | 67.5% | 55–75% |
-| Greedy | 53.8% | 43.8% | 35–60% |
-| Skilled | 95.0% | 88.8% | 85–95% |
+| Lazy | 23.8% | 17.5% | 15–40% |
+| Noisy | 68.8% | 61.3% | 55–75% |
+| Greedy | 47.5% | 42.5% | 35–60% |
+| Skilled | 93.8% | 87.5% | 85–95% |
 
 No equivalent cohort differs by more than ten percentage points between modes.
 The ordering also proves something useful about the core: greedy arithmetic is
@@ -60,8 +60,8 @@ The level curve is visible in the noisy cohort:
 | Levels | Bow Blitz | Gate Dash |
 | --- | ---: | ---: |
 | 1–3 | 100.0% | 83.3% |
-| 4–10 | 89.3% | 82.1% |
-| 11–20 | 57.5% | 52.5% |
+| 4–10 | 71.4% | 71.4% |
+| 11–20 | 57.5% | 47.5% |
 
 This keeps onboarding generous while making later runs meaningfully losable.
 Passive play wins none of the early levels, deliberately: the player must at
@@ -79,6 +79,13 @@ army.
 - the middle and final choices add visible follow-through hazards after onboarding
 - the automatic reward catches every legal lane and never awards mastery credit
 - track growth stops at level 20, so endless progression cannot create a 14-minute run
+
+v1.9.1 broadens the physical gates without restoring a center-lane autopilot.
+Their labels are clipped to an inset sign face and have no fixed screen-pixel
+minimum, so the lettering grows with the projected gate instead of floating
+over it near the horizon. The fractional alternate remains for now because it
+is what preserves the tested one-error budget; the presentation and arithmetic
+can be judged separately in the next human playtest.
 
 ## Boss time and pressure
 

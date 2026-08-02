@@ -69,6 +69,8 @@ test('the director builds a seeded rhythm with bounded agency and threat streaks
           assert.equal(pair.length, 2);
           assert.ok(pair.some(good), 'every pair offers growth');
           assert.ok(pair.every((gate) => Math.abs(gate.x) <= TUNE.laneHalf));
+          assert.ok(pair.every((gate) => gate.halfW >= 1.55),
+            'gate faces remain broad enough to read in late levels');
           assert.ok(pair.every((gate) => Math.abs(gate.x) >= gate.halfW + TUNE.gateHitMargin),
             'standing still does not accidentally choose a gate');
         }

@@ -82,7 +82,7 @@ export const TUNE = {
   biteReachX: 0.9, biteReachZ: 1.1,   // contact-bite box
   arrowHitX: 0.55,      // arrow vs enemy/obstacle half-width
   gateHitMargin: 0.25,  // gate crossing overlap slack
-  gateHalfW: 1.75,      // normal gates leave a real neutral lane at the center
+  gateHalfW: 1.95,      // broad signs stay readable while their shifted centers preserve a neutral lane
   tutorialGateHalfW: 2.15,
   aimConeNear: 0.9, aimConePerZ: 0.045, aimConeMax: 2.2,
 

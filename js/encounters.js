@@ -9,7 +9,7 @@ import { mulberry32 } from './engine.js';
 export const ENCOUNTER_FOLLOW_THROUGH = 28;
 export const ENCOUNTER_MIN_FOLLOW_THROUGH = 22;
 
-const GATE_X = 2.4;
+const GATE_X = 2.45;
 const FIRST_Z = 36;
 const LAST_MARGIN = 76;
 
@@ -77,7 +77,7 @@ export function buildEncounterRun({
 
   const gateWidth = L === 1
     ? TUNE.tutorialGateHalfW
-    : Math.max(1.3, TUNE.gateHalfW - Math.max(0, L - 3) * 0.03);
+    : Math.max(1.55, TUNE.gateHalfW - Math.max(0, L - 3) * 0.02);
   const followThrough = Math.max(
     ENCOUNTER_MIN_FOLLOW_THROUGH,
     ENCOUNTER_FOLLOW_THROUGH - Math.floor((L - 1) / 5) * 2,

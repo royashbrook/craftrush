@@ -9,6 +9,15 @@ export function crowdPowerVisualScale(reserve = 0, stars = 0) {
   return 1 + Math.min(0.65, overflow + Math.max(0, stars) * 0.07);
 }
 
+// Gate copy is painted onto a perspective-scaled panel. It deliberately has
+// no fixed pixel minimum: a distant gate and its lettering grow together,
+// instead of a 20px HUD label floating over a tiny object on the horizon.
+export function gateSignFontSize(text, widthPx, heightPx, heightRatio = 0.36) {
+  const glyphs = Math.max(1, String(text).length);
+  const widthFit = (Math.max(0, widthPx) * 0.82) / (glyphs * 0.62);
+  return Math.max(1, Math.min(Math.max(0, heightPx) * heightRatio, widthFit));
+}
+
 export const RenderMixin = {
   bb(q, spriteId, x, z, worldH, opts = {}) {
     const p = this.cam.project(x, 0, z);
@@ -65,13 +74,44 @@ export const RenderMixin = {
         const sh = ((this.t * 2 + gt.z) % 1) * hPx;
         ctx.fillRect(x0, y0 + sh, wPx, Math.max(2, hPx * 0.08));
         ctx.globalAlpha = 1;
-        // kid-readable: big label, and never smaller than a comfortable minimum
-        outlineText(ctx, this.gateLabel(gt), p.sx, y0 + hPx * 0.46, Math.max(20, p.s * 1.15), good ? '#eaf6ff' : '#ffe3dc');
-        if (gt.risk) {
-          outlineText(ctx, 'DANGER AHEAD', p.sx, y0 + hPx * 0.86, Math.max(10, p.s * 0.34), '#ffd94d');
-        } else if (this.mode === 'shooter' && !good) {
-          outlineText(ctx, 'SHOOT ME!', p.sx, y0 + hPx * 0.86, Math.max(11, p.s * 0.38), '#ffd94d');
+        const frame = Math.max(1, p.s * 0.08);
+        const label = this.gateLabel(gt);
+        const secondary = gt.risk
+          ? 'DANGER AHEAD'
+          : this.mode === 'shooter' && !good ? 'SHOOT ME!' : '';
+
+        // A dark inset panel and a hard clip make the type part of the gate,
+        // rather than free-floating world text that can overrun its frame.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x0 + frame, y0 + frame, Math.max(1, wPx - frame * 2), Math.max(1, hPx - frame * 2));
+        ctx.clip();
+        ctx.fillStyle = 'rgba(20,15,28,0.56)';
+        ctx.fillRect(x0 + frame, y0 + frame, wPx - frame * 2, hPx * 0.58);
+        ctx.strokeStyle = good ? 'rgba(190,231,255,0.78)' : 'rgba(255,211,199,0.78)';
+        ctx.lineWidth = frame;
+        ctx.strokeRect(x0 + frame * 1.5, y0 + frame * 1.5, wPx - frame * 3, hPx * 0.58 - frame);
+        outlineText(
+          ctx,
+          label,
+          p.sx,
+          y0 + hPx * 0.31,
+          gateSignFontSize(label, wPx, hPx),
+          good ? '#eaf6ff' : '#ffe3dc',
+        );
+        if (secondary) {
+          ctx.fillStyle = 'rgba(20,15,28,0.5)';
+          ctx.fillRect(x0 + frame, y0 + hPx * 0.68, wPx - frame * 2, hPx * 0.22);
+          outlineText(
+            ctx,
+            secondary,
+            p.sx,
+            y0 + hPx * 0.79,
+            gateSignFontSize(secondary, wPx, hPx, 0.13),
+            '#ffd94d',
+          );
         }
+        ctx.restore();
       });
     }
   },

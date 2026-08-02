@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CrowdMixin } from '../js/crowd.js';
 import { TIERS } from '../js/config.js';
-import { crowdPowerVisualScale } from '../js/render.js';
+import { crowdPowerVisualScale, gateSignFontSize } from '../js/render.js';
 
 // A minimal object carrying the crowd methods; setWorth with fx=false touches
 // no fx/audio/cam, so no DOM is needed.
@@ -45,4 +45,14 @@ test('overflow power becomes visible without unbounded giant growth', () => {
   assert.ok(crowdPowerVisualScale(1000, 0) > 1);
   assert.ok(crowdPowerVisualScale(1000, 2) > crowdPowerVisualScale(1000, 0));
   assert.ok(crowdPowerVisualScale(1e12, 99) <= 1.65);
+});
+
+test('gate lettering grows in perspective and always fits its physical panel', () => {
+  for (const label of ['×6', '×12', 'DANGER AHEAD']) {
+    const far = gateSignFontSize(label, 18, 10);
+    const near = gateSignFontSize(label, 72, 40);
+    assert.equal(near, far * 4, `${label} scales with the projected gate`);
+    assert.ok(far * label.length * 0.62 <= 18 * 0.82 + 1e-9, `${label} fits the far panel`);
+    assert.ok(near * label.length * 0.62 <= 72 * 0.82 + 1e-9, `${label} fits the near panel`);
+  }
 });
