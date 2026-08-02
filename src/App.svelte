@@ -24,8 +24,9 @@
   import Pause from './components/Pause.svelte';
   import Toast from './components/Toast.svelte';
   import AchPop from './components/AchPop.svelte';
+  import UpdateBanner from './components/UpdateBanner.svelte';
 
-  let { game, pauseGame } = $props();
+  let { game, pauseGame, updateState = 'idle', applyWaitingUpdate = () => {} } = $props();
 
   const TABS = [
     { tab: 'play',  screen: 'menu',  icon: 'ui_play',    label: 'Play' },
@@ -77,6 +78,7 @@
 {#if nav.result}<Result {game} />{/if}
 <Toast />
 <AchPop />
+<UpdateBanner state={updateState} onApply={applyWaitingUpdate} />
 
 <nav id="navbar">
   {#each TABS as t (t.tab)}

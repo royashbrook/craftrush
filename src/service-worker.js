@@ -19,10 +19,14 @@ const ASSETS = [...build, ...files, ...prerendered];
 
 self.addEventListener('install', (event) => {
   // all or nothing on purpose: a partial precache fails the install, so the old
-  // worker keeps serving and the browser retries, rather than a quietly broken cache
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()),
-  );
+  // worker keeps serving and the browser retries, rather than a quietly broken
+  // cache. Do not skip waiting here: the page offers the player an Update button
+  // and only activates this worker when reloading cannot eat a run or result.
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'ACTIVATE_UPDATE') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

@@ -30,6 +30,8 @@
   let stage = $state(null);
   let game = $state(null);
   let failed = $state('');
+  let updateState = $state('idle');
+  let applyWaitingUpdate = $state(() => {});
 
   function pauseGame(force) {
     if (!game) return;
@@ -42,10 +44,10 @@
   onMount(() => {
     let stop = () => {};
     let cancelled = false;
-    let updateWaiting = false;
+    let claimedUpdate = false;
     let reloadingForUpdate = false;
     const reloadUpdatedAppIfSafe = () => {
-      if (!updateWaiting || reloadingForUpdate || !updateReloadIsSafe(nav)) return;
+      if (!claimedUpdate || reloadingForUpdate || !updateReloadIsSafe(nav)) return;
       reloadingForUpdate = true;
       location.reload();
     };
@@ -53,9 +55,66 @@
     // Listen before asset loading starts. A fast worker can claim the page while
     // boot is awaiting the atlas; attaching afterward loses that update event.
     let onControllerChange = null;
+    let disposeWorkerUpdates = () => {};
     if (!dev && 'serviceWorker' in navigator
         && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
       let hadController = !!navigator.serviceWorker.controller;
+      let registration = null;
+      let installingWorker = null;
+      let waitingWorker = null;
+      let updateInterval = 0;
+      let activationTimer = 0;
+
+      const clearActivationTimer = () => {
+        clearTimeout(activationTimer);
+        activationTimer = 0;
+      };
+      const showWaitingWorker = (worker) => {
+        if (!worker || worker.state !== 'installed' || !navigator.serviceWorker.controller) return;
+        waitingWorker = worker;
+        updateState = 'ready';
+      };
+      const onInstallingState = () => {
+        if (installingWorker?.state === 'installed') {
+          showWaitingWorker(registration?.waiting || installingWorker);
+        }
+      };
+      const trackInstallingWorker = () => {
+        installingWorker?.removeEventListener?.('statechange', onInstallingState);
+        installingWorker = registration?.installing || null;
+        installingWorker?.addEventListener?.('statechange', onInstallingState);
+        onInstallingState();
+      };
+      const onUpdateFound = () => trackInstallingWorker();
+      const checkForUpdate = () => {
+        if (!registration || updateState === 'applying') return;
+        registration.update?.().catch?.(() => {});
+      };
+      const checkWhenVisible = () => {
+        if (document.visibilityState === 'visible') checkForUpdate();
+      };
+      const activateWaitingWorker = () => {
+        if (!waitingWorker || updateState === 'applying' || !updateReloadIsSafe(nav)) return;
+        if (waitingWorker.state !== 'installed') {
+          waitingWorker = null;
+          updateState = 'idle';
+          checkForUpdate();
+          return;
+        }
+        updateState = 'applying';
+        clearActivationTimer();
+        activationTimer = window.setTimeout(() => {
+          if (cancelled || updateState !== 'applying') return;
+          if (waitingWorker?.state === 'installed') updateState = 'ready';
+        }, 8000);
+        try {
+          waitingWorker.postMessage({ type: 'ACTIVATE_UPDATE' });
+        } catch {
+          clearActivationTimer();
+          updateState = 'ready';
+        }
+      };
+      applyWaitingUpdate = activateWaitingWorker;
       onControllerChange = () => {
         // First install should not bounce a page the player just opened. Once
         // that worker claims it, though, later deploys in this same long-lived
@@ -64,11 +123,36 @@
           hadController = true;
           return;
         }
-        updateWaiting = true;
+        clearActivationTimer();
+        claimedUpdate = true;
+        updateState = 'applying';
         reloadUpdatedAppIfSafe();
       };
       navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
-      navigator.serviceWorker.register(`${base}/service-worker.js`, { type: 'module' }).catch(() => {});
+      window.addEventListener('focus', checkForUpdate);
+      window.addEventListener('online', checkForUpdate);
+      document.addEventListener('visibilitychange', checkWhenVisible);
+      updateInterval = window.setInterval(checkForUpdate, 10 * 60 * 1000);
+      navigator.serviceWorker.register(`${base}/service-worker.js`, { type: 'module' })
+        .then((nextRegistration) => {
+          if (cancelled) return;
+          registration = nextRegistration;
+          registration.addEventListener?.('updatefound', onUpdateFound);
+          showWaitingWorker(registration.waiting);
+          trackInstallingWorker();
+          checkForUpdate();
+        })
+        .catch(() => {});
+      disposeWorkerUpdates = () => {
+        clearActivationTimer();
+        clearInterval(updateInterval);
+        window.removeEventListener('focus', checkForUpdate);
+        window.removeEventListener('online', checkForUpdate);
+        document.removeEventListener('visibilitychange', checkWhenVisible);
+        registration?.removeEventListener?.('updatefound', onUpdateFound);
+        installingWorker?.removeEventListener?.('statechange', onInstallingState);
+        if (applyWaitingUpdate === activateWaitingWorker) applyWaitingUpdate = () => {};
+      };
     }
 
     // A save handed over from the game's old address, if there is one. Done here,
@@ -201,6 +285,7 @@
     return () => {
       cancelled = true;
       stop();
+      disposeWorkerUpdates();
       if (onControllerChange) navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
     };
   });
@@ -209,7 +294,7 @@
 <div id="stage" bind:this={stage}>
   <canvas id="gameCanvas" bind:this={canvas}></canvas>
   {#if game}
-    <App {game} {pauseGame} />
+    <App {game} {pauseGame} {updateState} {applyWaitingUpdate} />
   {:else}
     <div id="loading">
       {#if failed}

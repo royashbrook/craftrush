@@ -374,6 +374,20 @@
     color: #fff; font-weight: 900; font-size: 14px; padding: 10px 14px; text-shadow: 1px 1px 0 #000;
     white-space: nowrap; pointer-events: none; box-shadow: inset 1px 1px 0 rgba(255,255,255,0.2); }
 
+  #updateBanner { position: absolute; top: calc(58px + env(safe-area-inset-top)); left: 9px; right: 9px;
+    z-index: 28; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px;
+    background: #1c1a24; border: 2px solid #7dff5a;
+    box-shadow: 0 5px 18px rgba(0,0,0,0.7), inset 1px 1px 0 rgba(255,255,255,0.12); }
+  .updateMark { flex: 0 0 auto; color: #7dff5a; font-size: 24px; font-weight: 900; line-height: 1; }
+  .updateCopy { min-width: 0; flex: 1 1 auto; text-align: left; }
+  .updateCopy b { display: block; color: #fff; font-size: 12px; line-height: 1.1; letter-spacing: .6px; }
+  .updateCopy small { display: block; margin-top: 2px; overflow: hidden; color: #b8b2c6;
+    font-size: 9px; font-weight: 700; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+  #btnApplyUpdate { flex: 0 0 auto; min-width: 76px; min-height: 38px; padding: 7px 9px;
+    border: 2px solid #000; background: #55c93f; color: #071407; font: inherit; font-size: 10px;
+    font-weight: 900; box-shadow: inset 1px 1px 0 rgba(255,255,255,0.35); }
+  #btnApplyUpdate:disabled { background: #5d5868; color: #ded9e6; }
+
   #resultTitle.win { color: #7dff5a; }
   #resultTitle.lose { color: #ff8d7a; }
   #resultTitle { font-size: 24px; font-weight: 900; text-shadow: 3px 3px 0 rgba(0,0,0,0.8); text-align: center; }
