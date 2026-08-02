@@ -12,7 +12,7 @@
     transform: none; }
   #gameCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; touch-action: none; }
 
-  /* ---- mobile app shell: a fixed top bar and bottom nav, content between ---- */
+  /* ---- mobile app shell: compact corner status and bottom nav ---- */
   /* Island/notch clearance: at least a little breathing room even where the inset
      reports 0. The home-indicator gap is capped, since a full 34px under a nav bar
      reads as the bar floating rather than sitting on the bottom edge. */
@@ -20,23 +20,16 @@
      viewport and the insets report 0. Plain padding is all the bars need. */
   #stage { --pad-top: 8px;
            --pad-bottom: 8px;
-           --bar-top: calc(46px + var(--pad-top)); --bar-bottom: calc(54px + var(--pad-bottom)); }
+           --bar-top: calc(34px + var(--pad-top)); --bar-bottom: calc(54px + var(--pad-bottom)); }
   #stage.playing { --bar-top: 0px; --bar-bottom: 0px; }   /* a run gets the whole screen */
-  #stage.playing #appbar, #stage.playing #navbar { display: none; }
+  #stage.playing #appMeta, #stage.playing #navbar { display: none; }
 
-  #appbar { position: absolute; top: 0; left: 0; right: 0; height: var(--bar-top); z-index: 20;
-    display: flex; align-items: center; gap: 8px;
-    padding: var(--pad-top) calc(8px + env(safe-area-inset-right)) 0 calc(8px + env(safe-area-inset-left));
-    background: #17141d; border-bottom: 3px solid #000;
-    box-shadow: inset 0 2px 0 rgba(255,255,255,0.07), 0 2px 8px rgba(0,0,0,0.5); }
-  #appTitle { flex: 1 1 auto; min-width: 0; font-weight: 900; font-size: 15px; letter-spacing: 1px;
-    color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .barBtn { flex: 0 0 auto; width: 44px; height: 44px; background: #3a3444; border: 2px solid #000; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; padding: 0;
-    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.16), inset -2px -2px 0 rgba(0,0,0,0.4); }
-  .barBtn:active { transform: translateY(1px); }
-  .barBtn.hidden { visibility: hidden; display: flex; }   /* keep the title from shifting */
-  #barWallet { font-size: 13px; padding: 4px 8px; }
+  #appMeta { position: absolute; top: 0; left: 0; right: 0; height: var(--bar-top); z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; pointer-events: none;
+    padding: var(--pad-top) calc(10px + env(safe-area-inset-right)) 0 calc(10px + env(safe-area-inset-left)); }
+  #barWallet { font-size: 13px; padding: 4px 8px; background: rgba(10,8,14,0.78); }
+  #verTag { font-size: 10px; font-weight: 900; letter-spacing: 1px;
+    color: rgba(255,255,255,0.56); text-shadow: 1px 1px 0 #000; }
 
   #navbar { position: absolute; bottom: 0; left: 0; right: 0; height: var(--bar-bottom); z-index: 20;
     display: flex; align-items: stretch;
@@ -108,7 +101,7 @@
   #menu.compact #legacyRestoreText span, #menu.tight #legacyRestoreText span { display: none; }
   #menu.tight #legacyRestore { padding: 5px; }
 
-  /* the wallet lives in the top bar, so the level banner gets the full width */
+  /* the wallet floats in the top-left status corner, so the level banner gets the full width */
   .levelChip { width: 100%; background: rgba(0,0,0,0.5); border: 2px solid #000; padding: 7px 10px;
     font-weight: 900; font-size: 14px; letter-spacing: 1px; color: #fff; text-align: center;
     text-shadow: 2px 2px 0 rgba(0,0,0,0.7); box-shadow: inset 1px 1px 0 rgba(255,255,255,0.15); }
@@ -149,10 +142,6 @@
     gap: clamp(6px, 1.4vh, 12px);
     width: min(340px, 92%); max-height: 100%; overflow-y: auto; }
 
-  .logo { font-size: clamp(22px, 6.5vh, 34px); font-weight: 900; letter-spacing: 2px; color: #7dff5a; line-height: 1.02;
-    text-shadow: 3px 3px 0 #1c4d10, 5px 5px 0 rgba(0,0,0,0.8); text-align: center; }
-  .logo small { display: block; font-size: clamp(10px, 2.2vh, 13px); color: #ffd94d; letter-spacing: 6px;
-    text-shadow: 2px 2px 0 rgba(0,0,0,0.8); margin-top: 4px; }
   .btnGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; width: 100%; }
   .btnGrid .mcbtn { padding: 9px 4px; }
   .btnGrid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
@@ -422,8 +411,6 @@
   .loadHelp a { color: #7ee0ff; }
   /* roy's maker's mark , the same colophon that rides every project (ported from royashbrook.com's
      Footer.astro to the game's monospace/dark theme). the red heart + gold sponsor stay literal. */
-  #verTag { position: absolute; top: 6px; right: 10px; z-index: 11;
-    font-size: 10px; font-weight: 900; letter-spacing: 1px; color: rgba(255,255,255,0.4); pointer-events: none; }
   .makerMark { margin: 2px auto 0; text-align: center; font-family: inherit;
     font-size: 10px; letter-spacing: .3px; color: #8f88a0; line-height: 1.6; }
   .makerMark .mmHeart { display: inline-block; width: .9em; height: .9em; fill: #e0746a; vertical-align: -.12em; }

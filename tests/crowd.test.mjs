@@ -2,7 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CrowdMixin } from '../js/crowd.js';
 import { TIERS } from '../js/config.js';
-import { crowdPowerVisualScale, gateSignFontSize, gateVisualScale } from '../js/render.js';
+import {
+  crowdPowerVisualScale,
+  gameplayVisualScale,
+  gameplayVisualX,
+  gateSignFontSize,
+  gateVisualScale,
+} from '../js/render.js';
 
 // A minimal object carrying the crowd methods; setWorth with fx=false touches
 // no fx/audio/cam, so no DOM is needed.
@@ -74,4 +80,25 @@ test('the whole distant gate pair spreads with its signs and fitted multiplier c
     const size = gateSignFontSize(label, gateWidth, panelHeight);
     assert.ok(size * label.length * 0.62 <= gateWidth * 0.82 + 1e-9, `${label} fits its panel`);
   }
+});
+
+test('approaching rewards and hazards are readable before converging to true perspective', () => {
+  const samples = [4.4, 8, 15, 23.9, 24, 36];
+  const visual = samples.map(gameplayVisualScale);
+  assert.ok(visual[0] >= 12, 'first-sight objects have a readable projection floor');
+  for (let i = 1; i < visual.length; i++) {
+    assert.ok(visual[i] > visual[i - 1], 'object geometry grows continuously');
+  }
+  assert.equal(gameplayVisualScale(24), 24, 'object exaggeration meets true perspective');
+  assert.equal(gameplayVisualScale(36), 36, 'near objects use true perspective exactly');
+  assert.ok(gameplayVisualScale(4.4) * 1.1 >= 13, 'a distant powerup is at least 13px tall');
+  assert.ok(gameplayVisualScale(4.4) * 1.35 >= 16, 'a distant obstacle is at least 16px tall');
+});
+
+test('distance-readable objects preserve their lane separation', () => {
+  const projectedScale = 4.4;
+  const visualScale = gameplayVisualScale(projectedScale);
+  const left = gameplayVisualX(200 - 2.5 * projectedScale, -2.5, 0, projectedScale);
+  const right = gameplayVisualX(200 + 2.5 * projectedScale, 2.5, 0, projectedScale);
+  assert.ok(Math.abs((right - left) - 5 * visualScale) < 1e-9);
 });
