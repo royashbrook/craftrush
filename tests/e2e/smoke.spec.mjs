@@ -292,6 +292,71 @@ test('a standard boss shows armor stages and survives a burst', async ({ page })
   await expect(page.locator('#bossHint')).toContainText('ARMOR BROKEN');
 });
 
+test('Gate Dash carries one hold into the boss and stops on release or blur', async ({ page }) => {
+  await page.goto('/');
+  await page.click('#btnPlayGates');
+  const canvas = page.locator('#gameCanvas');
+  const box = await canvas.boundingBox();
+
+  await page.evaluate(() => {
+    const par = CR.game.expectedBossArmy().power;
+    CR.game.setWorth(par);
+    CR.game.playerZ = CR.game.length;
+    CR.game.update(1 / 60);
+    CR.game.boss.entering = false;
+    CR.game.boss.attackT = 999;
+  });
+  const idleHp = await page.evaluate(() => CR.game.boss.hp);
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(() => CR.game.boss.hp)).toBe(idleHp);
+
+  await page.evaluate(() => {
+    CR.game.startRun();
+    CR.game.setWorth(CR.game.expectedBossArmy().power);
+  });
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.72);
+  await page.mouse.down();
+  expect(await page.evaluate(() => CR.game.charging)).toBe(true);
+  await page.evaluate(() => {
+    CR.game.playerZ = CR.game.length;
+    CR.game.update(1 / 60);
+    CR.game.boss.entering = false;
+    CR.game.boss.attackT = 999;
+  });
+  await expect(page.locator('#powerChips')).toContainText('CHARGING');
+  expect(await page.evaluate(() => CR.game.charging)).toBe(true);
+  const heldHp = await page.evaluate(() => CR.game.boss.hp);
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => CR.game.boss.hp)).toBeLessThan(heldHp);
+
+  await page.mouse.up();
+  expect(await page.evaluate(() => CR.game.charging)).toBe(false);
+  await expect(page.locator('#powerChips')).toContainText('HOLD TO CHARGE');
+  const releasedHp = await page.evaluate(() => CR.game.boss.hp);
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(() => CR.game.boss.hp)).toBe(releasedHp);
+
+  await page.keyboard.down('f');
+  expect(await page.evaluate(() => CR.game.charging)).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  expect(await page.evaluate(() => CR.game.charging)).toBe(false);
+  await page.keyboard.up('f');
+
+  const calmHp = await page.evaluate(() => {
+    CR.save.speed = 'calm';
+    CR.game.startRun();
+    CR.game.setWorth(CR.game.expectedBossArmy().power);
+    CR.game.playerZ = CR.game.length;
+    CR.game.update(1 / 60);
+    CR.game.boss.entering = false;
+    CR.game.boss.attackT = 999;
+    return CR.game.boss.hp;
+  });
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => CR.game.boss.hp)).toBeLessThan(calmHp);
+});
+
 test('CALM says clearly that the ready golem sends automatically', async ({ page }) => {
   await page.goto('/');
   await page.locator('#btnPlayShooter').waitFor();
@@ -526,11 +591,19 @@ test('mastery surfaces stay inside an iPhone-size stage', async ({ page }) => {
 
 test('pause and resume work', async ({ page }) => {
   await page.goto('/');
-  await page.click('#btnPlayShooter');
-  await page.click('#btnPause');
+  await page.click('#btnPlayGates');
+  await page.keyboard.down('f');
+  await page.keyboard.press('Escape');
   await expect(page.locator('#pause')).toBeVisible();
+  expect(await page.evaluate(() => ({ paused: CR.game.paused, charging: CR.game.charging })))
+    .toEqual({ paused: true, charging: false });
+  const z = await page.evaluate(() => CR.game.playerZ);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => CR.game.playerZ)).toBe(z);
+  await page.keyboard.up('f');
   await page.click('#btnResume');
   await expect(page.locator('#pause')).toBeHidden();
+  expect(await page.evaluate(() => CR.game.paused)).toBe(false);
 });
 
 test('the focused bottom navigation exposes only Play and Shop', async ({ page }) => {
@@ -652,6 +725,7 @@ test('the system back gesture walks the screen stack instead of leaving the game
   await expect(page.locator('#hud')).toBeVisible();
   await page.goBack();
   await expect(page.locator('#pause')).toBeVisible();
+  expect(await page.evaluate(() => CR.game.paused)).toBe(true);
 });
 
 // The rescue page exists for players whose game will not start, so it must not

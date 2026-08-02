@@ -117,7 +117,7 @@ export function togglePause(force) {
  * is nothing left to go back to we do NOT re-arm, so the next back really does
  * leave the app, which is what someone at the menu expects.
  */
-export function initHistory(pushState) {
+export function initHistory(pushState, pauseRun = () => togglePause(true)) {
   if (typeof window === 'undefined') return () => {};
   // SvelteKit owns the history stack, so the shallow-routing pushState from
   // $app/navigation is passed in rather than calling history.pushState directly,
@@ -129,7 +129,7 @@ export function initHistory(pushState) {
   arm();
   const onPopState = () => {
     // mid-run, back means "wait, stop" rather than "go somewhere"
-    if (nav.playing && !nav.paused) { togglePause(true); arm(); return; }
+    if (nav.playing && !nav.paused) { pauseRun(); arm(); return; }
     if (back()) { arm(); return; }
     if (nav.screen !== 'menu') { go('menu', { push: false }); arm(); return; }
     // at the menu with nothing behind it: let the gesture close the app

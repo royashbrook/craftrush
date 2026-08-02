@@ -90,6 +90,11 @@ export class Game {
     this.rings = [];
     this.floaties = [];
     this.waves = [];
+    this.bossMetrics = {
+      warnings: 0, resolved: 0, threatening: 0, hits: 0, dodges: 0,
+      actionsStarted: 0,
+      beats: new Map(),
+    };
     this.boss = null;
     this.bossDead = false;
     this.bigs = TIERS.units.map(() => []); // one array per ladder tier
@@ -102,7 +107,7 @@ export class Game {
     this.redstone = 0;
     this.runEmeralds = 0; this.kills = 0; this.bestCrowd = 0; this.runRods = 0;
     this.volleyT = 0; this.chargeT = 0;
-    this.firing = false;
+    this.firing = false; this.charging = false;
     this.volleysFired = 0;
     this.crowdPulse = 0;
     this.power = { triple: 0, rapid: 0, power: 0, sword: 0, axe: 0 };
@@ -195,6 +200,14 @@ export class Game {
           this.save.tutorialSeen = true;
           this.hooks.onTutorial(null);
         }
+      } else if (running && this.mode === 'gates') {
+        // Gate Dash uses the same one-finger contract as Bow Blitz: hold to
+        // attack and drag that same hold to keep steering through warnings.
+        this.charging = true;
+        if (!this.save.tutorialSeen) {
+          this.save.tutorialSeen = true;
+          this.hooks.onTutorial(null);
+        }
       }
     };
     const onPointerMove = (e) => {
@@ -212,11 +225,13 @@ export class Game {
       const tapped = dragging && !moved && upAt - downAt <= 280;
       dragging = false;
       this.firing = false;
+      this.charging = false;
       downX = null; downY = null; downAt = 0;
       if (tapped && this.save.speed !== 'calm' && this.redstone >= TUNE.redstoneMax) this.summonGolem();
     };
     const onPointerCancel = () => {
-      dragging = false; downX = null; downY = null; downAt = 0; moved = false; this.firing = false;
+      dragging = false; downX = null; downY = null; downAt = 0; moved = false;
+      this.firing = false; this.charging = false;
     };
     const onBlur = () => { onPointerCancel(); this.keys.KeyF = false; };
     // reset the reference point when the mouse leaves, so re-entry doesn't jump
@@ -229,12 +244,14 @@ export class Game {
       const interactive = e.target?.isContentEditable
         || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON';
       const running = this.state === 'run' || this.state === 'boss';
-      if (e.code === 'KeyF' && running && !this.paused && this.mode === 'shooter') {
+      if (e.code === 'KeyF' && running && !this.paused) {
         e.preventDefault();
-        if (!this.firing) {
+        if (this.mode === 'shooter' && !this.firing) {
           this.firing = true;
           this.volleyT = TUNE.volleyInterval * (this.power.rapid > 0 ? 0.55 : 1);
           this.fireVolley();
+        } else if (this.mode === 'gates') {
+          this.charging = true;
         }
       }
       if (e.code === 'Space' && !e.repeat && running && !this.paused
@@ -245,7 +262,7 @@ export class Game {
     };
     const onKeyUp = (e) => {
       this.keys[e.code] = false;
-      if (e.code === 'KeyF') this.firing = false;
+      if (e.code === 'KeyF') { this.firing = false; this.charging = false; }
     };
 
     c.addEventListener('pointerdown', onPointerDown);
@@ -293,9 +310,14 @@ export class Game {
     return id;
   }
 
-  noteGate(good, risky = false) {
-    const combo = recordGate(this.mastery, good, risky);
+  noteGate(good, risky = false, choiceTier = null) {
+    const combo = recordGate(this.mastery, good, risky, choiceTier);
     if (good && combo >= 2) this.floaty(`SMART CHOICE ×${combo}!`, this.playerX, this.playerZ + 3, '#ffd94d', 1.3);
+  }
+
+  releaseAction() {
+    this.firing = false;
+    this.charging = false;
   }
 
   noteDamage(amount) {
@@ -448,6 +470,8 @@ export class Game {
     h.level = this.level; h.biome = this.biome.name; h.mode = this.mode;
     h.firing = this.firing || this.save.speed === 'calm';
     h.autoFire = this.mode === 'shooter' && this.save.speed === 'calm';
+    h.charging = this.mode === 'gates' && (this.charging || this.save.speed === 'calm');
+    h.autoCharge = this.mode === 'gates' && this.save.speed === 'calm';
     h.autoGolem = this.save.speed === 'calm';
     h.power = this.power;
     const objective = objectiveState(this.mastery, {

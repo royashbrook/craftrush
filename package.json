@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test:build": "PW_TARGET=build playwright test",
+    "metrics:balance": "node tools/report-balance.mjs",
     "prebuild": "node tools/pack-themes.mjs && node tools/build-rescue.mjs"
   },
   "devDependencies": {

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ENCOUNTER_FOLLOW_THROUGH,
+  ENCOUNTER_MIN_FOLLOW_THROUGH,
   buildEncounterRun,
   encounterRunStyle,
   sweepObstacleX,
@@ -10,7 +11,7 @@ import { LevelMixin } from '../js/levelgen.js';
 import { CombatMixin } from '../js/combat.js';
 import { BIOMES, ENEMY_TYPES, SPEEDS, TUNE } from '../js/config.js';
 
-const good = (gate) => gate.op === 'add' || gate.op === 'mul';
+const good = (gate) => gate.op === 'add' || gate.op === 'mul' || gate.op === 'scale';
 
 function gatePairs(events) {
   const pairs = new Map();
@@ -55,8 +56,16 @@ test('the director builds a seeded rhythm with bounded agency and threat streaks
         }
 
         const pairs = gatePairs(run.events);
-        assert.ok(pairs.size >= 3, 'at least three gate decisions are reachable');
+        const decisions = [...pairs.values()].filter((pair) => pair.some((gate) => gate.meaningful));
+        const rewards = [...pairs.values()].filter((pair) => pair.every((gate) => gate.automatic));
+        assert.equal(decisions.length, 3, 'the run contains three real gate decisions');
+        assert.equal(rewards.length, 1, 'the breather contains one automatic reward');
         for (const pair of pairs.values()) {
+          if (pair.every((gate) => gate.automatic)) {
+            assert.equal(pair.length, 1);
+            assert.equal(pair[0].x, 0);
+            continue;
+          }
           assert.equal(pair.length, 2);
           assert.ok(pair.some(good), 'every pair offers growth');
           assert.ok(pair.every((gate) => Math.abs(gate.x) <= TUNE.laneHalf));
@@ -65,13 +74,56 @@ test('the director builds a seeded rhythm with bounded agency and threat streaks
         }
 
         for (const risk of run.events.filter((event) => event.type === 'gate' && event.risk)) {
-          assert.ok(risk.followThroughZ - risk.z >= ENCOUNTER_FOLLOW_THROUGH);
+          assert.ok(risk.followThroughZ - risk.z >= ENCOUNTER_MIN_FOLLOW_THROUGH);
           assert.ok(run.events.some((event) => event.type === 'obstacle'
             && event.encounterId === risk.encounterId
             && event.z === risk.followThroughZ
             && event.directed
             && Math.abs(event.x - risk.x) < 1.3), 'risk is followed by a readable lane hazard');
         }
+      }
+    }
+  }
+});
+
+test('one gate mistake is recoverable and two are threatening at every level', () => {
+  const apply = (worth, gate) => gate.op === 'mul'
+    ? worth * gate.val
+    : gate.op === 'scale'
+      ? Math.floor(worth * gate.val)
+      : worth + gate.val;
+  for (let level = 2; level <= 20; level++) {
+    for (const seed of [7, 104, 201, 298]) {
+      const run = buildEncounterRun({
+        level,
+        mode: 'gates',
+        biome: BIOMES[(level - 1) % BIOMES.length],
+        seed,
+      });
+      const allRows = [...gatePairs(run.events).values()];
+      const decisions = allRows
+        .filter((pair) => pair.some((gate) => gate.meaningful));
+      assert.equal(decisions.length, 3);
+
+      const routeWorth = (mistakes) => {
+        let worth = TUNE.crowdStart;
+        let decisionIndex = 0;
+        for (const pair of allRows) {
+          const automatic = pair.find((gate) => gate.automatic);
+          const selected = automatic || pair.find((gate) => mistakes.has(decisionIndex) ? !gate.par : gate.par);
+          worth = apply(worth, selected);
+          if (!automatic) decisionIndex++;
+        }
+        return worth;
+      };
+      const par = routeWorth(new Set());
+      for (let mistake = 0; mistake < decisions.length; mistake++) {
+        const ratio = routeWorth(new Set([mistake])) / par;
+        assert.ok(ratio >= 0.82 && ratio <= 0.88, `level ${level} one-error ratio ${ratio}`);
+      }
+      for (const mistakes of [[0, 1], [0, 2], [1, 2]]) {
+        const ratio = routeWorth(new Set(mistakes)) / par;
+        assert.ok(ratio >= 0.68 && ratio <= 0.78, `level ${level} two-error ratio ${ratio}`);
       }
     }
   }
@@ -98,6 +150,46 @@ test('the follow-through distance remains readable at every selectable pace', ()
       + closingDistance / (cappedSpeed + fastestEnemy);
     assert.ok(worstContactSeconds >= 0.9,
       `${pace.id} preserves at least 0.9 seconds against the fastest Forest enemy`);
+    for (const level of [1, 6, 12, 20, 100]) {
+      const run = buildEncounterRun({ level, mode: 'gates', biome: forest });
+      for (const risk of run.events.filter((event) => event.type === 'gate' && event.risk)) {
+        const seconds = (risk.followThroughZ - risk.z) / cappedSpeed;
+        assert.ok(seconds >= 0.9,
+          `${pace.id} level ${level} gate follow-through remains at least 0.9 seconds`);
+      }
+    }
+  }
+});
+
+test('post-12 track growth stops at level 20', () => {
+  const biome = BIOMES[0];
+  const level20 = buildEncounterRun({ level: 20, mode: 'gates', biome }).length;
+  assert.ok(level20 > buildEncounterRun({ level: 12, mode: 'gates', biome }).length);
+  assert.equal(buildEncounterRun({ level: 100, mode: 'gates', biome }).length, level20);
+  assert.equal(buildEncounterRun({ level: 1000, mode: 'gates', biome }).length, level20);
+});
+
+test('mutated starts and boosted gates preserve the same compounding mistake budget', () => {
+  const biome = BIOMES[1];
+  for (const mut of [{ startWorth: 60 }, { startWorth: 60, gateBoost: true }]) {
+    const run = buildEncounterRun({ level: 8, mode: 'gates', biome, mut, seed: 808 });
+    const rows = [...gatePairs(run.events).values()];
+    const decisions = rows.filter((pair) => pair.some((gate) => gate.meaningful));
+    const route = (mistakes) => {
+      let worth = mut.startWorth;
+      let index = 0;
+      for (const pair of rows) {
+        const automatic = pair.find((gate) => gate.automatic);
+        const gate = automatic || pair.find((entry) => mistakes.has(index) ? !entry.par : entry.par);
+        worth = gate.op === 'mul' ? worth * gate.val : Math.floor(worth * gate.val);
+        if (!automatic) index++;
+      }
+      return worth;
+    };
+    const par = route(new Set());
+    assert.equal(decisions.length, 3);
+    assert.ok(route(new Set([0])) / par >= 0.84);
+    assert.ok(route(new Set([0, 1])) / par <= 0.74);
   }
 });
 
@@ -199,6 +291,8 @@ test('expedition generation keeps enemy, pickup, and gate mutators', () => {
   assert.ok(run.events.some((event) => event.type === 'pickup' && event.kind === 'tnt'));
   assert.ok(run.events.some((event) => event.type === 'gate' && event.op === 'mul' && event.val >= 3),
     'gate boost produces a clearly stronger reward');
+  const standard = run.encounters.find((card) => card.role === 'choice');
+  assert.equal(standard.mechanic, 'growth-then-dodge', 'the middle choice becomes a route tradeoff');
 });
 
 test('generic enemy routes preserve the open half after chasers aggro', () => {

@@ -29,7 +29,7 @@ Codes: **Y** observed without help, **P** observed after a prompt, **N** not obs
 | 4 | ___ | ___ | ___ | ___ | ___ | ___ | ___ | ___ | __________________ |
 | 5 | ___ | ___ | ___ | ___ | ___ | ___ | ___ | ___ | __________________ |
 
-## v1.8 core-loop focus
+## v1.9 core-loop focus
 
 Run Bow Blitz first on NORMAL. A successful causality test means the player
 learns, without explanation, that holding fires, releasing stops, dragging aims,
@@ -80,17 +80,20 @@ Use a disposable test save, not the only copy of real progress.
 
 ## Release balance report
 
-Gameplay candidate: v1.8  Test date: __________  Levels: 2-20  Difficulty: NORMAL
+Gameplay candidate: v1.9  Test date: __________  Levels: 1-20  Difficulty: NORMAL
 
-| Mode | Bot | Runs | Wins | Win rate | Target | Pass |
+| Mode | Cohort | Runs | Wins | Win rate | Target | Pass |
 |------|-----|------|------|----------|--------|------|
-| Bow Blitz | No input | 19 | 0 | 0% | 25% or less | Yes |
-| Bow Blitz | Competent | 19 | 19 | 100% | 80% or more | Yes |
-| Gate Dash | No input | 19 | 0 | 0% | 25% or less | Yes |
-| Gate Dash | Competent | 19 | 19 | 100% | 80% or more | Yes |
+| Bow Blitz | Passive | 80 | 0 | 0.0% | 0–5% | Yes |
+| Bow Blitz | Noisy | 80 | 60 | 75.0% | 55–75% | Yes |
+| Bow Blitz | Skilled | 80 | 76 | 95.0% | 85–95% | Yes |
+| Gate Dash | Passive | 80 | 0 | 0.0% | 0–5% | Yes |
+| Gate Dash | Noisy | 80 | 54 | 67.5% | 55–75% | Yes |
+| Gate Dash | Skilled | 80 | 71 | 88.8% | 85–95% | Yes |
 
 Release notes or failures: ____________________________________________________________________________
 
 [ ] Both modes start on production  [ ] Bow Blitz stops firing on release  [ ] CALM auto-fires
+[ ] Gate Dash damages only while held  [ ] CALM auto-charges  [ ] Pause freezes the field
 [ ] Gate impact reads clearly  [ ] Two armor breaks appear  [ ] All three Golem grants appear
 [ ] Mastery persists after reload  [ ] Shop task works  [ ] No visible production errors

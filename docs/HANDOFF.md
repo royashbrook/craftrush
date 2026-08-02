@@ -16,7 +16,7 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.8.1**, tag `v1.8.1`. The core reset retires the town,
+Current release: **v1.9**, tag `v1.9`. The core reset retires the town,
 houses, playroom, village, mine, and idle emeralds without rewriting their old
 save fields. Bow Blitz and Gate Dash are direct play buttons, with no separate
 mode-selection step. `main` is the deployed branch.
@@ -63,6 +63,7 @@ npm run test:build   # the same suite against the BUILT output. Do not skip this
 npm run art          # rebuild themes + atlas after editing art or theme data
 npm run build        # production build into build/
 npm run check        # svelte-check
+npm run metrics:balance # reproducible five-cohort balance matrix
 ```
 
 `?theme=neon` in the browser, or `CRAFTRUSH_THEME=neon` for node, runs the
@@ -202,7 +203,11 @@ v1.7.2 kept semantic version stamping valid after patch release tags (#102).
 v1.8 makes the runner the whole product: only Play and Shop remain
 in primary navigation, old side-system data stays opaque and transferable, Bow
 Blitz requires intentional fire outside CALM, crowd gains have stronger impact,
-and every standard boss has at least three damage stages.
+and every standard boss has at least three damage stages. v1.9 completes #112,
+#113, and #114: five deterministic player cohorts now gate the release, gate
+mistakes compound predictably, later choices carry follow-through hazards,
+Gate Dash bosses require a held attack, and proportional boss hits remain
+relevant to large crowds. Exact methods and results live in `docs/BALANCE.md`.
 
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker

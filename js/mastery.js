@@ -218,6 +218,9 @@ export function createMastery(chapter, startCrowd) {
     badGates: 0,
     missedGates: 0,
     riskyGates: 0,
+    bestGates: 0,
+    alternateGates: 0,
+    safeGates: 0,
     combo: 0,
     maxCombo: 0,
     dodges: 0,
@@ -231,13 +234,16 @@ export function createMastery(chapter, startCrowd) {
   };
 }
 
-export function recordGate(mastery, good, risky = false) {
+export function recordGate(mastery, good, risky = false, choiceTier = null) {
   if (!mastery) return 0;
   mastery.gateChoices++;
   if (good === true) {
     mastery.goodGates++;
     mastery.combo++;
     if (risky) mastery.riskyGates++;
+    if (choiceTier === 'best' || choiceTier === 'risky') mastery.bestGates++;
+    else if (choiceTier === 'safe') mastery.safeGates++;
+    else if (choiceTier === 'alternate') mastery.alternateGates++;
   } else {
     mastery.combo = 0;
     if (good === false) mastery.badGates++;

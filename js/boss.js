@@ -2,12 +2,12 @@
 import { TUNE, BOSS_TYPES, TIERS } from './config.js';
 import { Audio } from './audio.js';
 
-export function crowdBossDamageFactor(actualPower, parPower) {
+export function crowdBossDamageFactor(actualPower, parPower, scale = TUNE.bossSurplusLogScale) {
   const actual = Math.max(0, Number(actualPower) || 0);
   const par = Math.max(1, Number(parPower) || 1);
   const ratio = actual / par;
   if (ratio <= 1) return 1;
-  const effectiveRatio = 1 + TUNE.bossSurplusLogScale * Math.log(ratio);
+  const effectiveRatio = 1 + scale * Math.log(ratio);
   return effectiveRatio / ratio;
 }
 
@@ -21,9 +21,9 @@ export const BossMixin = {
     // play still shortens the fight, but surplus crowd damage is compressed below.
     const baseHp = bt.hp * diff * (this.mode === 'gates' ? 0.45 : 0.75);
     const gatesHpPerPower = TUNE.bossGatesHpPerParPower
-      + Math.min(
-        TUNE.bossGatesHpBonusCap,
-        Math.max(0, this.level - 1) * TUNE.bossGatesHpPerLevel,
+      + Math.max(
+        -TUNE.bossGatesHpBonusCap,
+        Math.min(TUNE.bossGatesHpBonusCap, (this.level - 1) * TUNE.bossGatesHpPerLevel),
       );
     const parHp = par.power * (this.mode === 'gates'
       ? gatesHpPerPower
@@ -70,7 +70,7 @@ export const BossMixin = {
     Audio.music('boss');
     Audio.sfx('boss_roar');
     if (this.mode === 'gates') {
-      this.floaty('CHARGE!', this.playerX, this.playerZ + 4, '#ffd94d', 2);
+      this.floaty(this.save.speed === 'calm' ? 'AUTO CHARGE!' : 'HOLD TO CHARGE!', this.playerX, this.playerZ + 4, '#ffd94d', 2);
     }
   },
 
@@ -99,6 +99,7 @@ export const BossMixin = {
       let worth = state.worth;
       if (gate.op === 'add') worth += gate.val;
       else if (gate.op === 'mul') worth *= gate.val;
+      else if (gate.op === 'scale') worth = Math.floor(worth * gate.val);
       else if (gate.op === 'sub') worth = Math.max(0, worth - gate.val);
       else if (gate.op === 'div') worth = Math.ceil(worth / gate.val);
       return normalize(worth, state.stars);
@@ -110,6 +111,11 @@ export const BossMixin = {
       pairs.set(event.z, [...(pairs.get(event.z) || []), event]);
     }
     for (const pair of pairs.values()) {
+      const authoredPar = pair.find((gate) => gate.par);
+      if (authoredPar) {
+        state = apply(state, authoredPar);
+        continue;
+      }
       const choices = pair.map((gate) => apply(state, gate));
       choices.sort((a, b) => b.power - a.power || b.worth - a.worth);
       if (choices[0]) state = choices[0];
@@ -125,13 +131,44 @@ export const BossMixin = {
     // Freeze the surplus ratio at arrival. Gate Dash spends its crowd while it
     // attacks; recomputing from the shrinking army would release the soft cap
     // mid-fight and make its curve much steeper than Bow Blitz.
-    return crowdBossDamageFactor(this.boss?.arrivalPower, this.boss?.parPower);
+    const scale = this.mode === 'shooter'
+      ? TUNE.bossShooterSurplusLogScale
+      : TUNE.bossSurplusLogScale;
+    return crowdBossDamageFactor(this.boss?.arrivalPower, this.boss?.parPower, scale);
   },
 
   spawnBossWave(wave) {
     if (wave.sweep && !wave.warnTotal) wave.warnTotal = wave.warn;
-    wave.threatened = Math.abs(this.playerX - wave.x) < wave.halfW + 0.4;
+    const impactX = wave.sweep?.toX ?? wave.x;
+    wave.threatened = Math.abs(this.playerX - impactX) < wave.halfW + 0.4;
+    wave.beatId = wave.groupId || `boss-rhythm-${this.boss?.rhythmIdx || 0}`;
+    const metrics = this.bossMetrics;
+    if (metrics && !wave.ambush) {
+      let beat = metrics.beats.get(wave.beatId);
+      if (!beat) {
+        beat = { active: 0, threatened: false, hit: false };
+        metrics.beats.set(wave.beatId, beat);
+        metrics.warnings++;
+      }
+      beat.active++;
+      beat.threatened ||= wave.threatened;
+    }
     this.waves.push(wave);
+  },
+
+  recordBossWaveOutcome(wave, hit) {
+    const metrics = this.bossMetrics;
+    const beat = metrics?.beats.get(wave.beatId);
+    if (!beat) return;
+    beat.active = Math.max(0, beat.active - 1);
+    beat.threatened ||= wave.threatened;
+    beat.hit ||= hit;
+    if (beat.active > 0) return;
+    metrics.resolved++;
+    if (beat.threatened) metrics.threatening++;
+    if (beat.hit) metrics.hits++;
+    else if (beat.threatened) metrics.dodges++;
+    metrics.beats.delete(wave.beatId);
   },
 
   damageBoss(amount, crowdScaled = false) {
@@ -210,11 +247,11 @@ export const BossMixin = {
       Audio.sfx('boss_roar');
     } else if (atk === 'shockwave') {
       const x = Math.random() < 0.6 ? this.playerX : (Math.random() * 2 - 1) * 2;
-      this.spawnBossWave({ x, halfW: 1.5, z: b.z - 1, warn: 0.95 * reaction, speed: 14, kills: Math.min(10, 3 + Math.ceil(this.level / 2)) });
+      this.spawnBossWave({ x, halfW: 1.5, z: b.z - 1, warn: 0.95 * reaction, speed: 14, lossFraction: 0.26, kills: Math.min(10, 3 + Math.ceil(this.level / 2)) });
     } else if (atk === 'sonicboom') {
       // A side blast always leaves the opposite half of the steerable lane safe.
       const side = Math.random() < 0.5 ? -1 : 1;
-      this.spawnBossWave({ x: side * 2.2, halfW: 1.7, z: b.z - 1, warn: 1.15 * reaction, speed: 20, color: '#2fd6d6', kills: Math.min(14, 4 + Math.ceil(this.level / 2)) });
+      this.spawnBossWave({ x: side * 2.2, halfW: 1.7, z: b.z - 1, warn: 1.15 * reaction, speed: 20, color: '#2fd6d6', lossFraction: 0.26, kills: Math.min(14, 4 + Math.ceil(this.level / 2)) });
       Audio.sfx('boss_roar');
     } else if (atk === 'charge') {
       const warn = 0.75 * reaction;
@@ -225,7 +262,7 @@ export const BossMixin = {
       // there is one warned hit to dodge rather than two overlapping attacks.
       this.spawnBossWave({
         x: b.chargeX, halfW: 1.3, z: b.z - 1, warn, speed: 16,
-        color: '#ff8d7a', kills: Math.min(12, 4 + Math.ceil(this.level / 2)),
+        color: '#ff8d7a', lossFraction: 0.26, kills: Math.min(12, 4 + Math.ceil(this.level / 2)),
       });
     } else if (atk === 'skulls') {
       for (const spread of [-3.5, 0, 3.5]) {
@@ -258,6 +295,7 @@ export const BossMixin = {
           z: b.z - 1,
           warn: 1.35 * reaction,
           speed: 14,
+          lossFraction: 0.26,
           kills,
           color: '#ffd94d',
           remix: 'plains-wall',
@@ -304,6 +342,7 @@ export const BossMixin = {
         warn,
         warnTotal: warn,
         speed: 17,
+        lossFraction: 0.26,
         kills,
         color: '#ff9d3c',
         remix: 'desert-sweep',
@@ -345,12 +384,13 @@ export const BossMixin = {
           (3.5 - this.level * 0.1) * this.bossReactionScale(),
         );
         const rhythmIdx = b.rhythmIdx || 0;
+        if (this.bossMetrics) this.bossMetrics.actionsStarted++;
         const remixed = rhythmIdx % 3 === 0 && this.bossRemixAttack();
         b.rhythmIdx = rhythmIdx + 1;
         if (!remixed) this.bossAttack();
       }
     }
-    if (this.mode === 'gates') {
+    if (this.mode === 'gates' && (this.charging || this.save.speed === 'calm')) {
       // Crowd charge still spends the army, but only while the chosen lane is
       // lined up with the boss or a live crystal. Dodging can pause the attack.
       this.chargeT = (this.chargeT || 0) - dt;

@@ -7,6 +7,7 @@ import { TUNE } from './config.js';
 import { mulberry32 } from './engine.js';
 
 export const ENCOUNTER_FOLLOW_THROUGH = 28;
+export const ENCOUNTER_MIN_FOLLOW_THROUGH = 22;
 
 const GATE_X = 2.4;
 const FIRST_Z = 36;
@@ -50,7 +51,7 @@ export function buildEncounterRun({
   const L = Math.max(1, Math.floor(level));
   const rng = mulberry32(seed >>> 0);
   const style = encounterRunStyle(biome);
-  const length = 420 + Math.min(L, 12) * 35;
+  const length = 420 + Math.min(L, 12) * 35 + Math.min(8, Math.max(0, L - 12)) * 12;
   // Seven authored cards plus the boss are the promised eight-beat run:
   // warmup, calibration, route choice, biome challenge, breather, harder
   // remix, boss preview, boss.
@@ -74,83 +75,98 @@ export function buildEncounterRun({
     });
   };
 
-  const goodGate = () => {
-    const boost = mut.gateBoost ? 1 : 0;
-    if (rng() < (L >= 3 ? 0.42 : 0.25) + boost * 0.2) {
-      return {
-        op: 'mul',
-        val: (L >= 5 || boost) && rng() < 0.3 ? 3 : 2,
-      };
-    }
-    return { op: 'add', val: irnd(2, 3 + Math.min(L, 9) + boost * 4) };
-  };
+  const gateWidth = L === 1
+    ? TUNE.tutorialGateHalfW
+    : Math.max(1.3, TUNE.gateHalfW - Math.max(0, L - 3) * 0.03);
+  const followThrough = Math.max(
+    ENCOUNTER_MIN_FOLLOW_THROUGH,
+    ENCOUNTER_FOLLOW_THROUGH - Math.floor((L - 1) / 5) * 2,
+  );
+  let authoredPar = mut.startWorth || TUNE.crowdStart;
 
-  const badGate = () => (rng() < 0.4
-    ? { op: 'div', val: 2 }
-    : { op: 'sub', val: irnd(2, 2 + Math.ceil(L * 1.3)) });
+  const gateAfter = (worth, gate) => gate.op === 'mul'
+    ? worth * gate.val
+    : gate.op === 'scale'
+      ? Math.floor(worth * gate.val)
+    : worth + gate.val;
+
+  const decisionGate = (card, event, metadata) => addEvent(card, {
+    ...event,
+    meaningful: true,
+    parBefore: metadata.parBefore,
+    bestAfter: metadata.bestAfter,
+    alternateAfter: metadata.alternateAfter,
+  });
 
   const addGatePair = (card, kind) => {
     const choiceZ = roundZ(card.startZ + 4);
-    const halfW = L === 1 ? TUNE.tutorialGateHalfW : TUNE.gateHalfW;
-    const positiveSide = rng() < 0.5 ? -1 : 1;
-    const positiveX = positiveSide * GATE_X;
-    const otherX = -positiveX;
+    const halfW = gateWidth;
+    const bestSide = rng() < 0.5 ? -1 : 1;
+    const bestX = bestSide * GATE_X;
+    const alternateX = -bestX;
 
     card.agency += 1;
     card.choiceZ = choiceZ;
     card.mechanic = kind === 'risk' ? 'reward-then-dodge' : 'gate-choice';
 
-    if (kind === 'learn' || L === 1) {
-      // The directed track has fewer gates than the old event lottery. One
-      // obvious ×3 lane per teaching pair preserves the established boss par
-      // without adding back a dozen low-value decisions.
-      addEvent(card, { z: choiceZ, type: 'gate', x: positiveX, halfW, op: 'mul', val: 3 });
-      addEvent(card, { z: choiceZ, type: 'gate', x: otherX, halfW, ...goodGate() });
-      return;
-    }
+    const multiplier = kind === 'learn'
+      ? 3
+      : kind === 'risk'
+        ? (L >= 8 || mut.gateBoost ? 3 : 2)
+        : (L >= 14 || mut.gateBoost ? 3 : 2);
+    const parBefore = authoredPar;
+    const best = { op: 'mul', val: multiplier };
+    const bestAfter = gateAfter(parBefore, best);
+    // A proportional alternate compounds honestly across repeated mistakes.
+    // Fixed + gates authored against the perfect route accidentally became
+    // catch-up gates after an earlier miss, making two errors nearly harmless.
+    const alternateRatio = L === 1 ? 0.9 : 0.85;
+    const alternate = {
+      op: 'scale',
+      val: Math.round(multiplier * alternateRatio * 100) / 100,
+    };
+    const alternateAfter = gateAfter(parBefore, alternate);
+    const metadata = { parBefore, bestAfter, alternateAfter };
 
-    if (kind === 'risk') {
-      const dangerZ = roundZ(choiceZ + ENCOUNTER_FOLLOW_THROUGH);
+    const hasFollowThrough = (kind === 'risk' && L > 1) || (kind === 'standard' && L >= 4);
+    const followThroughZ = hasFollowThrough ? roundZ(choiceZ + followThrough) : undefined;
+    const bestEvent = {
+      z: choiceZ, type: 'gate', x: bestX, halfW,
+      ...best, par: true, choiceTier: kind === 'risk' ? 'risky' : 'best',
+      risk: hasFollowThrough,
+      followThroughZ,
+    };
+    decisionGate(card, bestEvent, metadata);
+    decisionGate(card, {
+      z: choiceZ, type: 'gate', x: alternateX, halfW,
+      ...alternate, choiceTier: kind === 'risk' ? 'safe' : 'alternate',
+    }, metadata);
+    authoredPar = bestAfter;
+
+    if (kind === 'risk' && L > 1) {
+      const dangerZ = roundZ(choiceZ + followThrough);
       card.dangerZ = dangerZ;
       card.threat = true;
-      addEvent(card, {
-        z: choiceZ,
-        type: 'gate',
-        x: positiveX,
-        halfW,
-        op: 'add',
-        val: 3 + Math.min(4, Math.floor(L / 4)),
-      });
-      addEvent(card, {
-        z: choiceZ,
-        type: 'gate',
-        x: otherX,
-        halfW,
-        op: 'mul',
-        val: L >= 8 || mut.gateBoost ? 3 : 2,
-        risk: true,
-        followThroughZ: dangerZ,
-      });
       for (const offset of [-0.8, 0.2, 1.2]) {
         addEvent(card, {
           z: dangerZ,
           type: 'obstacle',
-          x: clamp(otherX + offset, -TUNE.trackHalf + 0.5, TUNE.trackHalf - 0.5),
+          x: clamp(bestX + offset, -TUNE.trackHalf + 0.5, TUNE.trackHalf - 0.5),
           directed: true,
         });
       }
-      return;
+    } else if (kind === 'standard' && L >= 4) {
+      // The middle decision becomes a mild route tradeoff after onboarding:
+      // take full growth and cross once, or keep 85% with a clean follow-through.
+      const dangerZ = roundZ(choiceZ + followThrough);
+      addEvent(card, {
+        z: dangerZ, type: 'obstacle', x: bestX,
+        directed: true,
+      });
+      card.dangerZ = dangerZ;
+      card.threat = true;
+      card.mechanic = 'growth-then-dodge';
     }
-
-    addEvent(card, {
-      z: choiceZ,
-      type: 'gate',
-      x: positiveX,
-      halfW,
-      op: 'mul',
-      val: mut.gateBoost && L >= 5 ? 3 : 2,
-    });
-    addEvent(card, { z: choiceZ, type: 'gate', x: otherX, halfW, ...badGate() });
   };
 
   const addRewardTrail = (card, options = {}) => {
@@ -170,12 +186,15 @@ export function buildEncounterRun({
 
   const addReliefGate = (card) => {
     const z = roundZ(card.startZ + 24);
-    const halfW = L === 1 ? TUNE.tutorialGateHalfW : TUNE.gateHalfW;
-    // Both lanes are the same modest reward: a breather, not a disguised
-    // decision or the dominant source of the boss-arrival crowd.
-    const val = 3;
-    addEvent(card, { z, type: 'gate', x: -GATE_X, halfW, op: 'mul', val, reward: true });
-    addEvent(card, { z, type: 'gate', x: GATE_X, halfW, op: 'mul', val, reward: true });
+    // One full-width reward keeps the satisfying mid-run growth beat without
+    // pretending two identical lanes are a decision.
+    addEvent(card, {
+      z, type: 'gate', x: 0, halfW: TUNE.laneHalf + TUNE.gateHitMargin,
+      op: 'mul', val: 3, reward: true, automatic: true, par: true,
+      meaningful: false, parBefore: authoredPar, bestAfter: authoredPar * 3,
+      alternateAfter: authoredPar * 3,
+    });
+    authoredPar *= 3;
   };
 
   const addOpenChallenge = (card, compact = false) => {
