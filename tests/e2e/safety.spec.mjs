@@ -448,6 +448,56 @@ test('a waiting worker offers an in-app update and activates on request', async 
   await expect(page.locator('#updateBanner')).toHaveCount(0);
 });
 
+test('a worker parked while the PWA slept is found when the page resumes', async ({ page, context }) => {
+  test.skip(process.env.PW_TARGET !== 'build', 'service workers are deliberately absent in dev');
+  await context.addInitScript(() => {
+    let registerOptions = null;
+    let updateChecks = 0;
+    const worker = {
+      state: 'installed',
+      postMessage: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+    const registration = {
+      waiting: null,
+      installing: null,
+      update: async () => { updateChecks++; },
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      value: {
+        controller: {},
+        register: async (_url, options) => {
+          registerOptions = options;
+          return registration;
+        },
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      },
+    });
+    window.__parkSleepingUpdate = () => { registration.waiting = worker; };
+    window.__resumeUpdateState = () => ({ registerOptions, updateChecks });
+  });
+
+  await page.goto('/');
+  await expect(page.locator('#updateBanner')).toHaveCount(0);
+  expect((await page.evaluate(() => window.__resumeUpdateState())).registerOptions).toEqual({
+    type: 'module',
+    updateViaCache: 'none',
+  });
+
+  await page.evaluate(() => {
+    window.__parkSleepingUpdate();
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+  });
+
+  await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
+  expect((await page.evaluate(() => window.__resumeUpdateState())).updateChecks).toBeGreaterThan(1);
+});
+
 test('a newly installed update stays out of the run and result', async ({ page, context }) => {
   test.skip(process.env.PW_TARGET !== 'build', 'service workers are deliberately absent in dev');
   await context.addInitScript(() => {

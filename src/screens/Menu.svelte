@@ -149,6 +149,7 @@
 </script>
 
 <div id="menu" class="overlay {tier}">
+  <div class="logo">CraftRush</div>
   <div class="panel" bind:this={panel}>
     <div class="levelChip" id="menuLevel">LV {save.level} · {biome.name.toUpperCase()}</div>
 

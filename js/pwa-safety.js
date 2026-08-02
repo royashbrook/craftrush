@@ -4,8 +4,14 @@
 
 export const CRAFTRUSH_CACHE_PREFIX = 'craftrush-';
 export const CRAFTRUSH_APP_ORIGIN = 'https://craftrush.royashbrook.com';
-export const UPDATE_SUPPORT_QUERY = 'CRAFTRUSH_CAN_WAIT_FOR_UPDATE';
-export const UPDATE_SUPPORT_ACK = 'CRAFTRUSH_WAITING_UPDATES_SUPPORTED';
+// Version the handshake whenever the page-side waiting/update UX changes. A
+// v1.9.2-v1.10.0 page could answer the original probe but miss a worker that
+// became `waiting` while iOS had the PWA suspended. Treat those pages as legacy
+// once so this worker activates through their safe controller-change reload;
+// pages with the repaired lifecycle then keep future workers waiting for the
+// in-app Update button.
+export const UPDATE_SUPPORT_QUERY = 'CRAFTRUSH_CAN_WAIT_FOR_UPDATE_V2';
+export const UPDATE_SUPPORT_ACK = 'CRAFTRUSH_WAITING_UPDATES_SUPPORTED_V2';
 
 /**
  * Ask the pages already using this registration whether one of them knows how

@@ -199,6 +199,8 @@ test('an update waits through a run and its result', () => {
 });
 
 test('a current client tells an installing worker it can surface a waiting update', async () => {
+  assert.match(UPDATE_SUPPORT_QUERY, /_V2$/);
+  assert.match(UPDATE_SUPPORT_ACK, /_V2$/);
   let query = null;
   const supported = await anyClientSupportsWaitingUpdates([{
     postMessage(message, ports) {
