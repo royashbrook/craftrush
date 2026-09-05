@@ -73,6 +73,41 @@ test('menu captions are readable and every button is a full tap target on a phon
   expect(shell.shortestButton).toBeGreaterThanOrEqual(44);
 });
 
+// The pause button is the only thing a kid taps in the HUD strip, so it gets the
+// same 44px floor as the menu. Measured on the button box, and then hit-tested at
+// the centre and 4px in from each edge: a target that a chip or the progress bar
+// sits on top of is not 44px, whatever its rect says.
+for (const phone of [PHONE, { width: 375, height: 812 }]) {
+  test(`the pause button is a 44px target that owns its area at ${phone.width}x${phone.height}`, async ({ page }) => {
+    await page.setViewportSize(phone);
+    await page.goto('/');
+    await page.locator('#btnPlayShooter').click();
+    await expect(page.locator('#btnPause')).toBeVisible();
+
+    const pause = await page.evaluate(() => {
+      const btn = document.querySelector('#btnPause');
+      const r = btn.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const probes = [[cx, cy], [r.left + 4, cy], [r.right - 4, cy], [cx, r.top + 4], [cx, r.bottom - 4]];
+      const rect = (s) => document.querySelector(s).getBoundingClientRect();
+      const apart = (a, b) => a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
+      return {
+        width: r.width,
+        height: r.height,
+        owned: probes.filter(([x, y]) => document.elementFromPoint(x, y) === btn).length,
+        clearOf: ['#hudTop .chip.green', '#hudLevel', '#progressWrap'].filter((s) => apart(r, rect(s))),
+        onScreen: r.top >= 0 && r.left >= 0 && r.right <= innerWidth,
+      };
+    });
+    expect(pause.width).toBeGreaterThanOrEqual(44);
+    expect(pause.height).toBeGreaterThanOrEqual(44);
+    expect(pause.owned).toBe(5);
+    expect(pause.clearOf).toEqual(['#hudTop .chip.green', '#hudLevel', '#progressWrap']);
+    expect(pause.onScreen).toBe(true);
+  });
+}
+
 test('the expedition card says what the code does: one a week, a streak a day', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#expHead')).toContainText("THIS WEEK'S EXPEDITION");
