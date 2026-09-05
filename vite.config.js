@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 import { readdirSync, statSync, mkdirSync, copyFileSync, rmSync, existsSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
 import { appVersion } from './tools/version.mjs';
+import { isHostConfig } from './svelte.config.js';
 
 const walk = (dir, out = [], root = dir) => {
   for (const name of readdirSync(dir)) {
@@ -78,8 +79,26 @@ function themes() {
   };
 }
 
+// `vite preview` serves everything in build/ as a plain file, including the host
+// configuration Cloudflare swallows. The suite ran against that and passed a
+// worker whose precache could never install in production, so preview now
+// answers those paths the way the real host does.
+function hostConfigNotServed() {
+  return {
+    name: 'craftrush-host-config-not-served',
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const path = (req.url || '').split('?')[0].replace(/^\//, '');
+        if (!isHostConfig(path)) return next();
+        res.statusCode = 404;
+        res.end();
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [themes(), sveltekit()],
+  plugins: [themes(), hostConfigNotServed(), sveltekit()],
   build: {
     // Ship sourcemaps. A minified production-only failure reported as
     // "Ti is not a function" costs hours that a real function name costs
