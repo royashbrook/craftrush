@@ -301,7 +301,9 @@ export function finishMastery(mastery, {
   const [_, grade, label] = GRADE_STEPS.find(([minimum]) => score >= minimum);
 
   let praise;
-  if (objective?.done) praise = `Quest done: ${objective.text}`;
+  // the goal counts as done only on a win; a wiped crowd still gets the rest of
+  // the praise ladder, which is about what the player actually did
+  if (win && objective?.done) praise = `Goal done: ${objective.text}`;
   else if (m.nearMisses > 0) praise = `${m.nearMisses} close dodge${m.nearMisses === 1 ? '' : 's'}`;
   else if (m.dodges > 0) praise = `${m.dodges} boss attack${m.dodges === 1 ? '' : 's'} dodged`;
   else if (m.maxCombo >= 2) praise = `${m.maxCombo} smart choices in a row`;

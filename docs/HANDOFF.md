@@ -16,7 +16,7 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.9.1**, tag `v1.9.1`. The core reset retires the town,
+Current release: **v1.10.1**, tag `v1.10.1`. The core reset retires the town,
 houses, playroom, village, mine, and idle emeralds without rewriting their old
 save fields. Bow Blitz and Gate Dash are direct play buttons, with no separate
 mode-selection step. `main` is the deployed branch.
@@ -210,13 +210,22 @@ Gate Dash bosses require a held attack, and proportional boss hits remain
 relevant to large crowds. Exact methods and results live in `docs/BALANCE.md`.
 v1.9.1 completes #116: wider gates keep a forced lane read, and their clipped
 sign panels and perspective-scaled labels remove the distant floating-text bug.
+v1.9.2 through v1.10.1 are the PWA update arc (#118, #120, #126): an in-app
+UPDATE READY banner instead of a surprise reload, a bridge so pages from before
+the banner still take the update, and update discovery when a suspended Home
+Screen app resumes; v1.9.4 and v1.10 kept gate labels readable and simplified
+the mobile shell (#122, #124).
 
+- **#100 Durable save recovery beyond one browser container.** Open by design:
+  the save lives only in one browser or Home Screen container unless the player
+  exports it, and removing the app, replacing the device, or storage eviction
+  removes the only copy. The answer today is manual export (file, code, QR,
+  the rescue page). Anything better must stay accountless and add no
+  collection.
 - **#64 Adopt a standard atlas format.** Deliberately deferred. Our manifest
   lacks trim, rotation, animation tags and multi page support that TexturePacker
   and Aseprite exports have. At 512x212 none of that earns its complexity. When
   it does, adopt an existing format rather than growing ours.
-- **#72 Sourcemaps do not reach production.** Closed after production verification:
-  the map returns, parses, and embeds all source bodies.
 
 Ideas raised but not filed, because they may not be wanted: a save editor (the
 rescue page's paste box already does it, and a friendly emerald editor is also a

@@ -40,7 +40,9 @@
       ...(streakBonus > 0 ? [[`Day ${streak} streak`, `+${streakBonus}`]] : []),
       ...(r.rods > 0 ? [['Blaze rods', `+${r.rods}`]] : []),
       ...(isExp && !expFirst && r.win ? [['↻ Replay', 'base reward only']] : []),
-      ...(mastery?.objective ? [['Quest goal', mastery.objective.done ? 'DONE!' : `${mastery.objective.current}/${mastery.objective.target}`]] : []),
+      // "This run", never "quest": the chapter quest on the menu is a different
+      // thing, and a lost run does not get to call its goal done.
+      ...(mastery?.objective ? [['This run', r.win && mastery.objective.done ? 'DONE!' : `${mastery.objective.current}/${mastery.objective.target}`]] : []),
       ['Biggest crowd', `${r.bestCrowd}`],
       ...(r.mode === 'shooter' ? [[' Mobs blasted', `${r.kills}`]] : []),
       ...(isExp ? [] : [[' ' + r.biome, r.win ? 'CLEARED!' : 'try again!']]),

@@ -6,7 +6,7 @@
   refresh: this just derives off whatever nav.hud currently holds.
 -->
 <script>
-  import { nav } from '../lib/store.svelte.js';
+  import { nav, save } from '../lib/store.svelte.js';
 
   let { game, pauseGame } = $props();
 
@@ -22,14 +22,17 @@
 
   const chips = $derived.by(() => {
     const c = [];
-    if (h.mode === 'shooter') c.push(h.autoFire ? 'CALM · AUTO FIRE' : (h.firing ? 'FIRING' : 'HOLD TO FIRE'));
+    // HOLD TO FIRE teaches the gesture once. After the first hold it is dead
+    // text sitting in the busiest strip of the screen, so it goes with the
+    // tutorial flag rather than staying up for every run.
+    if (h.mode === 'shooter') c.push(h.autoFire ? 'CALM · AUTO FIRE' : (h.firing ? 'FIRING' : (save.tutorialSeen ? '' : 'HOLD TO FIRE')));
     if (h.mode === 'gates' && h.bossActive) c.push(h.autoCharge ? 'CALM · AUTO CHARGE' : (h.charging ? 'CHARGING' : 'HOLD TO CHARGE'));
     if (power.triple > 0) c.push(`3× ${Math.ceil(power.triple)}s`);
     if (power.rapid > 0) c.push(`RAPID ${Math.ceil(power.rapid)}s`);
     if (power.power > 0) c.push(`POWER ${Math.ceil(power.power)}s`);
     if (power.sword > 0) c.push(`SWORD ${Math.ceil(power.sword)}s`);
     if (power.axe > 0) c.push(`AXE ${Math.ceil(power.axe)}s`);
-    return c.join('  ');
+    return c.filter(Boolean).join('  ');
   });
   const bossHint = $derived.by(() => {
     const b = h.boss ?? {};
@@ -60,7 +63,7 @@
   </div>
   {#if h.objectiveText}
     <div id="runObjective" class:done={h.objectiveDone}>
-      QUEST: {h.objectiveText} <b>{h.objectiveDone ? 'DONE!' : h.objectiveProgress}</b>
+      GOAL: {h.objectiveText} <b>{h.objectiveDone ? 'DONE!' : h.objectiveProgress}</b>
     </div>
   {/if}
 </div>
