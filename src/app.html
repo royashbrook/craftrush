@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- ssr is off, so anything set from svelte:head only exists after the app boots.
+     The title and the description have to be in the served bytes to be read by
+     crawlers, link previews and anything that never runs the script. -->
+<title>Craft Rush</title>
+<meta name="description" content="A blocky crowd-runner for kids: grow your mob, blast creepers, beat the boss. no ads, no lives, no timers, nothing to buy, no accounts, no cookies, nothing sold or shared. Works offline.">
 <meta name="theme-color" content="#17141d">
 <link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest">
 <link rel="icon" href="%sveltekit.assets%/icons/icon-192.png">

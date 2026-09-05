@@ -121,7 +121,7 @@
   .backupEmpty { font-size: 11px; color: #8f88a0; text-align: center; padding: 6px; }
 
   #about .panel { gap: 8px; }
-  .noAds { font-weight: 900; font-size: 13px; letter-spacing: 2px; color: #7dff5a;
+  .ethos { font-weight: 900; font-size: 12px; line-height: 1.5; letter-spacing: 0.5px; color: #7dff5a;
     text-shadow: 2px 2px 0 rgba(0,0,0,0.7); text-align: center; }
   .aboutText { font-size: 12px; line-height: 1.55; color: #cfc9d8; text-align: left; }
   .aboutText p + p { margin-top: 8px; }
