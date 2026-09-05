@@ -63,7 +63,10 @@ test('chapter objectives report live progress and completion', () => {
   assert.equal(objectiveState(mastery).done, true);
   assert.match(finishMastery(mastery, {
     win: true, finalCrowd: 12, bestCrowd: 12, kills: 0,
-  }).praise, /^Quest done:/);
+  }).praise, /^Goal done:/);
+  assert.doesNotMatch(finishMastery(mastery, {
+    win: false, finalCrowd: 12, bestCrowd: 12, kills: 0,
+  }).praise, /done/i);
 });
 
 test('a finish-crowd objective keeps the boss-arrival result', () => {

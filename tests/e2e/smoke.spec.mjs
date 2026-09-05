@@ -251,7 +251,8 @@ test('Bow Blitz fires only while the player holds and drags', async ({ page }) =
   const released = await page.evaluate(() => CR.game.volleysFired);
   await page.waitForTimeout(550);
   expect(await page.evaluate(() => CR.game.volleysFired)).toBe(released);
-  await expect(page.locator('#powerChips')).toContainText('HOLD TO FIRE');
+  // the first hold taught the gesture, so the HOLD TO FIRE caption is gone now
+  await expect(page.locator('#powerChips')).not.toContainText('FIRING');
 
   await page.evaluate(() => { CR.game.redstone = 100; });
   await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.72);
@@ -410,7 +411,7 @@ test('an authored milestone owns the same biome on the menu and in the run', asy
 test('run skill cues survive the real browser input and result flow', async ({ page }) => {
   await page.goto('/');
   await page.click('#btnPlayShooter');
-  await expect(page.locator('#runObjective')).toContainText('QUEST:');
+  await expect(page.locator('#runObjective')).toContainText('GOAL:');
 
   await page.evaluate(() => {
     const game = window.CR.game;

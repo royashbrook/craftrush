@@ -214,13 +214,13 @@
 
     <div id="expCard" class="menuSupportCard">
       <div id="expHead">
-        TODAY'S EXPEDITION<span id="expStreak">{expStat.streak > 0 ? `${expStat.streak} DAY STREAK` : ''}</span>
+        THIS WEEK'S EXPEDITION<span id="expStreak">{expStat.streak > 0 ? `${expStat.streak} DAY STREAK` : ''}</span>
       </div>
       <div id="expBody">
         <Sprite name={exp.icon} class="" id="expIcon" scale={4} />
         <div class="expText">
           <div id="expName">{exp.name}</div>
-          <div id="expDesc">{exp.desc} (new expedition every week)</div>
+          <div id="expDesc">{exp.desc} (new one every week, run it daily for a streak)</div>
         </div>
       </div>
       <button class="mcbtn small" id="btnExpedition" onclick={startExpedition}>
