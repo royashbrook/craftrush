@@ -1,7 +1,7 @@
 {
   "name": "Craft Rush — Mob Runner",
   "short_name": "Craft Rush",
-  "description": "Blocky crowd-runner: grow your mob, blast creepers, beat the boss!",
+  "description": "A blocky crowd-runner for kids: grow your mob, blast creepers, beat the boss. no ads, no lives, no timers, nothing to buy, no accounts, no cookies, nothing sold or shared. Works offline.",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
