@@ -1,6 +1,9 @@
 import adapter from '@sveltejs/adapter-static';
 import { appVersion } from './tools/version.mjs';
 
+// Files in static/ that the host reads as its own configuration and never serves.
+export const isHostConfig = (file) => /^_(headers|redirects)$/.test(file);
+
 /** @type {import('@sveltejs/kit').Config} */
 export default {
   kit: {
@@ -33,6 +36,12 @@ export default {
       // registered by hand in src/routes/+layout.svelte, so dev never gets one:
       // a stale worker serving yesterday's app has cost real debugging time
       register: false,
+      // `files` becomes the worker's precache list, and addAll is all or nothing.
+      // Cloudflare consumes static/_headers as configuration and 404s the URL,
+      // which failed the whole install and left the live site with no worker at
+      // all: no offline play, no update banner, and nothing in the build to say so
+      // because vite preview serves the same file happily.
+      files: (file) => !/\.DS_Store/.test(file) && !isHostConfig(file),
     },
   },
 };
