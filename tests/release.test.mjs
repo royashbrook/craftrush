@@ -9,8 +9,13 @@ import { pathToFileURL } from 'node:url';
 import { artifactManifest, assertCurrentDeploy, verifyArtifact } from '../tools/release-artifact.mjs';
 import { compareLive } from '../tools/release-live.mjs';
 import { assertRescueCurrent, inventoryForModules, mergedInventory, noticeText, rescueBuildInputs } from '../tools/license-inventory.mjs';
+import browserConfig from '../playwright.config.mjs';
 
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+
+test('browser output cleanup does not own the native-update evidence directory', () => {
+  assert.equal(browserConfig.outputDir, 'test-results/browser');
+});
 
 test('build preflight generates Kit configuration before compiling the typed rescue entry', () => {
   const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));

@@ -7,6 +7,8 @@ const preview = `npx vite preview --host 127.0.0.1 --port ${port} --strictPort`;
 // Runs the no-cache dev server automatically.
 export default defineConfig({
   testDir: './tests/e2e',
+  // Playwright clears its output directory. Native-update evidence is a sibling.
+  outputDir: 'test-results/browser',
   timeout: 30000,
   fullyParallel: true,
   workers: process.env.CI ? 2 : undefined,
