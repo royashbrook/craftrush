@@ -25,10 +25,11 @@ function fakeCanvas(w = 0, h = 0) {
 globalThis.document = { createElement: () => fakeCanvas(), getElementById: () => null };
 globalThis.window = { addEventListener: noop, removeEventListener: noop };
 
-const { initAssets } = await import('../js/assets.js');
-const { Game } = await import('../js/game.js');
-const { BIOMES, CAMPAIGN, TUNE, loadSave } = await import('../js/config.js');
-const { finishRunSettlement } = await import('../js/settlement.js');
+const { initAssets } = await import('../js/assets.ts');
+const { Game } = await import('../js/game.ts');
+const { BIOMES, CAMPAIGN, TUNE, loadSave } = await import('../js/config.ts');
+const { finishRunSettlement } = await import('../js/settlement.ts');
+const { simulationClock } = await import('../js/clock.ts');
 await initAssets();
 
 function makeGame(overrides = {}, hookOverrides = {}) {
@@ -39,6 +40,34 @@ function makeGame(overrides = {}, hookOverrides = {}) {
   g.resize(430, 900);
   return g;
 }
+
+test('the real game follows the same input/tick trace at 30, 60 and 120 display Hz', () => {
+  const random = Math.random;
+  try {
+    const traces = [30, 60, 120].map(hz => {
+      Math.random = () => 0.5;
+      const game = makeGame({ mode: 'shooter', level: 1 });
+      game.startRun();
+      const clock = simulationClock(), trace = [];
+      let tick = 0;
+      for (let frame = 0; frame < hz * 8; frame++) {
+        clock.advance(1 / hz, false, dt => {
+          game.targetX = tick < 180 ? -1 : 1;
+          game.firing = tick >= 60 && tick < 300;
+          game.update(dt);
+          trace.push([game.t, game.playerX, game.playerZ, game.armyPower(), game.volleysFired,
+            game.kills, game.runEmeralds, game.state, JSON.stringify(game.mastery)]);
+          tick++;
+        });
+      }
+      const snapshot = JSON.stringify(trace);
+      game.destroy();
+      return snapshot;
+    });
+    assert.equal(traces[0], traces[1]);
+    assert.equal(traces[1], traces[2]);
+  } finally { Math.random = random; }
+});
 
 function runToBossDeath(g, maxTicks = 8000) {
   let ticks = 0;
@@ -138,7 +167,7 @@ test('a real engine result reaches the settlement boundary exactly once', () => 
   assert.equal(result.biomeId, g.biome.id);
   const settled = finishRunSettlement(g.save, result, {
     now: Date.UTC(2026, 6, 27),
-    persist: () => { persists++; },
+    persist: () => { persists++; return true; },
     backup: () => { backups++; },
   });
   assert.equal(settled.applied, true);
@@ -152,7 +181,7 @@ test('a real engine result reaches the settlement boundary exactly once', () => 
 
   const saved = JSON.stringify(g.save);
   const duplicate = finishRunSettlement(g.save, result, {
-    persist: () => { persists++; },
+    persist: () => { persists++; return true; },
     backup: () => { backups++; },
   });
   assert.equal(duplicate.applied, false);

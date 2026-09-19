@@ -49,8 +49,8 @@ test('Game.destroy removes input listeners and pending callbacks, and is idempot
     setPointerCapture: noop,
   });
   const [{ Game }, { loadSave }] = await Promise.all([
-    import('../js/game.js'),
-    import('../js/config.js'),
+    import('../js/game.ts'),
+    import('../js/config.ts'),
   ]);
   const game = new Game(canvas, loadSave(), {
     onHud: noop,

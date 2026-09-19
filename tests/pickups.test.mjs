@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CombatMixin } from '../js/combat.js';
-import { TIERS } from '../js/config.js';
+import { CombatMixin } from '../js/combat.ts';
+import { TIERS } from '../js/config.ts';
 
 // Headless integration harness: inject the combat mixin onto a bare object with
 // tiny stubs and drive real update ticks. Audio is already a no-op in node.

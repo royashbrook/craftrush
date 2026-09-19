@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSave } from '../js/config.js';
-import { finishRunSettlement, settleRunResult, SETTLED_RUN_CAP } from '../js/settlement.js';
+import { loadSave } from '../js/config.ts';
+import { finishRunSettlement, settleRunResult, SETTLED_RUN_CAP } from '../js/settlement.ts';
 
 const NOW = new Date(2026, 6, 27, 12).getTime();
 
@@ -32,7 +32,7 @@ test('a normal win settles every persistent run fact once', () => {
 
   const first = finishRunSettlement(save, r, {
     now: NOW,
-    persist: () => { persisted++; },
+    persist: () => { persisted++; return true; },
     backup: () => { backedUp++; },
   });
   assert.equal(first.applied, true);
@@ -52,7 +52,7 @@ test('a normal win settles every persistent run fact once', () => {
   const before = JSON.stringify(save);
   const duplicate = finishRunSettlement(save, { ...r }, {
     now: NOW,
-    persist: () => { persisted++; },
+    persist: () => { persisted++; return true; },
     backup: () => { backedUp++; },
   });
   assert.equal(duplicate.applied, false);
@@ -71,7 +71,7 @@ test('a loss records the run but does not advance or back up', () => {
     rods: 0,
   }), {
     now: NOW,
-    persist: () => {},
+    persist: () => true,
     backup: () => { backedUp++; },
   });
   assert.equal(settled.applied, true);

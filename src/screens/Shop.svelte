@@ -2,15 +2,22 @@
   A compact dressing room. Cards only choose what to inspect; buying, claiming,
   equipping and removing are separate actions in the selected-item preview.
 -->
-<script>
-  import { save, nav, commit, toast } from '../lib/store.svelte.js';
-  import { Audio } from '../../js/audio.js';
-  import { blit, getSprite } from '../../js/assets.js';
-  import { COSMETICS, SKINS, questCosmeticEarned } from '../../js/config.js';
+<script lang="ts">
+  import { save, nav, commit, toast } from '../lib/store.svelte.ts';
+  import type { ShopCategory } from '../lib/store.svelte.ts';
+  import type { Game } from '../../js/game.ts';
+  import type { Skin, Cosmetic, Cape, Trail } from '../../types/craftrush.js';
+  import { Audio } from '../../js/audio.ts';
+  import { blit, getSprite } from '../../js/assets.ts';
+  import { COSMETICS, SKINS, questCosmeticEarned } from '../../js/config.ts';
 
-  let { game } = $props();
+  let { game }: { game: Game } = $props();
 
-  const CATEGORIES = [
+  type ShopItem = Skin | Cosmetic;
+  type ItemState = ReturnType<typeof itemState>;
+  type ItemAction = ReturnType<typeof actionFor>;
+
+  const CATEGORIES: { id: ShopCategory; label: string }[] = [
     { id: 'skin', label: 'SKINS' },
     { id: 'cape', label: 'CAPES' },
     { id: 'hat', label: 'HATS' },
@@ -18,7 +25,7 @@
     { id: 'pet', label: 'PETS' },
   ];
 
-  let selectedId = $state(null);
+  let selectedId = $state<string | null>(null);
 
   const activeSkin = $derived(SKINS.find((s) => s.id === save.skin) || SKINS[0]);
   const category = $derived(CATEGORIES.some((c) => c.id === nav.shopCategory) ? nav.shopCategory : 'skin');
@@ -33,7 +40,7 @@
       || null;
   });
 
-  function itemState(cat, def) {
+  function itemState(cat: ShopCategory, def: ShopItem) {
     const skin = cat === 'skin';
     const owned = skin
       ? save.unlocked.includes(def.id)
@@ -41,21 +48,22 @@
     const equipped = skin
       ? save.skin === def.id
       : save.cosmetics?.[cat] === def.id;
-    const earned = !!def.quest && questCosmeticEarned(save, def);
-    const affordable = !def.quest && save.emeralds >= (def.cost || 0);
+    const quest = 'quest' in def ? def.quest : undefined;
+    const earned = !!quest && questCosmeticEarned(save, def);
+    const affordable = !quest && save.emeralds >= (def.cost || 0);
     const need = Math.max(0, (def.cost || 0) - save.emeralds);
 
     let badge = 'PRICE';
     if (equipped) badge = 'EQUIPPED';
     else if (owned) badge = 'OWNED';
     else if (earned) badge = 'EARNED';
-    else if (def.quest) badge = 'QUEST';
+    else if (quest) badge = 'QUEST';
     else if (affordable) badge = 'READY';
 
     return { owned, equipped, earned, affordable, need, badge };
   }
 
-  function actionFor(cat, def, state) {
+  function actionFor(cat: ShopCategory, def: ShopItem | null, state: ItemState | null) {
     if (!def || !state) return { kind: 'none', label: 'UNAVAILABLE', disabled: true, blocked: true };
     if (state.equipped) {
       return cat === 'skin'
@@ -63,7 +71,7 @@
         : { kind: 'remove', label: 'REMOVE', disabled: false, blocked: false };
     }
     if (state.owned) return { kind: 'equip', label: 'EQUIP', disabled: false, blocked: false };
-    if (def.quest) {
+    if ('quest' in def && def.quest) {
       return state.earned
         ? { kind: 'claim', label: 'CLAIM', disabled: false, blocked: false }
         : { kind: 'quest', label: 'QUEST REWARD', disabled: false, blocked: true };
@@ -73,11 +81,11 @@
       : { kind: 'need', label: `NEED ${state.need} MORE`, disabled: false, blocked: true };
   }
 
-  function stateDescription(def, state) {
+  function stateDescription(def: ShopItem, state: ItemState) {
     if (state.equipped) return `${def.name}, equipped`;
     if (state.owned) return `${def.name}, owned`;
     if (state.earned) return `${def.name}, quest reward earned`;
-    if (def.quest) return `${def.name}, quest reward locked`;
+    if ('quest' in def && def.quest) return `${def.name}, quest reward locked`;
     if (state.affordable) return `${def.name}, affordable for ${def.cost} emeralds`;
     return `${def.name}, costs ${def.cost} emeralds, need ${state.need} more`;
   }
@@ -88,9 +96,10 @@
   // ---------- previews: composites drawn straight into a canvas ----------
   // Sprite only draws one sprite; these are two (body+cape, head+hat), so they
   // stay as small canvas actions rather than <Sprite>.
-  function drawSkinPreview(canvas, skin) {
-    function draw(s) {
-      const g = canvas.getContext('2d');
+  function drawSkinPreview(canvas: HTMLCanvasElement, skin: ShopItem) {
+    function draw(item: ShopItem) {
+      const s = item as Skin;
+      const g = canvas.getContext('2d')!;
       g.imageSmoothingEnabled = false;
       g.clearRect(0, 0, canvas.width, canvas.height);
       const head = getSprite(s.head);
@@ -102,15 +111,17 @@
     return { update: draw };
   }
 
-  function drawCosmeticPreview(canvas, { cat, def, skin }) {
-    function draw({ cat, def, skin }) {
-      const g = canvas.getContext('2d');
+  type CosmeticPreview = { cat: ShopCategory; def: ShopItem; skin: Skin };
+  function drawCosmeticPreview(canvas: HTMLCanvasElement, { cat, def, skin }: CosmeticPreview) {
+    function draw({ cat, def: item, skin }: CosmeticPreview) {
+      const def = item as Cosmetic;
+      const g = canvas.getContext('2d')!;
       g.imageSmoothingEnabled = false;
       g.clearRect(0, 0, canvas.width, canvas.height);
       if (cat === 'cape') {
         const body = getSprite('runner_back', skin.palette, `back_${skin.id}`);
         blit(g, body, 0, 32, 84, 70);
-        const cape = getSprite('cape', def.rainbow ? { c: '#ff5545', C: '#3fa9ff' } : def.colors, `shop_${def.id}`);
+        const cape = getSprite('cape', def.rainbow ? { c: '#ff5545', C: '#3fa9ff' } : (def as Cape).colors, `shop_${def.id}`);
         blit(g, cape, 0, 32, 84 - 70 * (3.5 / 18), 70 * (9 / 18));
         if (def.rainbow) {
           const cols = ['#ff5545', '#ffd94d', '#2eff70', '#3fa9ff', '#c76bff'];
@@ -119,10 +130,10 @@
       } else if (cat === 'hat') {
         const head = getSprite(skin.head);
         blit(g, head, 0, 32, 74, 44);
-        const hat = getSprite(def.sprite);
+        const hat = getSprite(def.sprite!);
         blit(g, hat, 0, 32, 74 - 44 + hat.h * 2.5, hat.h * 5.5);
       } else if (cat === 'trail') {
-        const cols = def.colors;
+        const cols = (def as Trail).colors!;
         for (let i = 0; i < 4; i++) {
           g.globalAlpha = 1 - i * 0.2;
           g.fillStyle = cols[i % cols.length];
@@ -133,7 +144,7 @@
         const arrow = getSprite('arrow');
         blit(g, arrow, 0, 32, 30, 26);
       } else if (cat === 'pet') {
-        const spr = getSprite(def.sprite);
+        const spr = getSprite(def.sprite!);
         blit(g, spr, 0, 32, 76, 54);
       }
     }
@@ -142,7 +153,7 @@
   }
 
   // ---------- navigation and explicit actions ----------
-  function chooseCategory(id, focus = false) {
+  function chooseCategory(id: ShopCategory, focus = false) {
     if (!CATEGORIES.some((c) => c.id === id)) return;
     nav.shopCategory = id;
     selectedId = null;
@@ -150,7 +161,7 @@
     if (focus) requestAnimationFrame(() => document.getElementById(`shopTab-${id}`)?.focus());
   }
 
-  function onTabKeydown(event, index) {
+  function onTabKeydown(event: KeyboardEvent, index: number) {
     let next = null;
     if (event.key === 'ArrowRight') next = (index + 1) % CATEGORIES.length;
     else if (event.key === 'ArrowLeft') next = (index - 1 + CATEGORIES.length) % CATEGORIES.length;
@@ -161,12 +172,12 @@
     chooseCategory(CATEGORIES[next].id, true);
   }
 
-  function chooseItem(def) {
+  function chooseItem(def: ShopItem) {
     selectedId = def.id;
     Audio.sfx('click');
   }
 
-  function deny(action, def, state) {
+  function deny(action: ItemAction, def: ShopItem, state: ItemState) {
     Audio.sfx('gate_bad');
     if (action.kind === 'quest') toast(`Find this on your quest: ${def.name}.`);
     else if (action.kind === 'need') toast(`You need ${state.need} more emeralds.`);

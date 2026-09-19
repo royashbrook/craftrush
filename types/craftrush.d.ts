@@ -1,10 +1,4 @@
-// The shapes worth naming.
-//
-// Not an attempt to type nine thousand lines of engine. These are the places
-// this project has actually been bitten: the save, which is a kid's progress
-// and must never be corrupted; the theme, which is now loaded from disk and so
-// can be wrong in ways nothing else would notice; and the sprite manifest,
-// which is the contract between the art and the code.
+// Public engine, content and save contracts. Retired save payloads stay opaque.
 
 /** A single pixel-art sprite as the art manifest describes it. */
 export interface SpriteMeta {
@@ -42,17 +36,19 @@ export interface Biome {
   sun: string | null;
   clouds?: boolean;
   embers?: boolean;
+  stars?: boolean;
+  dropsRods?: boolean;
   structure?: boolean;
   hillFar: string;
   hillNear: string;
   fog: string;
-  ground: { a: string; b: string; c: string; pathA: string; pathB: string; edge: string };
+  ground: { a: string; b: string; c: string; pathA: string; pathB: string; edge: string; vein?: string };
   /** sprite names, which must exist in the theme's art */
   scenery: string[];
   enemies: string[];
   runStyle?: 'open' | 'fork' | 'sweep';
   obstacle: string;
-  boss?: string;
+  boss: string;
 }
 
 export interface Chapter {
@@ -126,38 +122,145 @@ export interface Save {
   speed: string;
   cosmetics: Record<string, string>;
   cosmeticsOwned: string[];
-  stats: Record<string, number>;
+  stats: SaveStats;
   achievements: string[];
-  expedition: Record<string, unknown>;
+  expedition: { lastDay: string | null; streak: number; [key: string]: unknown };
   /** campaign resources: obsidian, blazeRods, enderEyes, elytra, trims, witherSkulls */
   inventory: Record<string, number>;
   campaign: { done: string[] };
   mastery: PersistentMastery;
-  home: { lastCollect: number };
+  home: { lastCollect: number; [key: string]: unknown };
   mine: {
-    dug: string[]; mx: number; my: number; depth: number;
-    pickaxe: string; inv: Record<string, number>; energy?: number;
+    depth: number; pickaxe: string; energy?: number; [key: string]: unknown;
   };
   roomTiersOwned: string[];
   decorOwned: Record<string, number>;
-  world: Record<string, unknown>;
+  world: unknown;
   settledRunIds?: string[];
+  [key: string]: unknown;
 }
 
 /** Everything a theme folder supplies, keyed by file name. */
 export interface Theme {
   biomes: Biome[];
-  skins: unknown[];
-  cosmetics: Record<string, unknown[]>;
-  enemies: { mobs: Record<string, unknown>; bosses: Record<string, unknown> };
-  campaign: { resources: Record<string, { label: string }>; chapters: Chapter[] };
-  mine: { tiles: Record<string, unknown>; pickaxes: unknown[] };
-  village: { villagers: unknown[]; towns: unknown[]; decor: unknown[]; roomTiers: unknown[] };
-  tiers: unknown;
-  expeditions: unknown[];
+  skins: Skin[];
+  cosmetics: Cosmetics;
+  enemies: { mobs: Record<string, EnemyType>; bosses: Record<string, BossType> };
+  campaign: { resources: Record<string, { label: string; icon?: string }>; chapters: Chapter[] };
+  tiers: Tiers;
+  expeditions: Expedition[];
 }
 
 declare global {
   /** replaced by vite at build time with major.minor.commits-since-tag */
   const __APP_VERSION__: string;
+  interface Window { webkitAudioContext?: typeof AudioContext }
 }
+
+export type Palette = Record<string, string>;
+export type Mode = 'shooter' | 'gates';
+export type RunState = 'menu' | 'run' | 'boss' | 'won' | 'lost' | 'destroyed';
+export type RunStyle = 'classic' | 'open' | 'fork' | 'sweep';
+export type ChoiceTier = 'best' | 'risky' | 'safe' | 'alternate';
+export type GateOp = 'add' | 'mul' | 'scale' | 'sub' | 'div';
+export interface Sprite { frames: HTMLCanvasElement[]; flash: HTMLCanvasElement[]; w: number; h: number; anchor: string }
+export interface BlitOptions { flash?: boolean; alpha?: number; flip?: boolean }
+export interface BillboardOptions extends BlitOptions { palette?: Palette; palKey?: string; zBias?: number; readable?: boolean; shadow?: boolean; yOff?: number; frame?: number }
+export interface Projection { sx: number; sy: number; s: number; rel: number }
+export interface CameraPreset { label: string; camBack: number; camHeight: number; focal: number; horizonFrac: number }
+export type Objective = NonNullable<Chapter['objective']>;
+export interface Skin { id: string; name: string; cost: number; head: string; body?: string; palette: Palette }
+export interface Cosmetic { id: string; name: string; cost: number; quest?: string; rainbow?: boolean; sprite?: string }
+export interface Cape extends Cosmetic { colors?: Palette }
+export interface Trail extends Cosmetic { colors?: string[] }
+export interface Cosmetics { cape: Cape[]; hat: Cosmetic[]; trail: Trail[]; pet: Cosmetic[] }
+export interface Tier { name: string; worth: number; scale: number; max: number; boots: string; weight: number; color: string }
+export interface Tiers { units: Tier[]; maxRunners: number; gradWorth: number; starMult: number }
+export interface EnemyBase { hp: number; speed: number; worldH: number; sprite?: string; hops?: boolean; floats?: boolean; splitsTo?: string; bitePeriod?: number; zigzag?: boolean; teleports?: boolean }
+export interface ExploderType extends EnemyBase { kind: 'exploder'; boomRadius: number; boomKills: number; fuse: number }
+export interface ArcherType extends EnemyBase { kind: 'archer'; range: number; shotPeriod: number; spread?: number; projectile?: 'arrow' | 'fireball' }
+export interface LobberType extends EnemyBase { kind: 'lobber'; range: number; shotPeriod: number; aoeRadius: number; aoeKills: number }
+export type EnemyType = EnemyBase & { kind: 'chaser' | 'swooper' } | ExploderType | ArcherType | LobberType;
+export interface BossType { name: string; hp: number; worldH: number; attacks: string[] }
+export interface Modifiers { speedMul?: number; startWorth?: number; emeraldMul?: number; enemyHpMul?: number; enemies?: string[]; gateBoost?: boolean; appleCommon?: boolean; tntCommon?: boolean }
+export interface Expedition { id: string; name: string; icon: string; desc: string; mode?: Mode; biome?: string; mut?: Modifiers }
+export interface DailyExpedition extends Expedition { level: number; key: string; week: number }
+export interface ThemeManifest { id: string; name: string; blurb: string; art?: string; atlas?: string; data?: string[]; [key: string]: unknown }
+export interface PackedTheme { manifest: ThemeManifest; data: Theme }
+export interface SaveStats { runs: number; wins: number; kills: number; golems: number; gigas: number; totalEmeralds: number; bossWins: Record<string, number>; expeditions: number; [key: string]: unknown }
+export interface Backup { day: string; ts: number; level: number; emeralds: number; code: string }
+export interface Mastery {
+  gateChoices: number; goodGates: number; badGates: number; missedGates: number; riskyGates: number;
+  bestGates: number; alternateGates: number; safeGates: number; combo: number; maxCombo: number;
+  dodges: number; nearMisses: number; damageTaken: number; golemSends: number; usefulGolems: number;
+  golemHits: number; startCrowd: number; objective: Objective | null;
+}
+export interface ObjectiveState { text: string; current: number; target: number; done: boolean }
+export interface FinishFacts { win: boolean; finalCrowd: number; finishCrowd?: number; bestCrowd: number; kills: number }
+export type MasteryTarget = { kind: 'badge'; id: string; label: string; description: string }
+  | { kind: 'grade'; grade: string; label: string } | { kind: 'crowd'; target: number; label: string };
+export interface MasteryMerge { applied: boolean; newBadges: string[]; record: ChapterMasteryUpdateRecord | null; nextTarget: MasteryTarget | null }
+export interface FinishedMastery extends Omit<Mastery, 'objective'> {
+  objective: ObjectiveState | null; win: boolean; finalCrowd: number; bestCrowd: number; kills: number;
+  score: number; grade: MasteryGrade; label: string; praise: string;
+  masteryUpdate?: Pick<MasteryMerge, 'newBadges' | 'record' | 'nextTarget'>;
+}
+export interface RunResult {
+  id: string; win: boolean; level: number; emeralds: number; pickupEmeralds: number; bonus: number;
+  emeraldMul: number; rods: number; kills: number; bestCrowd: number; biome: string; biomeId: string;
+  mode: Mode; structure: boolean; expedition: Pick<Expedition, 'id' | 'name'> | null;
+  chapter: Pick<Chapter, 'id' | 'name' | 'credits' | 'coda'> | null; mastery: FinishedMastery;
+  settlement?: { earned: number; banked: number; streakBonus: number; streak: number; expeditionFirst: boolean };
+}
+export interface HudState {
+  emeralds: number; crowd: number; stars: number; progress: number; redstone: number; redstoneMax: number;
+  golemReady: boolean; golemGrants: number; nextGolemGrant: number | null;
+  level: number; biome: string; mode: Mode; firing: boolean; autoFire: boolean; charging: boolean;
+  autoCharge: boolean; autoGolem: boolean; power: Record<string, number>;
+  objectiveText: string; objectiveProgress: string; objectiveDone: boolean; bossActive: boolean;
+  boss: { name: string; hp: number; max: number; needRunners: number | null; phase: number; phases: number; shielded: boolean };
+}
+export interface GameHooks { onHud: (hud: HudState) => void; onRunEnd: (result: RunResult) => void; onTutorial: (step: 'aim_fire' | 'steer' | 'golem' | null) => void; onPause?: () => void }
+export interface Position { x: number; z: number }
+export interface Unit { ox: number; oz: number; tx: number; tz: number; phase: number; flash: number }
+export interface Enemy extends Position { id: string; type: EnemyType; hp: number; maxHp: number; t: number; flash: number; fuse: number; shotT: number; biteT: number; tpT: number; dead: boolean; routeSide: number }
+export interface Crystal extends Position { hp: number; t: number; dead: boolean }
+export interface Boss extends Position {
+  id: string; type: BossType; name: string; hp: number; maxHp: number; parPower: number; arrivalPower: number;
+  targetZ: number; t: number; flash: number; attackT: number; attackIdx: number; lunge: number;
+  entering: boolean; phases: number; phase: number; shielded: number; rhythmIdx: number; remixIdx: number;
+  healing?: boolean; guarded?: boolean; chargeX?: number; lungeWarn?: number;
+}
+export interface GateShape extends Position { op: GateOp; val: number; halfW: number; risk?: boolean; par?: boolean; automatic?: boolean; meaningful?: boolean; choiceTier?: ChoiceTier | null; parBefore?: number; bestAfter?: number; alternateAfter?: number; followThroughZ?: number; encounterId?: string; reward?: boolean }
+export interface Gate extends GateShape { hits: number; used: boolean; pulse: number; sparkVolley?: number }
+export type SweepMotion = { kind: 'sweep'; amplitude: number; groupId?: string; startZ: number; endZ: number; direction?: number; initialSafeLane?: number; finalSafeLane?: number; originZ?: never; frequency?: never; phase?: never }
+  | { kind: 'sweep'; amplitude: number; startZ?: never; endZ?: never; direction?: never; originZ: number; frequency: number; phase: number };
+export interface AmbushEnemy extends Position { id: string }
+export interface EncounterTrigger { choiceZ: number; dangerZ: number; defaultSide: number; branches: { left: AmbushEnemy[]; right: AmbushEnemy[] }; encounterId?: string; fired: boolean }
+export interface EventCommon { z: number; encounterId?: string; role?: string; _order?: number }
+export type LevelEvent = EventCommon & (
+  | GateShape & { type: 'gate' }
+  | Position & { type: 'enemy'; id: string; routeSide?: number }
+  | Position & { type: 'obstacle'; baseX?: number; motion?: SweepMotion; stationary?: boolean; directed?: boolean }
+  | Position & { type: 'pickup'; kind: string }
+  | Omit<EncounterTrigger, 'fired'> & { type: 'ambush_trigger'; branchRewards?: { left: string; right: string } }
+);
+export interface Encounter { id: string; role: string; startZ: number; endZ: number; threat: boolean; relief: boolean; agency: number; mechanic: string; choiceZ?: number; dangerZ?: number; safeLane?: number; bossPreview?: boolean }
+export interface Obstacle extends Position { baseX: number; hp: number; sprite: string; wobble: number; stationary: boolean; directed: boolean; motion: SweepMotion | null; encounterId?: string }
+export interface Pickup extends Position { kind: string; t: number; hp?: number; dead?: boolean }
+export interface Arrow extends Position { vx: number; dmg: number; big?: boolean; dead?: boolean }
+export type EnemyShot = Position & { vx: number; vz?: number; y: number; dead?: boolean } & (
+  { kind: 'potion'; vy: number; aoe: LobberType } | { kind: 'arrow' | 'fireball' }
+);
+export interface Summon extends Position { t: number; stompT: number; source: string; perfectTiming: boolean; firstImpactT: number | null; impactCount: number; dead?: boolean }
+export interface Particle extends Position { y: number; vx: number; vy: number; vz: number; life: number; color: string; size: number }
+export interface Ring extends Position { r: number; maxR: number; life: number; T: number }
+export interface Floaty extends Position { text: string; y: number; vy: number; life: number; T: number; color: string; sizeMul: number }
+export interface Wave extends Position {
+  halfW: number; warn: number; speed: number; kills: number; color?: string; lossFraction?: number;
+  warnTotal?: number; sweep?: { fromX: number; toX: number }; threatened?: boolean; beatId?: string;
+  groupId?: string; ambush?: AmbushEnemy[]; remix?: string; safeLane?: number; stationaryLane?: boolean;
+  commitSide?: number; dead?: boolean;
+}
+export interface BossMetrics { warnings: number; resolved: number; threatening: number; hits: number; dodges: number; actionsStarted: number; beats: Map<string, { active: number; threatened: boolean; hit: boolean }> }
+export interface GolemGrant { progress: number; awarded: boolean; wasted: boolean }

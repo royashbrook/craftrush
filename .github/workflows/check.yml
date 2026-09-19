@@ -1,0 +1,63 @@
+name: check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: strict application types
+        run: npm run check
+      - name: rules, persistence and release contracts
+        run: npm test
+      # Before a new milestone is tagged the candidate is explicitly a preview,
+      # never a fallback release. This workflow has no deployment credentials.
+      - name: build the development candidate
+        run: npm run build:dev
+      - run: npx playwright install --with-deps chromium webkit
+      - name: all browser projects against that artifact
+        id: browsers
+        run: npx playwright test --forbid-only --retries=0 --workers=2 --reporter=line,json
+        env:
+          PW_TARGET: build
+          PW_PREBUILT: "1"
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/browser-report.json
+      - name: require executed passing coverage
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const report = JSON.parse(readFileSync('test-results/browser-report.json', 'utf8'));
+          for (const field of ['unexpected', 'flaky', 'skipped']) assert.equal(report.stats[field], 0, `browser ${field}`);
+          assert.ok(report.stats.expected > 0, 'browser tests must actually run');
+          NODE
+      - name: verify candidate bytes and distribution notices
+        run: node tools/release-artifact.mjs build --development
+        env:
+          CRAFTRUSH_EXPECTED_SOURCE: ${{ github.sha }}
+      - name: native legacy update and offline recovery
+        run: node tools/verify-update.mjs --candidate build --evidence test-results/native-update
+      - name: retain browser evidence
+        if: always() && steps.browsers.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-evidence
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7

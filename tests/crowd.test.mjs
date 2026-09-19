@@ -1,14 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CrowdMixin } from '../js/crowd.js';
-import { TIERS } from '../js/config.js';
+import { CrowdMixin } from '../js/crowd.ts';
+import { TIERS } from '../js/config.ts';
 import {
   crowdPowerVisualScale,
   gameplayVisualScale,
   gameplayVisualX,
   gateSignFontSize,
   gateVisualScale,
-} from '../js/render.js';
+} from '../js/render.ts';
 
 // A minimal object carrying the crowd methods; setWorth with fx=false touches
 // no fx/audio/cam, so no DOM is needed.

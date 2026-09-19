@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSave, exportSave, importSave, resetSave } from '../js/config.js';
+import { loadSave, exportSave, importSave, resetSave } from '../js/config.ts';
 
 function withStorage(seed) {
   const store = {};

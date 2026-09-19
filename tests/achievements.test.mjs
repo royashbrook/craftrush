@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkAchievements, ACHIEVEMENTS } from '../js/achievements.js';
+import { checkAchievements, ACHIEVEMENTS } from '../js/achievements.ts';
 
 const fullSave = () => ({
   bestCrowd: 600, bestLevel: 9,

@@ -1,5 +1,7 @@
 import adapter from '@sveltejs/adapter-static';
-import { appVersion } from './tools/version.mjs';
+import { releaseIdentity } from './tools/version.mjs';
+
+const release = releaseIdentity();
 
 // Files in static/ that the host reads as its own configuration and never serves.
 export const isHostConfig = (file) => /^_(headers|redirects)$/.test(file);
@@ -28,9 +30,9 @@ export default {
     // base here that would have to be kept in sync with someone else's config.
     paths: { relative: true },
 
-    // The default version is a timestamp, so every rebuild would retire every
-    // client's cache even when nothing changed. Key it to the release instead.
-    version: { name: appVersion() },
+    // Same-version rebuilds and rollbacks still need an update. UI metadata,
+    // Kit's version document and the worker share the same build identity.
+    version: { name: release.fingerprint },
 
     serviceWorker: {
       // registered by hand in src/routes/+layout.svelte, so dev never gets one:

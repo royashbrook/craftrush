@@ -25,8 +25,8 @@ if (!globalThis.document) globalThis.document = { createElement: fakeCanvas, get
 if (!globalThis.window) globalThis.window = { addEventListener: noop, removeEventListener: noop };
 
 const [{ Game }, { loadSave, TUNE }] = await Promise.all([
-  import('../../js/game.js'),
-  import('../../js/config.js'),
+  import('../../js/game.ts'),
+  import('../../js/config.ts'),
 ]);
 
 function seeded(seed) {

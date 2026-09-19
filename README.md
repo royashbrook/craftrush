@@ -8,13 +8,11 @@ assets, fully offline after first load.
 
 ## Versioning
 
-The version shown in the top corner of the menu is **computed at build time** by
-`svelte.config.js`, you don't hand-edit it. It's semver:
-**major.minor come from the latest git tag, and the patch is the number of commits
-since that tag.** So every deploy bumps the patch automatically (`1.1.3`, `1.1.4`, …),
-and cutting a milestone is just tagging the next `v1.x` in git (`v1.2`, …), which
-resets the patch. (`VERSION` in `js/config.js` is only a fallback for an unbuilt or
-git-less checkout.)
+The top-right version is derived from the nearest `vMAJOR.MINOR` milestone on
+main's first-parent history. Patch counts all commits since it. A separate build
+fingerprint identifies the exact input snapshot for updates. Production refuses
+missing history/tags, dirty trees and backwards legacy anchors; no fallback build
+can deploy. See [the release contract](docs/release.md) for commands and evidence.
 
 Picking this up cold? Read [docs/HANDOFF.md](docs/HANDOFF.md) first: architecture,
 the standalone deploy, save handoff, and the gotchas that cost hours.
@@ -22,14 +20,15 @@ the standalone deploy, save handoff, and the gotchas that cost hours.
 ## Develop
 
 ```sh
-npm install        # once
+npm ci             # Node 22, exact lockfile
 npm run dev        # vite dev server, no service worker, always fresh
 npm test           # unit + headless integration
 npm run test:e2e   # browser e2e (playwright)
 npm run art        # rebuild the atlas after editing themes/<id>/art/*.png
-npm run build      # build/, a prerendered page plus a service worker
+npm run build:dev  # explicitly labelled local artifact, including a worker
+npm run build      # strict release: clean tree and eligible milestone required
 npm run preview    # serve the built output exactly as it deploys
-npm run check      # svelte-check over the components and typed modules
+npm run check      # strict Svelte + TypeScript over the complete application
 ```
 
 Play a different theme with `?theme=neon` in the browser, or
@@ -46,9 +45,9 @@ Two test layers:
 - **Browser e2e** (Playwright, against dev or the built output). One-time setup
   then run:
   ```sh
-  npm install && npx playwright install chromium
+  npm ci && npx playwright install chromium webkit
   npm run test:e2e                  # dev server, desktop + mobile viewports
-  npm run test:build                # production build, including WebKit
+  PW_TARGET=build PW_PREBUILT=1 npm run test:e2e # the artifact already built above
   ```
 
 SvelteKit writes the production app to `build/`. Its service worker receives the
@@ -74,7 +73,7 @@ The dev server is the quickest local path:
 npm run dev
 ```
 
-For the exact production shape, run `npm run build && npm run preview`. On a
+For the local production shape, run `npm run build:dev && npm run preview`. On a
 phone, use the machine's LAN address, then "Add to Home Screen" to install it as
 an offline fullscreen app.
 
@@ -116,7 +115,7 @@ an offline fullscreen app.
   dodging and the golem are everything. Bosses still attack, so steer through
   warned safe lanes while the crowd charges.
 
-The toggle is data-driven (`mode` in `js/config.js` / menu button) — same engine,
+The mode is data-driven (`mode` in `js/config.ts` / the two play buttons): same engine,
 systems switch off cleanly.
 
 ## Reskinning / extending
@@ -133,7 +132,7 @@ Everything visual is data:
   base palette the colour variants are derived from.
 - `themes/<id>/atlas.png` + `atlas.json` — build output. Nothing edits these by
   hand.
-- `js/config.js` — engine tuning, economy, save schema and compatibility
+- `js/config.ts` — engine tuning, economy, save schema and compatibility
   re-exports for theme data.
 - Levels are procedurally generated from the level number (seeded), difficulty
   scales automatically; 7 biomes cycle forever.
@@ -144,15 +143,17 @@ Everything visual is data:
 src/routes/+page.svelte   boot, canvas sizing and engine loop
 src/App.svelte            app bar, screen stack and bottom navigation
 src/screens/              one Svelte component per game screen
-src/lib/store.svelte.js   reactive save, navigation and back gesture
-src/service-worker.js     generated-file precache
-js/game.js                run lifecycle and engine composition
-js/encounters.js          seeded eight-beat encounter direction
-js/levelgen.js            directed track runtime and event spawning
-js/combat.js              gates, enemies, pickups and summons
-js/boss.js                boss fights
-js/mastery.js             run grades, persistent records, badges and next target
-js/config.js              tuning, economy, save and theme re-exports
+src/lib/store.svelte.ts   reactive save, navigation and back gesture
+src/lib/update.ts         bounded update discovery, consent and lifecycle
+src/service-worker.ts     exact-build precache, held-client cache retention
+js/game.ts                run lifecycle and engine composition
+js/clock.ts               fixed 60Hz simulation, bounded catch-up
+js/encounters.ts          seeded eight-beat encounter direction
+js/levelgen.ts            directed track runtime and event spawning
+js/combat.ts              gates, enemies, pickups and summons
+js/boss.ts                boss fights
+js/mastery.ts             run grades, persistent records, badges and next target
+js/config.ts              tuning, economy, save and theme re-exports
 themes/<id>/              theme data, source art and packed atlas
 tools/                    theme, atlas and rescue-page builders
 tests/                    node integration and Playwright browser coverage

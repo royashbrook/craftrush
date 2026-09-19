@@ -4,7 +4,7 @@ Everything needed to pick this project up. Read this first, then `README.md`.
 
 ## What it is
 
-Craft Rush: a Minecraft-flavoured crowd runner, built for Roy's kids. It is live
+Craft Rush: a Minecraft-flavoured crowd runner, built for my kids. It is live
 at **craftrush.royashbrook.com** and is genuinely played, which is the single
 most important fact about it. Two consequences:
 
@@ -16,7 +16,9 @@ most important fact about it. Two consequences:
 - **No ads, ever.** That is the reason the project exists. It is on the About
   page in those words. Do not add analytics, trackers or third party embeds.
 
-Current release: **v1.10.1**, tag `v1.10.1`. The core reset retires the town,
+The current deployed identity is served at `/release.json` after the house-spec
+migration; the release issue [#139](https://github.com/royashbrook/craftrush/issues/139)
+holds the exact receipt. The historical v1.10 core reset retired the town,
 houses, playroom, village, mine, and idle emeralds without rewriting their old
 save fields. Bow Blitz and Gate Dash are direct play buttons, with no separate
 mode-selection step. `main` is the deployed branch.
@@ -24,14 +26,14 @@ mode-selection step. `main` is the deployed branch.
 ## The standalone deploy and old-address handoff
 
 This repo builds and deploys the game directly. Pushing to `main` runs
-`.github/workflows/deploy-site.yml`: full-history checkout, unit tests,
-`npm run build`, a real-version guard, then `wrangler deploy`. `wrangler.jsonc`
+`.github/workflows/deploy-site.yml`: full-history checkout, strict types, unit and
+artifact browser tests, verified release identity, then deployment. `wrangler.jsonc`
 owns the `craftrush.royashbrook.com` custom domain and serves `build/` as static
 assets.
 
-Full history is not optional. The release and service-worker cache key come from
-the latest tag plus commits since it. A shallow checkout stamps `0.0.0-dev`, so
-CI refuses to deploy one.
+Full history is not optional. Missing history or tags fails release mode; it does
+not produce a deployable fallback. [release.md](release.md) owns the version,
+fingerprint, concurrent-deploy, notice and native-update contracts.
 
 The companion **`royashbrook/royashbrook.com`** repo no longer builds the game.
 Its `/craftrush/` page stays as a first-party save handoff because localStorage
@@ -55,14 +57,15 @@ verify the live hostname afterwards, never just the CI status.
 ## Run it
 
 ```sh
-npm install          # also installs the git hooks, see Conventions
+npm ci               # Node 22, lockfile install; also installs git hooks
 npm run dev          # vite dev server, no service worker
 npm test             # node unit and engine-integration tests
 npm run test:e2e     # playwright, four browser/device projects, against dev
 npm run test:build   # the same suite against the BUILT output. Do not skip this.
 npm run art          # rebuild themes + atlas after editing art or theme data
-npm run build        # production build into build/
-npm run check        # svelte-check
+npm run build:dev    # explicit local artifact into build/
+npm run build        # strict clean/tagged production build
+npm run check        # strict complete-application Svelte + TypeScript check
 npm run metrics:balance # reproducible five-cohort balance matrix
 ```
 
@@ -80,21 +83,24 @@ src/           the SvelteKit app. One route, one screen stack, no URLs.
   routes/+page.svelte   boots the game, owns the stage and canvas
   App.svelte            top bar, bottom nav, the screen stack
   screens/*.svelte      one per screen
-  lib/store.svelte.js   the save, nav state, the back gesture
-  service-worker.js     precache list comes from $service-worker
+  lib/store.svelte.ts   the save, nav state, the back gesture
+  lib/update.ts        bounded update discovery and explicit consent
+  service-worker.ts    exact-build precache; old clients retain their modules
 themes/<id>/   a theme: data JSON, art/ source PNGs, built atlas
 tools/         pack-atlas, pack-themes, build-rescue, png
 static/        served verbatim. themes/ and rescue.html are GENERATED here.
 tests/         node tests + tests/e2e (playwright)
 ```
 
-The engine is plain JavaScript and stays that way. TypeScript is opt in per file
-with a `// @ts-check` pragma; the data layer is checked, the rest is not.
+Application modules and Svelte components are strict TypeScript. Tools and tests
+may remain JavaScript. Canvas owns rendering, framework-free modules own rules,
+and Svelte owns screens and lifetime. [architecture.md](architecture.md) records
+the preserved baseline, intentional changes and evidence limits.
 
 ## Themes are the big idea
 
 A theme is a folder. Biomes, skins, cosmetics, mobs, the campaign, and the
-expeditions are all data. `config.js` re-exports it so every
+expeditions are all data. `config.ts` re-exports it so every
 call site is untouched, which is what makes a theme swap a folder swap.
 
 The line to hold: **if changing it changes how the game PLAYS it is engine; if
@@ -115,7 +121,7 @@ Every one of these is a real scar. The comments in the code say so too.
 912pt screen and orphans the strip at the bottom, so the nav floats above the
 home indicator. Took three wrong fixes to find.
 
-**No top-level await, anywhere.** `theme.js` used to fetch its data, which made
+**No top-level await in the browser module graph.** `theme.js` used to fetch its data, which made
 it an async module, which under code splitting changes the order chunks
 evaluate in. Safari enforces that order differently from Chromium. The router's
 first navigation ran before the chunk holding Svelte's helpers had initialised,
@@ -175,7 +181,7 @@ not `./rescue`: the bare path 404s on any plain static server including
 push, since a hook cannot police a commit made through the web UI. File the
 issue first, including for small things.
 
-Commit messages are prose that explains WHY, in Roy's voice. Read a few with
+Commit messages are prose that explains WHY. Read a few with
 `git log` before writing one. No em dashes anywhere in issues or PR bodies:
 there is a hook that rejects them, and it is right to.
 

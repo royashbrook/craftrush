@@ -1,21 +1,23 @@
 <!-- The runner is the product. Each game mode is its own play button; the quest
   and expedition sit behind them as reasons to run, never destinations that
   compete with them. -->
-<script>
+<script lang="ts">
   import { onMount, tick } from 'svelte';
-  import { save, nav, commit, go, toast } from '../lib/store.svelte.js';
-  import { Audio } from '../../js/audio.js';
+  import { save, nav, commit, go, toast } from '../lib/store.svelte.ts';
+  import type { Game } from '../../js/game.ts';
+  import type { Save } from '../../types/craftrush.js';
+  import { Audio } from '../../js/audio.ts';
   import {
     BIOMES, CAMPAIGN, RESOURCES, currentChapter, chapterMissing,
     dailyExpedition, expeditionStatus, importSave,
-  } from '../../js/config.js';
-  import { masteryChapterEligible, nextMasteryTarget } from '../../js/mastery.js';
-  import { isStandaloneApp, shouldOfferLegacyRestore } from '../../js/pwa-safety.js';
+  } from '../../js/config.ts';
+  import { masteryChapterEligible, nextMasteryTarget } from '../../js/mastery.ts';
+  import { isStandaloneApp, shouldOfferLegacyRestore } from '../../js/pwa-safety.ts';
   import Sprite from '../lib/Sprite.svelte';
 
-  let { game } = $props();
+  let { game }: { game: Game } = $props();
 
-  let panel = $state(null);
+  let panel = $state<HTMLDivElement>();
   let tier = $state('');          // '', 'compact' or 'compact tight'
   let standalone = $state(false);
   let restoreBusy = $state(false);
@@ -39,7 +41,7 @@
   const exp = $derived(dailyExpedition());
   const expStat = $derived(expeditionStatus(save));
   const masteryTarget = $derived(
-    masteryChapterEligible(chapter) ? nextMasteryTarget(save, chapter.id) : null,
+    masteryChapterEligible(chapter) ? nextMasteryTarget(save, chapter!.id) : null,
   );
   const offerLegacyRestore = $derived(
     standalone
@@ -79,7 +81,7 @@
     finishLegacyRestoreOffer();
   }
 
-  function start(mode) {
+  function start(mode: Save['mode']) {
     Audio.unlock();
     Audio.sfx('click');
     save.mode = mode;
@@ -198,7 +200,7 @@
       </div>
       <div id="questNeed">
         {#if missing}
-          Need {Object.entries(missing).map(([k, n]) => `${n} more ${RESOURCES[k].label}`).join(', ')} for {next.name}.
+          Need {Object.entries(missing).map(([k, n]) => `${n} more ${RESOURCES[k].label}`).join(', ')} for {next!.name}.
         {/if}
       </div>
       {#if masteryChapterEligible(chapter)}

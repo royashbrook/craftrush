@@ -6,9 +6,10 @@
   No svelte:head here: with ssr off it only runs after boot, so the title and
   description live in src/app.html where the served bytes carry them.
 -->
-<script>
+<script lang="ts">
   import '../app.css';
-  let { children } = $props();
+  import type { Snippet } from 'svelte';
+  let { children }: { children: Snippet } = $props();
 </script>
 
 {@render children()}

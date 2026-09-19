@@ -266,328 +266,202 @@ test('in-app import confirms replacement and keeps a byte-exact rollback', async
   await expect(page.locator('#menu')).toBeVisible();
 });
 
-test('a claimed worker update waits until the run and result are both clear', async ({ page, context }) => {
+// These are page-coordinator tests with a modeled worker. Actual old-build and
+// cache lifecycle evidence is supplied separately by tools/verify-update.mjs.
+async function modelUpdates(page, context, initial = 'waiting') {
   test.skip(process.env.PW_TARGET !== 'build', 'service workers are deliberately absent in dev');
-  await context.addInitScript(() => {
-    const boots = Number(sessionStorage.getItem('craftrush_test_boots') || 0) + 1;
-    sessionStorage.setItem('craftrush_test_boots', String(boots));
-    let controllerChange = null;
-    const serviceWorker = {
-      controller: {},
-      register: async () => ({}),
-      addEventListener: (type, listener) => {
-        if (type === 'controllerchange') controllerChange = listener;
-      },
-      removeEventListener: (type, listener) => {
-        if (type === 'controllerchange' && controllerChange === listener) controllerChange = null;
-      },
+  const current = (await (await page.request.get('/release.json')).json()).fingerprint;
+  await context.addInitScript(({ current, initial }) => {
+    const key = 'craftrush_update_test_boots';
+    const boots = Number(sessionStorage.getItem(key) || 0) + 1;
+    sessionStorage.setItem(key, String(boots));
+    const next = current === 'a'.repeat(64) ? 'b'.repeat(64) : 'a'.repeat(64);
+    let target = boots === 1 && initial === 'waiting' ? next : current;
+    let probes = 0;
+    let checks = 0;
+    let posts = 0;
+    const fetchOriginal = window.fetch.bind(window);
+    window.fetch = (input, options) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('release.json?update-probe')) {
+        probes++;
+        return Promise.resolve(new Response(JSON.stringify({ fingerprint: target }), { status: 200 }));
+      }
+      return fetchOriginal(input, options);
     };
-    Object.defineProperty(navigator, 'serviceWorker', {
-      configurable: true,
-      value: serviceWorker,
+    const service = new EventTarget();
+    const registration = new EventTarget();
+    const worker = (fingerprint, state) => Object.assign(new EventTarget(), {
+      state,
+      postMessage(message, ports) {
+        if (message.type === 'CRAFTRUSH_VERSION') ports?.[0]?.postMessage(fingerprint);
+        if (message.type === 'CRAFTRUSH_ACTIVATE') {
+          posts++;
+          this.state = 'activating';
+          setTimeout(() => {
+            this.state = 'activated';
+            registration.active = this;
+            registration.waiting = null;
+            service.controller = this;
+            service.dispatchEvent(new Event('controllerchange'));
+          }, 0);
+        }
+      },
     });
-    window.__claimUpdatedWorker = () => controllerChange?.();
-  });
+    const old = worker(current, 'activated');
+    const fresh = worker(next, 'installed');
+    Object.assign(registration, {
+      active: old, waiting: boots === 1 && initial === 'waiting' ? fresh : null, installing: null,
+      update: async () => { checks++; },
+    });
+    Object.assign(service, {
+      controller: initial === 'first' ? null : old,
+      register: async (_url, options) => {
+        window.__registerOptions = options;
+        if (boots === 1 && initial === 'boot-claim') queueMicrotask(() => window.__claimNext());
+        return registration;
+      },
+    });
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: service });
+    window.__claimNext = () => {
+      target = next;
+      fresh.state = 'activated';
+      service.controller = fresh;
+      registration.active = fresh;
+      registration.waiting = null;
+      service.dispatchEvent(new Event('controllerchange'));
+    };
+    window.__claimFirst = () => {
+      service.controller = old;
+      service.dispatchEvent(new Event('controllerchange'));
+    };
+    window.__park = () => { target = next; registration.waiting = fresh; };
+    window.__install = () => {
+      target = next; fresh.state = 'installing'; registration.installing = fresh;
+      registration.dispatchEvent(new Event('updatefound'));
+      registration.installing = null; registration.waiting = fresh; fresh.state = 'installed';
+      fresh.dispatchEvent(new Event('statechange'));
+    };
+    window.__updates = () => ({ probes, checks, posts, boots });
+  }, { current, initial });
+}
 
+test('a claimed worker update waits for the run, result, and explicit consent', async ({ page, context }) => {
+  await modelUpdates(page, context, 'none');
   await page.goto('/');
   await page.locator('#btnPlayShooter').click();
-  await page.evaluate(() => window.__claimUpdatedWorker());
+  await page.evaluate(() => window.__claimNext());
   await page.waitForTimeout(300);
-  expect(await page.evaluate(() => sessionStorage.getItem('craftrush_test_boots'))).toBe('1');
+  expect((await page.evaluate(() => window.__updates())).boots).toBe(1);
   expect(await page.evaluate(() => CR.nav.playing)).toBe(true);
-
+  await expect(page.locator('#updateBanner')).toHaveCount(0);
   await page.evaluate(() => CR.game.endRun(false));
   await expect(page.locator('#result')).toBeVisible();
-  await page.waitForTimeout(300);
-  expect(await page.evaluate(() => sessionStorage.getItem('craftrush_test_boots'))).toBe('1');
-
-  await page.evaluate(() => {
-    CR.nav.result = null;
-    CR.nav.playing = false;
-  });
-  await expect.poll(async () => {
-    try {
-      return await page.evaluate(() => sessionStorage.getItem('craftrush_test_boots'));
-    } catch {
-      return null;
-    }
-  }).toBe('2');
-  await expect(page.locator('#menu')).toBeVisible();
+  await expect(page.locator('#updateBanner')).toHaveCount(0);
+  await page.evaluate(() => { CR.nav.result = null; CR.nav.playing = false; });
+  await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
+  expect((await page.evaluate(() => window.__updates())).boots).toBe(1);
+  await page.locator('#btnApplyUpdate').click();
+  await expect.poll(() => page.evaluate(() => window.__updates()?.boots)).toBe(2);
 });
 
-test('a first worker install stays put and a later claim reloads safely', async ({ page, context }) => {
-  test.skip(process.env.PW_TARGET !== 'build', 'service workers are deliberately absent in dev');
-  await context.addInitScript(() => {
-    const boots = Number(sessionStorage.getItem('craftrush_first_install_boots') || 0) + 1;
-    sessionStorage.setItem('craftrush_first_install_boots', String(boots));
-    let controllerChange = null;
-    Object.defineProperty(navigator, 'serviceWorker', {
-      configurable: true,
-      value: {
-        controller: null,
-        register: async () => ({}),
-        addEventListener: (type, listener) => {
-          if (type === 'controllerchange') controllerChange = listener;
-        },
-        removeEventListener: () => {},
-      },
-    });
-    window.__claimFirstWorker = () => controllerChange?.();
-  });
-
+test('first install stays put and a later claim still requires consent', async ({ page, context }) => {
+  await modelUpdates(page, context, 'first');
   await page.goto('/');
-  await page.locator('#btnPlayShooter').waitFor();
-  await page.evaluate(() => window.__claimFirstWorker());
+  await expect(page.locator('#menu')).toBeVisible();
+  await page.evaluate(() => window.__claimFirst());
   await page.waitForTimeout(300);
-  expect(await page.evaluate(() =>
-    sessionStorage.getItem('craftrush_first_install_boots'))).toBe('1');
-  await expect(page.locator('#menu')).toBeVisible();
-
-  await page.evaluate(() => window.__claimFirstWorker());
-  await expect.poll(async () => {
-    try {
-      return await page.evaluate(() => sessionStorage.getItem('craftrush_first_install_boots'));
-    } catch {
-      return null;
-    }
-  }).toBe('2');
-  await expect(page.locator('#menu')).toBeVisible();
+  expect((await page.evaluate(() => window.__updates())).boots).toBe(1);
+  await expect(page.locator('#updateBanner')).toHaveCount(0);
+  await page.evaluate(() => window.__claimNext());
+  await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
+  expect((await page.evaluate(() => window.__updates())).boots).toBe(1);
+  await page.locator('#btnApplyUpdate').click();
+  await expect.poll(() => page.evaluate(() => window.__updates()?.boots)).toBe(2);
 });
 
-test('a worker claim during asset boot is not missed', async ({ page, context }) => {
-  test.skip(process.env.PW_TARGET !== 'build', 'service workers are deliberately absent in dev');
-  await context.addInitScript(() => {
-    const boots = Number(sessionStorage.getItem('craftrush_boot_claim_boots') || 0) + 1;
-    sessionStorage.setItem('craftrush_boot_claim_boots', String(boots));
-    let controllerChange = null;
-    Object.defineProperty(navigator, 'serviceWorker', {
-      configurable: true,
-      value: {
-        controller: {},
-        register: async () => {
-          if (boots === 1) setTimeout(() => controllerChange?.(), 0);
-          return {};
-        },
-        addEventListener: (type, listener) => {
-          if (type === 'controllerchange') controllerChange = listener;
-        },
-        removeEventListener: () => {},
-      },
-    });
-  });
-
+test('a worker claim during asset boot is discovered without an unsolicited reload', async ({ page, context }) => {
+  await modelUpdates(page, context, 'boot-claim');
   await page.goto('/');
-  await expect.poll(async () => {
-    try {
-      return await page.evaluate(() => sessionStorage.getItem('craftrush_boot_claim_boots'));
-    } catch {
-      return null;
-    }
-  }).toBe('2');
   await expect(page.locator('#menu')).toBeVisible();
+  await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
+  expect((await page.evaluate(() => window.__updates())).boots).toBe(1);
+  await page.locator('#btnApplyUpdate').click();
+  await expect.poll(() => page.evaluate(() => window.__updates()?.boots)).toBe(2);
 });
 
-test('a waiting worker offers an in-app update and activates on request', async ({ page, context }) => {
-  test.skip(process.env.PW_TARGET !== 'build', 'service workers are deliberately absent in dev');
-  await context.addInitScript(() => {
-    const boots = Number(sessionStorage.getItem('craftrush_update_banner_boots') || 0) + 1;
-    sessionStorage.setItem('craftrush_update_banner_boots', String(boots));
-    let controllerChange = null;
-    let updateChecks = 0;
-    const worker = {
-      state: 'installed',
-      postMessage: (message) => {
-        sessionStorage.setItem('craftrush_update_message', JSON.stringify(message));
-        if (message?.type !== 'ACTIVATE_UPDATE') return;
-        worker.state = 'activating';
-        setTimeout(() => {
-          worker.state = 'activated';
-          serviceWorker.controller = {};
-          controllerChange?.();
-        }, 0);
-      },
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    };
-    const registration = {
-      waiting: boots === 1 ? worker : null,
-      installing: null,
-      update: async () => { updateChecks++; },
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    };
-    const serviceWorker = {
-      controller: {},
-      register: async () => registration,
-      addEventListener: (type, listener) => {
-        if (type === 'controllerchange') controllerChange = listener;
-      },
-      removeEventListener: (type, listener) => {
-        if (type === 'controllerchange' && controllerChange === listener) controllerChange = null;
-      },
-    };
-    Object.defineProperty(navigator, 'serviceWorker', {
-      configurable: true,
-      value: serviceWorker,
-    });
-    window.__updateChecks = () => updateChecks;
-  });
-
+test('a verified waiting worker offers an update and activates only on request', async ({ page, context }) => {
+  await modelUpdates(page, context);
   await page.goto('/');
   await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
-  const initialChecks = await page.evaluate(() => window.__updateChecks());
+  const before = await page.evaluate(() => window.__updates());
+  expect(before.posts).toBe(0);
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-  await expect.poll(() => page.evaluate(() => window.__updateChecks())).toBeGreaterThan(initialChecks);
-
+  await expect.poll(() => page.evaluate(() => window.__updates().probes)).toBeGreaterThan(before.probes);
   await page.locator('#btnApplyUpdate').click();
-  await expect.poll(() => page.evaluate(() =>
-    sessionStorage.getItem('craftrush_update_banner_boots'))).toBe('2');
-  expect(await page.evaluate(() =>
-    JSON.parse(sessionStorage.getItem('craftrush_update_message')))).toEqual({ type: 'ACTIVATE_UPDATE' });
+  await expect.poll(() => page.evaluate(() => window.__updates()?.boots)).toBe(2);
   await expect(page.locator('#menu')).toBeVisible();
   await expect(page.locator('#updateBanner')).toHaveCount(0);
 });
 
 test('a worker parked while the PWA slept is found when the page resumes', async ({ page, context }) => {
-  test.skip(process.env.PW_TARGET !== 'build', 'service workers are deliberately absent in dev');
-  await context.addInitScript(() => {
-    let registerOptions = null;
-    let updateChecks = 0;
-    const worker = {
-      state: 'installed',
-      postMessage: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    };
-    const registration = {
-      waiting: null,
-      installing: null,
-      update: async () => { updateChecks++; },
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    };
-    Object.defineProperty(navigator, 'serviceWorker', {
-      configurable: true,
-      value: {
-        controller: {},
-        register: async (_url, options) => {
-          registerOptions = options;
-          return registration;
-        },
-        addEventListener: () => {},
-        removeEventListener: () => {},
-      },
-    });
-    window.__parkSleepingUpdate = () => { registration.waiting = worker; };
-    window.__resumeUpdateState = () => ({ registerOptions, updateChecks });
-  });
-
+  await modelUpdates(page, context, 'none');
   await page.goto('/');
+  await expect(page.locator('#menu')).toBeVisible();
   await expect(page.locator('#updateBanner')).toHaveCount(0);
-  expect((await page.evaluate(() => window.__resumeUpdateState())).registerOptions).toEqual({
-    type: 'module',
-    updateViaCache: 'none',
-  });
-
+  expect(await page.evaluate(() => window.__registerOptions)).toEqual({ type: 'module', updateViaCache: 'none' });
   await page.evaluate(() => {
-    window.__parkSleepingUpdate();
+    window.__park();
     window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
   });
-
   await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
-  expect((await page.evaluate(() => window.__resumeUpdateState())).updateChecks).toBeGreaterThan(1);
+  expect((await page.evaluate(() => window.__updates())).posts).toBe(0);
 });
 
 test('a newly installed update stays out of the run and result', async ({ page, context }) => {
-  test.skip(process.env.PW_TARGET !== 'build', 'service workers are deliberately absent in dev');
-  await context.addInitScript(() => {
-    let updateFound = null;
-    let workerStateChanged = null;
-    const worker = {
-      state: 'installing',
-      postMessage: () => {},
-      addEventListener: (type, listener) => {
-        if (type === 'statechange') workerStateChanged = listener;
-      },
-      removeEventListener: () => {},
-    };
-    const registration = {
-      waiting: null,
-      installing: null,
-      update: async () => {},
-      addEventListener: (type, listener) => {
-        if (type === 'updatefound') updateFound = listener;
-      },
-      removeEventListener: () => {},
-    };
-    Object.defineProperty(navigator, 'serviceWorker', {
-      configurable: true,
-      value: {
-        controller: {},
-        register: async () => registration,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-      },
-    });
-    window.__installUpdate = () => {
-      registration.installing = worker;
-      updateFound?.();
-      registration.waiting = worker;
-      worker.state = 'installed';
-      workerStateChanged?.();
-    };
-  });
-
+  await modelUpdates(page, context, 'none');
   await page.goto('/');
   await page.locator('#btnPlayShooter').click();
-  await page.evaluate(() => window.__installUpdate());
+  await page.evaluate(() => window.__install());
   await expect(page.locator('#updateBanner')).toHaveCount(0);
-
   await page.evaluate(() => CR.game.endRun(false));
   await expect(page.locator('#result')).toBeVisible();
   await expect(page.locator('#updateBanner')).toHaveCount(0);
-
-  await page.evaluate(() => {
-    CR.nav.result = null;
-    CR.nav.playing = false;
-  });
+  await page.evaluate(() => { CR.nav.result = null; CR.nav.playing = false; });
   await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
+  expect((await page.evaluate(() => window.__updates())).posts).toBe(0);
 });
 
-test('the modern worker activates without deleting a neighboring app cache', async ({ page }) => {
+test('modern worker retains old caches until a sole current client acknowledges', async ({ page }) => {
   test.skip(process.env.PW_TARGET !== 'build', 'service workers are deliberately absent in dev');
   await page.goto('/rescue.html');
-  const cacheNames = await page.evaluate(async () => {
-    for (const registration of await navigator.serviceWorker.getRegistrations()) {
-      await registration.unregister();
-    }
+  const before = await page.evaluate(async () => {
+    for (const registration of await navigator.serviceWorker.getRegistrations()) await registration.unregister();
     for (const key of await caches.keys()) await caches.delete(key);
     await caches.open('craftrush-stale-build');
     await caches.open('quarkatamari-v7');
-
     const registration = await navigator.serviceWorker.register(
-      `/service-worker.js?activation-test=${Date.now()}`,
-      { type: 'module', scope: '/' },
-    );
+      '/service-worker.js?activation-test=' + Date.now(), { type: 'module', scope: '/' });
     const worker = registration.installing || registration.waiting || registration.active;
     if (worker && worker.state !== 'activated') {
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('worker activation timed out')), 10000);
         const advance = () => {
           if (worker.state === 'installed') worker.postMessage({ type: 'ACTIVATE_UPDATE' });
-          if (worker.state === 'activated') {
-            clearTimeout(timeout);
-            resolve();
-          }
+          if (worker.state === 'activated') { clearTimeout(timeout); resolve(); }
         };
-        worker.addEventListener('statechange', advance);
-        advance();
+        worker.addEventListener('statechange', advance); advance();
       });
     }
     return caches.keys();
   });
-
-  expect(cacheNames).not.toContain('craftrush-stale-build');
-  expect(cacheNames).toContain('quarkatamari-v7');
-  expect(cacheNames.some((name) => name.startsWith('craftrush-'))).toBe(true);
+  expect(before).toContain('craftrush-stale-build');
+  expect(before).toContain('quarkatamari-v7');
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+  await page.evaluate(async () => {
+    const identity = await (await fetch('/release.json', { cache: 'no-store' })).json();
+    navigator.serviceWorker.controller.postMessage({ type: 'CRAFTRUSH_CLIENT', fingerprint: identity.fingerprint });
+  });
+  await expect.poll(() => page.evaluate(async () => (await caches.keys()).includes('craftrush-stale-build'))).toBe(false);
+  expect(await page.evaluate(async () => (await caches.keys()).includes('quarkatamari-v7'))).toBe(true);
 });

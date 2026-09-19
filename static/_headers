@@ -9,19 +9,25 @@
 # Offline play is unaffected: the service worker precaches into the Cache API,
 # which no-store does not govern.
 /
-  Cache-Control: no-store
+  Cache-Control: no-store, no-transform
 /index.html
-  Cache-Control: no-store
+  Cache-Control: no-store, no-transform
 /rescue
-  Cache-Control: no-store
+  Cache-Control: no-store, no-transform
 /rescue.html
-  Cache-Control: no-store
+  Cache-Control: no-store, no-transform
 /_app/version.json
   Cache-Control: no-store
 /service-worker.js
   Cache-Control: no-store
 /manifest.webmanifest
-  Cache-Control: no-cache
+  Cache-Control: no-store
+/release.json
+  Cache-Control: no-store
+/artifact.json
+  Cache-Control: no-store
+/*
+  X-Content-Type-Options: nosniff
 
 # SvelteKit fingerprints these files by content. They can stay forever; a new
 # shell/version document points at a new URL on every changed build.

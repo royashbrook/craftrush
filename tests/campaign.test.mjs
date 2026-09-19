@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMPAIGN, chapterById, chapterMissing, chapterUnlocked, currentChapter, completeChapter, THEME_ART } from '../js/config.js';
+import { CAMPAIGN, chapterById, chapterMissing, chapterUnlocked, currentChapter, completeChapter, THEME_ART } from '../js/config.ts';
 
 const fresh = () => ({ inventory: {}, campaign: { done: [] } });
 
@@ -99,7 +99,7 @@ test('a milestone chapter is not replayed once it is done', () => {
 });
 
 test('the walk home is peaceful: no enemies, no obstacles, only kind gates', async () => {
-  const { LevelMixin } = await import('../js/levelgen.js');
+  const { LevelMixin } = await import('../js/levelgen.ts');
   const g = { chapter: chapterById('credits'), level: 1, mode: 'gates', mut: {}, biome: { enemies: [], obstacle: 'fence' } };
   Object.assign(g, LevelMixin);
   g.genLevel(1);
@@ -115,7 +115,7 @@ test('the walk home is peaceful: no enemies, no obstacles, only kind gates', asy
 });
 
 test('campaign loot cannot be bought, only brought home', async () => {
-  const { COSMETICS, questCosmeticEarned } = await import('../js/config.js');
+  const { COSMETICS, questCosmeticEarned } = await import('../js/config.ts');
   const loot = Object.values(COSMETICS).flat().filter((c) => c.quest);
   assert.ok(loot.length >= 2, 'the chain hands back things you can wear');
   const rich = { inventory: {}, emeralds: 9e9 };
@@ -129,7 +129,7 @@ test('campaign loot cannot be bought, only brought home', async () => {
 });
 
 test('every chapter has a real place to happen, built out of real art', async () => {
-  const { BIOMES } = await import('../js/config.js');
+  const { BIOMES } = await import('../js/config.ts');
   const { readFileSync } = await import('node:fs');
   const ART = JSON.parse(readFileSync(new URL('sprites.json', THEME_ART + '/'), 'utf8'));
   const places = new Set(BIOMES.map((b) => b.id));

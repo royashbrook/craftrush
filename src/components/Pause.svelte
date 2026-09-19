@@ -4,13 +4,14 @@
   Camera and sound both write straight to `save` and commit immediately —
   there is no separate refresh, the labels are derived from `save` itself.
 -->
-<script>
-  import { save, nav, commit, go, togglePause } from '../lib/store.svelte.js';
-  import { Audio } from '../../js/audio.js';
-  import { CAMERAS } from '../../js/config.js';
+<script lang="ts">
+  import { save, nav, commit, go, togglePause } from '../lib/store.svelte.ts';
+  import type { Game } from '../../js/game.ts';
+  import { Audio } from '../../js/audio.ts';
+  import { CAMERAS } from '../../js/config.ts';
   import Sprite from '../lib/Sprite.svelte';
 
-  let { game } = $props();
+  let { game }: { game: Game } = $props();
 
   const cameraLabel = $derived((CAMERAS[save.camera] || CAMERAS.far).label);
   const soundLabel = $derived(save.sound ? 'ALL SOUND ON' : 'ALL SOUND OFF');

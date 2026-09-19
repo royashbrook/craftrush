@@ -1,14 +1,14 @@
 <!-- One useful mastery target, not a wall of boxes asking to be completed. -->
-<script>
-  import { save } from '../lib/store.svelte.js';
-  import { CAMPAIGN, currentChapter } from '../../js/config.js';
+<script lang="ts">
+  import { save } from '../lib/store.svelte.ts';
+  import { CAMPAIGN, currentChapter } from '../../js/config.ts';
   import {
     BADGES, chapterMastery, masteryChapterEligible, nextMasteryTarget,
-  } from '../../js/mastery.js';
-  import { ACHIEVEMENTS } from '../../js/achievements.js';
+  } from '../../js/mastery.ts';
+  import { ACHIEVEMENTS } from '../../js/achievements.ts';
   import Sprite from '../lib/Sprite.svelte';
 
-  let tab = $state('mastery');
+  let tab = $state<'mastery' | 'achievements'>('mastery');
   let selectedChapterId = $state('');
   const masteryChapters = CAMPAIGN.filter(masteryChapterEligible);
   const defaultChapter = $derived.by(() => {
@@ -91,7 +91,7 @@
         <h2>NEXT TARGET</h2>
         {#if target}
           <strong>{target.label}</strong>
-          {#if target.description}<p>{target.description}</p>{/if}
+          {#if 'description' in target && target.description}<p>{target.description}</p>{/if}
         {:else}
           <strong>CHAPTER MASTERED</strong>
           <p>Every mark is yours. Keep playing for a bigger crowd.</p>

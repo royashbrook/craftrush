@@ -4,36 +4,51 @@
   A result is already settled before this component sees it. Drawing or
   remounting this screen therefore cannot touch the save.
 -->
-<script>
-  import { nav, go, toast } from '../lib/store.svelte.js';
-  import { Audio } from '../../js/audio.js';
-  import { BADGES } from '../../js/mastery.js';
+<script lang="ts">
+  import { nav, go, toast } from '../lib/store.svelte.ts';
+  import type { Game } from '../../js/game.ts';
+  import type { ChapterMasteryUpdateRecord, FinishedMastery, MasteryTarget, RunResult } from '../../types/craftrush.js';
+  import { Audio } from '../../js/audio.ts';
+  import { BADGES } from '../../js/mastery.ts';
   import Sprite from '../lib/Sprite.svelte';
 
-  let { game } = $props();
+  let { game }: { game: Game } = $props();
+
+  type Badge = string | { label?: string; id: string };
+  type ResultRecord = ChapterMasteryUpdateRecord & { grade?: string };
+  type MasteryUpdate = {
+    newBadges?: Badge[];
+    badgesEarned?: Badge[];
+    record?: ResultRecord | null;
+    nextTarget?: MasteryTarget | null;
+  };
+  type DisplayResult = Omit<RunResult, 'mastery' | 'settlement'> & {
+    mastery?: Omit<FinishedMastery, 'masteryUpdate'> & MasteryUpdate & { masteryUpdate?: MasteryUpdate };
+    settlement?: NonNullable<RunResult['settlement']> & { masteryUpdate?: MasteryUpdate };
+  };
 
   const view = $derived(nav.result ? resultView(nav.result) : null);
 
-  function badgeLabel(entry) {
+  function badgeLabel(entry: Badge) {
     if (typeof entry === 'object') return entry.label || entry.id;
     return BADGES.find((badge) => badge.id === entry)?.label || entry;
   }
 
-  function resultView(r) {
+  function resultView(r: DisplayResult) {
     const isExp = !!r.expedition;
-    const settled = r.settlement || {};
+    const settled: Partial<NonNullable<DisplayResult['settlement']>> = r.settlement || {};
     const earned = settled.earned ?? r.emeralds;
     const streakBonus = settled.streakBonus || 0;
     const streak = settled.streak || 0;
     const expFirst = !!settled.expeditionFirst;
     const mastery = r.mastery || null;
-    const update = mastery?.masteryUpdate || settled.masteryUpdate || {};
+    const update: MasteryUpdate = mastery?.masteryUpdate || settled.masteryUpdate || {};
     const newBadges = mastery?.badgesEarned || mastery?.newBadges || update.newBadges || update.badgesEarned || [];
     const record = mastery?.record || update.record || null;
     const nextTarget = mastery?.nextTarget || update.nextTarget || null;
 
     const rows = [
-      ...(isExp ? [[r.expedition.name, r.win ? 'CLEARED!' : 'failed']] : []),
+      ...(isExp ? [[r.expedition!.name, r.win ? 'CLEARED!' : 'failed']] : []),
       ['<span class="em"></span> Emeralds earned', `+${earned}`],
       ...(r.win && !isExp ? [['Victory bonus', `+${r.bonus}`]] : []),
       ...(expFirst && r.emeraldMul > 1 ? [['Expedition bonus', `${r.emeraldMul}× emeralds`]] : []),

@@ -13,7 +13,7 @@ import {
   recordDamage,
   recordDodge,
   recordGate,
-} from '../js/mastery.js';
+} from '../js/mastery.ts';
 
 test('the same run facts always produce the same grade', () => {
   const facts = createMastery(null, 4);

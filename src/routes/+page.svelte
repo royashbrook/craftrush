@@ -8,36 +8,33 @@
   when a run banks emeralds or finishes a chapter, every screen showing those
   numbers updates on its own.
 -->
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
-  import { base } from '$app/paths';
   import { pushState } from '$app/navigation';
-  import { dev } from '$app/environment';
-  import { initAssets, getSprite, assetsReady } from '../../js/assets.js';
-  import { persistSave, THEME_ERROR } from '../../js/config.js';
-  import { finishRunSettlement } from '../../js/settlement.js';
-  import { checkAchievements } from '../../js/achievements.js';
-  import {
-    UPDATE_SUPPORT_ACK,
-    UPDATE_SUPPORT_QUERY,
-    updateReloadIsSafe,
-  } from '../../js/pwa-safety.js';
-  import { consumeMigration, takePendingToast } from '../../js/migrate.js';
-  import { Game } from '../../js/game.js';
-  import { Audio } from '../../js/audio.js';
-  import { save, nav, toast, commit, togglePause, initHistory } from '../lib/store.svelte.js';
+  import { initAssets, getSprite, assetsReady } from '../../js/assets.ts';
+  import { persistSave, THEME_ERROR } from '../../js/config.ts';
+  import { finishRunSettlement } from '../../js/settlement.ts';
+  import { checkAchievements } from '../../js/achievements.ts';
+  import { updateReloadIsSafe } from '../../js/pwa-safety.ts';
+  import { startUpdates, type UpdateStatus } from '../lib/update.ts';
+  import { consumeMigration, takePendingToast } from '../../js/migrate.ts';
+  import { Game } from '../../js/game.ts';
+  import { Audio } from '../../js/audio.ts';
+  import { simulationClock } from '../../js/clock.ts';
+  import { save, nav, toast, commit, togglePause, initHistory } from '../lib/store.svelte.ts';
   import App from '../App.svelte';
 
   const RES_W = 430; // internal logical width; height derived from viewport aspect
 
-  let canvas = $state(null);
-  let stage = $state(null);
-  let game = $state(null);
+  let canvas = $state<HTMLCanvasElement>();
+  let stage = $state<HTMLDivElement>();
+  let game = $state<Game | null>(null);
   let failed = $state('');
-  let updateState = $state('idle');
+  let updateState = $state<UpdateStatus>('idle');
   let applyWaitingUpdate = $state(() => {});
+  let checkForUpdate = $state(() => {});
 
-  function pauseGame(force) {
+  function pauseGame(force?: boolean) {
     if (!game) return;
     const open = force ?? !nav.paused;
     game.releaseAction();
@@ -48,143 +45,12 @@
   onMount(() => {
     let stop = () => {};
     let cancelled = false;
-    let claimedUpdate = false;
-    let reloadingForUpdate = false;
-    const reloadUpdatedAppIfSafe = () => {
-      if (!claimedUpdate || reloadingForUpdate || !updateReloadIsSafe(nav)) return;
-      reloadingForUpdate = true;
-      location.reload();
-    };
-
-    // Listen before asset loading starts. A fast worker can claim the page while
-    // boot is awaiting the atlas; attaching afterward loses that update event.
-    let onControllerChange = null;
-    let disposeWorkerUpdates = () => {};
-    if (!dev && 'serviceWorker' in navigator
-        && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-      let hadController = !!navigator.serviceWorker.controller;
-      let registration = null;
-      let installingWorker = null;
-      let waitingWorker = null;
-      let updateInterval = 0;
-      let activationTimer = 0;
-      let updateCheckPending = false;
-
-      const clearActivationTimer = () => {
-        clearTimeout(activationTimer);
-        activationTimer = 0;
-      };
-      const showWaitingWorker = (worker) => {
-        if (!worker || worker.state !== 'installed' || !navigator.serviceWorker.controller) return;
-        waitingWorker = worker;
-        updateState = 'ready';
-      };
-      const onInstallingState = () => {
-        if (installingWorker?.state === 'installed') {
-          showWaitingWorker(registration?.waiting || installingWorker);
-        }
-      };
-      const trackInstallingWorker = () => {
-        installingWorker?.removeEventListener?.('statechange', onInstallingState);
-        installingWorker = registration?.installing || null;
-        installingWorker?.addEventListener?.('statechange', onInstallingState);
-        onInstallingState();
-      };
-      const onUpdateFound = () => trackInstallingWorker();
-      const syncRegistrationWorkers = () => {
-        showWaitingWorker(registration?.waiting);
-        trackInstallingWorker();
-      };
-      const checkForUpdate = async () => {
-        if (!registration || updateState === 'applying') return;
-        // WebKit can finish installing an update while a Home Screen app is
-        // suspended. On resume `registration.waiting` is already populated, so
-        // no new updatefound event is guaranteed. Read the registration both
-        // before and after the network check instead of relying on that event.
-        syncRegistrationWorkers();
-        if (updateCheckPending) return;
-        updateCheckPending = true;
-        try {
-          await registration.update?.();
-        } catch { /* offline: the next lifecycle/poll check retries */ }
-        updateCheckPending = false;
-        if (!cancelled) syncRegistrationWorkers();
-      };
-      const checkWhenVisible = () => {
-        if (document.visibilityState === 'visible') checkForUpdate();
-      };
-      const activateWaitingWorker = () => {
-        if (!waitingWorker || updateState === 'applying' || !updateReloadIsSafe(nav)) return;
-        if (waitingWorker.state !== 'installed') {
-          waitingWorker = null;
-          updateState = 'idle';
-          checkForUpdate();
-          return;
-        }
-        updateState = 'applying';
-        clearActivationTimer();
-        activationTimer = window.setTimeout(() => {
-          if (cancelled || updateState !== 'applying') return;
-          if (waitingWorker?.state === 'installed') updateState = 'ready';
-        }, 8000);
-        try {
-          waitingWorker.postMessage({ type: 'ACTIVATE_UPDATE' });
-        } catch {
-          clearActivationTimer();
-          updateState = 'ready';
-        }
-      };
-      applyWaitingUpdate = activateWaitingWorker;
-      const onWorkerMessage = (event) => {
-        if (event.data?.type === UPDATE_SUPPORT_QUERY) {
-          event.ports[0]?.postMessage({ type: UPDATE_SUPPORT_ACK });
-        }
-      };
-      onControllerChange = () => {
-        // First install should not bounce a page the player just opened. Once
-        // that worker claims it, though, later deploys in this same long-lived
-        // page are real updates and must follow the normal safe-reload path.
-        if (!hadController) {
-          hadController = true;
-          return;
-        }
-        clearActivationTimer();
-        claimedUpdate = true;
-        updateState = 'applying';
-        reloadUpdatedAppIfSafe();
-      };
-      navigator.serviceWorker.addEventListener('message', onWorkerMessage);
-      navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
-      window.addEventListener('focus', checkForUpdate);
-      window.addEventListener('pageshow', checkForUpdate);
-      window.addEventListener('online', checkForUpdate);
-      document.addEventListener('visibilitychange', checkWhenVisible);
-      updateInterval = window.setInterval(checkForUpdate, 2 * 60 * 1000);
-      navigator.serviceWorker.register(`${base}/service-worker.js`, {
-        type: 'module',
-        updateViaCache: 'none',
-      })
-        .then((nextRegistration) => {
-          if (cancelled) return;
-          registration = nextRegistration;
-          registration.addEventListener?.('updatefound', onUpdateFound);
-          syncRegistrationWorkers();
-          checkForUpdate();
-        })
-        .catch(() => {});
-      disposeWorkerUpdates = () => {
-        clearActivationTimer();
-        clearInterval(updateInterval);
-        window.removeEventListener('focus', checkForUpdate);
-        window.removeEventListener('pageshow', checkForUpdate);
-        window.removeEventListener('online', checkForUpdate);
-        document.removeEventListener('visibilitychange', checkWhenVisible);
-        navigator.serviceWorker.removeEventListener('message', onWorkerMessage);
-        registration?.removeEventListener?.('updatefound', onUpdateFound);
-        installingWorker?.removeEventListener?.('statechange', onInstallingState);
-        if (applyWaitingUpdate === activateWaitingWorker) applyWaitingUpdate = () => {};
-      };
-    }
+    const updates = startUpdates(
+      state => { updateState = state.status; },
+      () => updateReloadIsSafe(nav) && persistSave(save),
+    );
+    applyWaitingUpdate = updates.apply;
+    checkForUpdate = () => { void updates.check(); };
 
     // A save handed over from the game's old address, if there is one. Done here,
     // before assets, because adopting one means reloading: the store builds the
@@ -215,6 +81,8 @@
         document.documentElement.style.setProperty('--em-icon', `url(${em.frames[0].toDataURL()})`);
       } catch { /* art missing: chips just show the count */ }
 
+      if (!canvas || !stage) throw new Error('The game surface is missing');
+      const surface = stage;
       const g = new Game(canvas, save, {
         // hudState() reuses ONE object every frame to stay allocation-free, so
         // assigning that reference would never look like a change and the HUD
@@ -227,7 +95,7 @@
           nav.paused = false;
           nav.result = settled.result;
         },
-        onTutorial: (k) => toast(k),
+        onTutorial: (k) => { if (k) toast(k); },
         onPause: () => { if (nav.playing) pauseGame(); },
       });
 
@@ -252,17 +120,17 @@
         const vw = vv ? vv.width : window.innerWidth;
         const vh = vv ? vv.height : window.innerHeight;
         const phone = vw / vh <= 0.68;
-        stage.classList.toggle('fullscreen', phone);
+        surface.classList.toggle('fullscreen', phone);
         if (phone) {
           // CSS (100dvh) owns the size here. Pinning to the visual viewport was
           // wrong in an installed PWA: it reports the area INSIDE the safe areas,
           // so the stage stopped short of the bottom and left a band under the nav.
-          stage.style.width = ''; stage.style.height = '';
+          surface.style.width = ''; surface.style.height = '';
         } else {
-          stage.style.width = `${Math.round(vh * 0.58)}px`;
-          stage.style.height = `${vh}px`;
+          surface.style.width = `${Math.round(vh * 0.58)}px`;
+          surface.style.height = `${vh}px`;
         }
-        const r = stage.getBoundingClientRect();
+        const r = surface.getBoundingClientRect();
         const resH = Math.min(1000, Math.round(RES_W * (r.height / Math.max(1, r.width))));
         g.resize(RES_W, resH);
       }
@@ -282,12 +150,12 @@
       window.CR = { game: g, save, nav, commit, togglePause, assetsReady };
 
       let raf = 0, last = performance.now();
-      const frame = (now) => {
-        const dt = Math.min(0.05, (now - last) / 1000);
+      const clock = simulationClock();
+      const frame = (now: number) => {
+        const elapsed = (now - last) / 1000;
         last = now;
-        if (!g.paused && !window.CR.paused) g.update(dt);
+        clock.advance(elapsed, g.paused || Boolean(window.CR?.paused), dt => g.update(dt));
         g.render();
-        reloadUpdatedAppIfSafe();
         raf = requestAnimationFrame(frame);
       };
       raf = requestAnimationFrame(frame);
@@ -299,6 +167,7 @@
       stop = () => {
         cancelAnimationFrame(raf);
         g.destroy();
+        Audio.stopMusic();
         stopHistory();
         document.removeEventListener('visibilitychange', onVisibility);
         document.removeEventListener('pointerdown', unlock);
@@ -316,8 +185,8 @@
     return () => {
       cancelled = true;
       stop();
-      disposeWorkerUpdates();
-      if (onControllerChange) navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
+      updates.dispose();
+      applyWaitingUpdate = () => {};
     };
   });
 </script>
@@ -325,7 +194,7 @@
 <div id="stage" bind:this={stage}>
   <canvas id="gameCanvas" bind:this={canvas}></canvas>
   {#if game}
-    <App {game} {pauseGame} {updateState} {applyWaitingUpdate} />
+    <App {game} {pauseGame} {updateState} {applyWaitingUpdate} {checkForUpdate} />
   {:else}
     <div id="loading">
       {#if failed}
@@ -336,7 +205,7 @@
                localStorage. Say so, and hand them the one page that cannot break
                the same way, instead of leaving them to clear data and lose it. -->
           <div class="loadHelp">
-            Your save is safe. Get it out here:
+            Recover or copy this device’s saved data:
             <a href="./rescue.html">rescue page</a>
           </div>
         </div>

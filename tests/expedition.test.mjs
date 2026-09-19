@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dailyExpedition, weekKey, dayKey, recordExpedition, expeditionStatus } from '../js/config.js';
+import { dailyExpedition, weekKey, dayKey, recordExpedition, expeditionStatus } from '../js/config.ts';
 
 test('the expedition is the same theme all week and rotates by week', () => {
   // a Monday and the Sunday of the same week

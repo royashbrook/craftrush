@@ -5,7 +5,6 @@ import vm from 'node:vm';
 import {
   UPDATE_SUPPORT_ACK,
   UPDATE_SUPPORT_QUERY,
-  anyClientSupportsWaitingUpdates,
   CRAFTRUSH_APP_ORIGIN,
   craftRushScopePath,
   isStandaloneApp,
@@ -16,7 +15,7 @@ import {
   saveSchemaError,
   shouldOfferLegacyRestore,
   updateReloadIsSafe,
-} from '../js/pwa-safety.js';
+} from '../js/pwa-safety.ts';
 
 test('cache ownership never reaches a neighboring app', () => {
   assert.equal(ownsCraftRushCache('craftrush-v3'), true);
@@ -198,29 +197,9 @@ test('an update waits through a run and its result', () => {
   assert.equal(updateReloadIsSafe({ playing: false, result: null }), true);
 });
 
-test('a current client tells an installing worker it can surface a waiting update', async () => {
+test('the page retains the deployed worker capability message names', () => {
   assert.match(UPDATE_SUPPORT_QUERY, /_V2$/);
   assert.match(UPDATE_SUPPORT_ACK, /_V2$/);
-  let query = null;
-  const supported = await anyClientSupportsWaitingUpdates([{
-    postMessage(message, ports) {
-      query = message;
-      ports[0].postMessage({ type: UPDATE_SUPPORT_ACK });
-      ports[0].close();
-    },
-  }], { timeoutMs: 20 });
-
-  assert.equal(supported, true);
-  assert.deepEqual(query, { type: UPDATE_SUPPORT_QUERY });
-});
-
-test('legacy and absent clients cannot strand an update they do not know how to show', async () => {
-  const legacy = await anyClientSupportsWaitingUpdates([{
-    postMessage(_message, ports) { ports[0].close(); },
-  }], { timeoutMs: 5 });
-
-  assert.equal(legacy, false);
-  assert.equal(await anyClientSupportsWaitingUpdates([], { timeoutMs: 5 }), false);
 });
 
 test('the legacy worker tombstone retires only Craft Rush caches and never navigates clients', async () => {
