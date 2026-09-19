@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { dirname, extname, join, resolve } from 'node:path'
@@ -56,16 +56,29 @@ function command(executable, args, cwd, log) {
   return result.stdout.trim()
 }
 
-function buildLegacy(root, work) {
+function historyState(root, logs, name) {
+  const shallow = command('git', ['rev-parse', '--is-shallow-repository'], root, join(logs, `${name}-history.log`))
+  const marker = resolve(root, command('git', ['rev-parse', '--git-path', 'shallow'], root, join(logs, `${name}-marker-path.log`)))
+  const state = { shallow, marker: existsSync(marker) ? readFileSync(marker, 'utf8') : null }
+  writeFileSync(join(logs, `${name}-history.json`), `${JSON.stringify(state, null, 2)}\n`)
+  console.log(`legacy fixture ${name} history: ${JSON.stringify(state)}`)
+  return shallow
+}
+
+function buildLegacy(root, work, evidence) {
   const dir = join(work, 'legacy-source')
+  const logs = join(evidence, 'legacy-build')
+  mkdirSync(logs, { recursive: true })
+  command('git', ['--version'], root, join(logs, 'git-version.log'))
+  historyState(root, logs, 'source')
   // A separate clone owns its hook config, dependencies and generated files.
   // Do not repoint the active checkout or share its postinstall configuration.
-  command('git', ['clone', '--no-hardlinks', '--no-checkout', root, dir], root, join(work, 'legacy-clone.log'))
-  command('git', ['checkout', '--detach', legacySource], dir, join(work, 'legacy-checkout.log'))
-  assert.equal(command('git', ['rev-parse', 'HEAD'], dir, join(work, 'legacy-head.log')), legacySource)
-  assert.equal(command('git', ['rev-parse', '--is-shallow-repository'], dir, join(work, 'legacy-history.log')), 'false')
-  command('npm', ['ci'], dir, join(work, 'legacy-install.log'))
-  command('npm', ['run', 'build'], dir, join(work, 'legacy-build.log'))
+  command('git', ['clone', '--no-hardlinks', '--no-checkout', root, dir], root, join(logs, 'legacy-clone.log'))
+  command('git', ['checkout', '--detach', legacySource], dir, join(logs, 'legacy-checkout.log'))
+  assert.equal(command('git', ['rev-parse', 'HEAD'], dir, join(logs, 'legacy-head.log')), legacySource)
+  assert.equal(historyState(dir, logs, 'clone'), 'false')
+  command('npm', ['ci'], dir, join(logs, 'legacy-install.log'))
+  command('npm', ['run', 'build'], dir, join(logs, 'legacy-build.log'))
   return join(dir, 'build')
 }
 
@@ -196,7 +209,7 @@ async function main() {
   const work = mkdtempSync(join(tmpdir(), 'craftrush-native-update-'))
   const evidence = values.evidence ? resolve(values.evidence) : work
   mkdirSync(evidence, { recursive: true })
-  const legacyBuild = values.legacy ? resolve(values.legacy) : buildLegacy(root, work)
+  const legacyBuild = values.legacy ? resolve(values.legacy) : buildLegacy(root, work, evidence)
   const artifacts = {
     legacy: snapshot(legacyBuild, join(work, 'legacy')),
     candidate: snapshot(resolve(values.candidate), join(work, 'candidate')),

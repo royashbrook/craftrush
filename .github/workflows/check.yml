@@ -31,6 +31,8 @@ jobs:
       - name: build the development candidate
         run: npm run build:dev
       - run: npx playwright install --with-deps chromium webkit
+      - name: native legacy update and offline recovery
+        run: node tools/verify-update.mjs --candidate build --evidence test-results/native-update
       - name: all browser projects against that artifact
         id: browsers
         run: npx playwright test --forbid-only --retries=0 --workers=2 --reporter=line,json
@@ -51,10 +53,8 @@ jobs:
         run: node tools/release-artifact.mjs build --development
         env:
           CRAFTRUSH_EXPECTED_SOURCE: ${{ github.sha }}
-      - name: native legacy update and offline recovery
-        run: node tools/verify-update.mjs --candidate build --evidence test-results/native-update
       - name: retain browser evidence
-        if: always() && steps.browsers.outcome != 'skipped'
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: browser-evidence

@@ -11,6 +11,15 @@ import { compareLive } from '../tools/release-live.mjs';
 import { assertRescueCurrent, inventoryForModules, mergedInventory, noticeText, rescueBuildInputs } from '../tools/license-inventory.mjs';
 
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+
+test('build preflight generates Kit configuration before compiling the typed rescue entry', () => {
+  const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
+  const steps = scripts.prebuild.split(/\s*&&\s*/);
+  assert.equal(steps[0], 'svelte-kit sync', 'a fresh checkout has no generated tsconfig');
+  assert.ok(steps.indexOf('node tools/build-rescue.mjs') > 0);
+  assert.ok(scripts['build:dev'].startsWith('npm run prebuild && '));
+});
+
 function artifact(t) {
   const directory = mkdtempSync(join(tmpdir(), 'craftrush-artifact-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));

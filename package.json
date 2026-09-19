@@ -16,7 +16,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test:build": "PW_TARGET=build playwright test",
     "metrics:balance": "node tools/report-balance.mjs",
-    "prebuild": "node tools/pack-themes.mjs && node tools/build-rescue.mjs"
+    "prebuild": "svelte-kit sync && node tools/pack-themes.mjs && node tools/build-rescue.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
