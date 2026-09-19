@@ -4,7 +4,7 @@ const SAVE_KEY = 'craftrush_save_v1';
 const ROLLBACK_KEY = 'craftrush_pre_restore_v1';
 const arriving = { level: 12, emeralds: 1000, camera: 'close' };
 
-test('a normal settings change during the import handoff cannot replace the restored save', async ({ page }) => {
+test('rapid DOM control activation during import cannot replace the restored save', async ({ page }) => {
   await page.addInitScript(({ key }) => {
     if (sessionStorage.getItem('import_handoff_seeded')) return;
     localStorage.setItem(key, JSON.stringify({ level: 3, emeralds: 10, camera: 'far' }));
@@ -20,19 +20,34 @@ test('a normal settings change during the import handoff cannot replace the rest
   const code = `CR1|${Buffer.from(JSON.stringify(arriving)).toString('base64')}`;
   await page.locator('#saveImport').fill(code);
   page.once('dialog', dialog => dialog.accept());
-  await page.locator('#btnLoadSave').click();
 
-  // These are ordinary user clicks during the existing reload delay. Do not
-  // replace timers, stop navigation, call commit directly, or replace the store.
-  await page.locator('#navMore').click();
-  await page.locator('#btnCameraMore').click();
-  const pending = await page.evaluate(({ key, rollbackKey }) => ({
-    boot: performance.timeOrigin,
-    memory: { level: window.CR.save.level, camera: window.CR.save.camera },
-    stored: JSON.parse(localStorage.getItem(key)),
-    rollback: JSON.parse(localStorage.getItem(rollbackKey)).raw,
-  }), { key: SAVE_KEY, rollbackKey: ROLLBACK_KEY });
+  // Native pointer clicks independently reproduced the original loss, but CI
+  // driver round trips can let the real 700ms reload win before the last click.
+  // This is deliberately synthetic rapid DOM control activation, not a native
+  // input test. Run the real handlers in one renderer task, flushing Svelte's
+  // microtask before using its newly rendered camera control. Timers, reload,
+  // the save/store, and commit are not overridden or called directly.
+  const pending = await page.evaluate(async ({ key, rollbackKey }) => {
+    const activate = selector => {
+      const button = document.querySelector(selector);
+      if (!(button instanceof HTMLButtonElement)) throw new Error(`Missing control: ${selector}`);
+      button.click();
+    };
+    activate('#btnLoadSave');
+    const imported = JSON.parse(localStorage.getItem(key));
+    activate('#navMore');
+    await Promise.resolve();
+    activate('#btnCameraMore');
+    return {
+      boot: performance.timeOrigin,
+      imported,
+      memory: { level: window.CR.save.level, camera: window.CR.save.camera },
+      stored: JSON.parse(localStorage.getItem(key)),
+      rollback: JSON.parse(localStorage.getItem(rollbackKey)).raw,
+    };
+  }, { key: SAVE_KEY, rollbackKey: ROLLBACK_KEY });
   expect(pending.boot).toBe(before.boot);
+  expect(pending.imported).toMatchObject(arriving);
   expect(pending.memory).toEqual({ level: 3, camera: 'overhead' });
   expect(pending.stored).toMatchObject(arriving);
   expect(pending.rollback).toBe(before.raw);

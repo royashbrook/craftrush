@@ -66,6 +66,12 @@ export function deriveRelease(cwd = process.cwd(), mode = process.env.CRAFTRUSH_
     if (newerLegacy) throw new Error(`release anchor ${anchor} predates legacy ${newerLegacy}; establish the next major/minor milestone`);
   }
   const base = anchor ? versionFromTag(anchor, git(cwd, 'rev-list', `${anchor}..HEAD`, '--count')) : '0.0.0';
+  // A historical three-part release tag reserves that version for its source.
+  // A newly introduced milestone must not give different bytes the same label.
+  if (!development && git(cwd, 'tag', '--list', `v${base}`) &&
+    git(cwd, 'rev-parse', `v${base}^{commit}`) !== source) {
+    throw new Error(`version ${base} already belongs to a different tagged source; choose a new milestone`);
+  }
   const identity = { version: `${base}${development ? '-dev' : ''}`, source, anchor, dirty, development };
   return Object.freeze({ ...identity, fingerprint: inputFingerprint(cwd, identity) });
 }

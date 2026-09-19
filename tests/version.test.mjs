@@ -73,6 +73,20 @@ test('release refuses missing or invalid anchor, dirty tree, shallow history and
   assert.throws(() => deriveRelease(shallow, 'release'), /shallow/);
 });
 
+test('a new milestone cannot reuse a legacy version on a different source', t => {
+  const cwd = repository(t);
+  git(cwd, 'tag', 'v1.10.0');
+  git(cwd, 'tag', 'v1.10');
+  assert.equal(deriveRelease(cwd, 'release').version, '1.10.0', 'same tagged source may rebuild');
+  commit(cwd, 'migration');
+  git(cwd, 'tag', '-f', 'v1.10'); // fixture models the bad proposed anchor, not a real retag
+  assert.throws(() => deriveRelease(cwd, 'release'), /already belongs to a different tagged source/);
+  assert.equal(deriveRelease(cwd, 'development').version, '1.10.0-dev');
+  git(cwd, 'tag', '-d', 'v1.10'); // discard the hypothetical anchor in this throwaway fixture
+  git(cwd, 'tag', 'v1.11');
+  assert.equal(deriveRelease(cwd, 'release').version, '1.11.0');
+});
+
 test('fingerprint covers app, art, toolchain and metadata, not generated copies or absolute checkout paths', t => {
   const cwd = repository(t);
   const second = repository(t);

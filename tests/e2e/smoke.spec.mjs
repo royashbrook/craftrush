@@ -230,9 +230,17 @@ test('PLAY starts a run and the HUD shows, still no errors', async ({ page }) =>
 });
 
 test('Bow Blitz fires only while the player holds and drags', async ({ page }) => {
+  // Firing intervals use simulation seconds. Under a loaded renderer the
+  // bounded clock deliberately drops excess wall time, so 550 ms on the runner
+  // need not contain 550 ms of game time. Observe the clock, never volley count,
+  // as the wait condition: broken firing must still fail its own assertion.
+  const gameSeconds = () => page.evaluate(() => CR.game.t);
+  const advance = async (start) => {
+    await expect.poll(gameSeconds).toBeGreaterThanOrEqual(start + 0.55);
+  };
   await page.goto('/');
   await page.click('#btnPlayShooter');
-  await page.waitForTimeout(550);
+  await advance(await gameSeconds());
   expect(await page.evaluate(() => CR.game.volleysFired)).toBe(0);
   await expect(page.locator('#powerChips')).toContainText('HOLD TO FIRE');
 
@@ -241,7 +249,7 @@ test('Bow Blitz fires only while the player holds and drags', async ({ page }) =
   await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.72);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width * 0.68, box.y + box.height * 0.72, { steps: 5 });
-  await page.waitForTimeout(550);
+  await advance(await gameSeconds());
   await expect(page.locator('#powerChips')).toContainText('FIRING');
   const held = await page.evaluate(() => ({ volleys: CR.game.volleysFired, targetX: CR.game.targetX }));
   expect(held.volleys).toBeGreaterThanOrEqual(2);
@@ -249,7 +257,7 @@ test('Bow Blitz fires only while the player holds and drags', async ({ page }) =
 
   await page.mouse.up();
   const released = await page.evaluate(() => CR.game.volleysFired);
-  await page.waitForTimeout(550);
+  await advance(await gameSeconds());
   expect(await page.evaluate(() => CR.game.volleysFired)).toBe(released);
   // the first hold taught the gesture, so the HOLD TO FIRE caption is gone now
   await expect(page.locator('#powerChips')).not.toContainText('FIRING');
@@ -257,7 +265,7 @@ test('Bow Blitz fires only while the player holds and drags', async ({ page }) =
   await page.evaluate(() => { CR.game.redstone = 100; });
   await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.72);
   await page.mouse.down();
-  await page.waitForTimeout(550);
+  await advance(await gameSeconds());
   await page.mouse.up();
   expect(await page.evaluate(() => ({ summons: CR.game.summons.length, redstone: CR.game.redstone })))
     .toEqual({ summons: 0, redstone: 100 });

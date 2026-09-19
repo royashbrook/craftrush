@@ -11,6 +11,8 @@ first-parent history. Patch is the count of **all** commits reachable from HEAD
 but not the anchor, including merged branch commits and the merge itself.
 For example, `v1.11` produces `1.11.0`; the next two commits produce `1.11.2`.
 Side-branch tags never become release anchors. Legacy three-part tags stay intact.
+An existing three-part tag also reserves its exact version for its source: a new
+milestone cannot derive the same release number at a different commit.
 
 A release requires full Git history and tags, a clean tree and an eligible anchor.
 There is no successful `0.0.0-dev` fallback. `npm run build:dev` is an explicit
