@@ -249,15 +249,12 @@ test('in-app import confirms replacement and keeps a byte-exact rollback', async
   await page.locator('#btnSaveMore').click();
   const beforeImport = await page.evaluate(() => localStorage.getItem('craftrush_save_v1'));
   await page.locator('#saveImport').fill(code);
-  await page.locator('#btnLoadSave').click();
-  await expect.poll(async () => {
-    try {
-      return await page.evaluate(() =>
-        JSON.parse(localStorage.getItem('craftrush_save_v1')).emeralds);
-    } catch {
-      return null;
-    }
-  }).toBe(77);
+  await Promise.all([
+    page.waitForEvent('domcontentloaded'),
+    page.locator('#btnLoadSave').click(),
+  ]);
+  expect(await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('craftrush_save_v1')).emeralds)).toBe(77);
 
   expect(confirmation).toContain('one-step rollback');
   const rollback = await page.evaluate(() =>
@@ -361,8 +358,12 @@ test('a claimed worker update waits for the run, result, and explicit consent', 
   await page.evaluate(() => { CR.nav.result = null; CR.nav.playing = false; });
   await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
   expect((await page.evaluate(() => window.__updates())).boots).toBe(1);
-  await page.locator('#btnApplyUpdate').click();
-  await expect.poll(() => page.evaluate(() => window.__updates()?.boots)).toBe(2);
+  // The reload replaces the execution context; observe its next document before reading it.
+  await Promise.all([
+    page.waitForEvent('domcontentloaded'),
+    page.locator('#btnApplyUpdate').click(),
+  ]);
+  expect(await page.evaluate(() => window.__updates().boots)).toBe(2);
 });
 
 test('first install stays put and a later claim still requires consent', async ({ page, context }) => {
@@ -376,8 +377,11 @@ test('first install stays put and a later claim still requires consent', async (
   await page.evaluate(() => window.__claimNext());
   await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
   expect((await page.evaluate(() => window.__updates())).boots).toBe(1);
-  await page.locator('#btnApplyUpdate').click();
-  await expect.poll(() => page.evaluate(() => window.__updates()?.boots)).toBe(2);
+  await Promise.all([
+    page.waitForEvent('domcontentloaded'),
+    page.locator('#btnApplyUpdate').click(),
+  ]);
+  expect(await page.evaluate(() => window.__updates().boots)).toBe(2);
 });
 
 test('a worker claim during asset boot is discovered without an unsolicited reload', async ({ page, context }) => {
@@ -386,8 +390,11 @@ test('a worker claim during asset boot is discovered without an unsolicited relo
   await expect(page.locator('#menu')).toBeVisible();
   await expect(page.locator('#updateBanner')).toContainText('UPDATE READY');
   expect((await page.evaluate(() => window.__updates())).boots).toBe(1);
-  await page.locator('#btnApplyUpdate').click();
-  await expect.poll(() => page.evaluate(() => window.__updates()?.boots)).toBe(2);
+  await Promise.all([
+    page.waitForEvent('domcontentloaded'),
+    page.locator('#btnApplyUpdate').click(),
+  ]);
+  expect(await page.evaluate(() => window.__updates().boots)).toBe(2);
 });
 
 test('a verified waiting worker offers an update and activates only on request', async ({ page, context }) => {
@@ -398,8 +405,11 @@ test('a verified waiting worker offers an update and activates only on request',
   expect(before.posts).toBe(0);
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await expect.poll(() => page.evaluate(() => window.__updates().probes)).toBeGreaterThan(before.probes);
-  await page.locator('#btnApplyUpdate').click();
-  await expect.poll(() => page.evaluate(() => window.__updates()?.boots)).toBe(2);
+  await Promise.all([
+    page.waitForEvent('domcontentloaded'),
+    page.locator('#btnApplyUpdate').click(),
+  ]);
+  expect(await page.evaluate(() => window.__updates().boots)).toBe(2);
   await expect(page.locator('#menu')).toBeVisible();
   await expect(page.locator('#updateBanner')).toHaveCount(0);
 });
