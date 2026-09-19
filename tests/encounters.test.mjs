@@ -6,10 +6,10 @@ import {
   buildEncounterRun,
   encounterRunStyle,
   sweepObstacleX,
-} from '../js/encounters.js';
-import { LevelMixin } from '../js/levelgen.js';
-import { CombatMixin } from '../js/combat.js';
-import { BIOMES, ENEMY_TYPES, SPEEDS, TUNE } from '../js/config.js';
+} from '../js/encounters.ts';
+import { LevelMixin } from '../js/levelgen.ts';
+import { CombatMixin } from '../js/combat.ts';
+import { BIOMES, ENEMY_TYPES, SPEEDS, TUNE } from '../js/config.ts';
 
 const good = (gate) => gate.op === 'add' || gate.op === 'mul' || gate.op === 'scale';
 

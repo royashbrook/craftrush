@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BossMixin } from '../js/boss.js';
-import { CombatMixin } from '../js/combat.js';
+import { BossMixin } from '../js/boss.ts';
+import { CombatMixin } from '../js/combat.ts';
 
 const noop = () => {};
 

@@ -36,9 +36,9 @@ let TUNE;
 let loadSave;
 
 before(async () => {
-  ({ Game } = await import('../js/game.js'));
-  ({ GOLEM_GRANT_PROGRESS, GOLEM_SMASH_WINDOW } = await import('../js/combat.js'));
-  ({ TUNE, loadSave } = await import('../js/config.js'));
+  ({ Game } = await import('../js/game.ts'));
+  ({ GOLEM_GRANT_PROGRESS, GOLEM_SMASH_WINDOW } = await import('../js/combat.ts'));
+  ({ TUNE, loadSave } = await import('../js/config.ts'));
 });
 
 function makeGame(mode = 'shooter', level = 1, speed = 'normal') {

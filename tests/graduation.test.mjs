@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CrowdMixin } from '../js/crowd.js';
-import { TIERS, winBonus, SKINS, COSMETICS } from '../js/config.js';
+import { CrowdMixin } from '../js/crowd.ts';
+import { TIERS, winBonus, SKINS, COSMETICS } from '../js/config.ts';
 
 // Headless harness: inject the crowd mixin onto a bare game with tiny stubs.
 function fakeCrowd(stars = 0) {

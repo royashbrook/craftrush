@@ -1,6 +1,6 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { consumeMigration, takePendingToast } from '../js/migrate.js';
+import { consumeMigration, takePendingToast } from '../js/migrate.ts';
 
 const INBOX_KEY = 'craftrush_migration_inbox_v1';
 const DONE_KEY = 'craftrush_migration_done_v1';

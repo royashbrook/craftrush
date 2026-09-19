@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { contentKey, paletteKey } from '../js/atlaskey.js';
-import { enumerateVariants } from '../js/variants.js';
-import { SKINS, COSMETICS, TIERS, THEME_ART } from '../js/config.js';
+import { contentKey, paletteKey } from '../js/atlaskey.ts';
+import { enumerateVariants } from '../js/variants.ts';
+import { SKINS, COSMETICS, TIERS, THEME_ART } from '../js/config.ts';
 import { readFileSync } from 'node:fs';
 import { decodePNG } from '../tools/png.mjs';
 

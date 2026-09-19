@@ -34,9 +34,9 @@ let loadSave;
 let TUNE;
 let crowdBossDamageFactor;
 before(async () => {
-  ({ Game } = await import('../js/game.js'));
-  ({ loadSave, TUNE } = await import('../js/config.js'));
-  ({ crowdBossDamageFactor } = await import('../js/boss.js'));
+  ({ Game } = await import('../js/game.ts'));
+  ({ loadSave, TUNE } = await import('../js/config.ts'));
+  ({ crowdBossDamageFactor } = await import('../js/boss.ts'));
 });
 
 function seeded(seed) {

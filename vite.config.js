@@ -1,9 +1,12 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import { readdirSync, statSync, mkdirSync, copyFileSync, rmSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, mkdirSync, copyFileSync, rmSync, existsSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
-import { appVersion } from './tools/version.mjs';
+import { releaseIdentity } from './tools/version.mjs';
+import { licensePlugin } from './tools/license-inventory.mjs';
 import { isHostConfig } from './svelte.config.js';
+
+const release = releaseIdentity();
 
 const walk = (dir, out = [], root = dir) => {
   for (const name of readdirSync(dir)) {
@@ -44,8 +47,7 @@ function syncThemes(force = false) {
     // file again: a loop that truncated responses mid-stream and left the app
     // failing to boot with ERR_CONTENT_LENGTH_MISMATCH.
     if (existsSync(dst)) {
-      const a = statSync(src), b = statSync(dst);
-      if (a.size === b.size && b.mtimeMs >= a.mtimeMs) continue;
+      if (readFileSync(src).equals(readFileSync(dst))) continue;
     }
     mkdirSync(dirname(dst), { recursive: true });
     copyFileSync(src, dst);
@@ -98,7 +100,7 @@ function hostConfigNotServed() {
 }
 
 export default defineConfig({
-  plugins: [themes(), hostConfigNotServed(), sveltekit()],
+  plugins: [themes(), hostConfigNotServed(), sveltekit(), licensePlugin(release)],
   build: {
     // Ship sourcemaps. A minified production-only failure reported as
     // "Ti is not a function" costs hours that a real function name costs
@@ -106,7 +108,8 @@ export default defineConfig({
     sourcemap: true,
   },
   define: {
-    __APP_VERSION__: JSON.stringify(appVersion()),
+    __APP_VERSION__: JSON.stringify(release.version),
+    __RELEASE__: JSON.stringify(release),
   },
   server: { port: 8123, strictPort: false },
 });

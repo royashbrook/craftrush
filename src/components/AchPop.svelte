@@ -4,14 +4,15 @@
   achievement predicates actually read, so a check runs whenever progress
   that could unlock one changes.
 -->
-<script>
-  import { save, nav, commit } from '../lib/store.svelte.js';
-  import { checkAchievements } from '../../js/achievements.js';
-  import { Audio } from '../../js/audio.js';
+<script lang="ts">
+  import { save, nav, commit } from '../lib/store.svelte.ts';
+  import { checkAchievements } from '../../js/achievements.ts';
+  import { Audio } from '../../js/audio.ts';
   import Sprite from '../lib/Sprite.svelte';
 
-  let queue = $state([]);
-  let current = $state(null);
+  type Achievement = ReturnType<typeof checkAchievements>[number];
+  let queue = $state<Achievement[]>([]);
+  let current = $state<Achievement | null>(null);
 
   // touch every save field an ACHIEVEMENTS[].check() reads, so this effect
   // reruns exactly when something that could newly unlock one changes
@@ -37,7 +38,7 @@
   // re-enter while one is already showing
   $effect(() => {
     if (current || queue.length === 0) return;
-    current = queue.shift();
+    current = queue.shift()!;
     nav.achPop = current;
     Audio.sfx('powerup');
   });

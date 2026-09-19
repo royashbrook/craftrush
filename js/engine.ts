@@ -1,0 +1,294 @@
+import type { CameraPreset, Biome, Projection } from '../types/craftrush.js';
+// Pseudo-3D renderer: perspective-projected ground plane viewed from behind and
+// above the crowd, parallax pixel hills, biome sky, fog. All Canvas 2D, no deps.
+import { TUNE } from './config.ts';
+
+// deterministic per-cell hash -> [0,1)
+export function hash2(a: number, b: number) {
+  let h = (a * 374761393 + b * 668265263) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+export function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export interface Camera { back: number; h: number; focal: number; horizonFrac: number; x: number; z: number; shake: number; bobT: number; W: number; H: number; horizon: number; offX: number; offY: number }
+export class Camera {
+  constructor() {
+    this.back = TUNE.camBack; this.h = TUNE.camHeight;
+    this.focal = TUNE.focal; this.horizonFrac = 0.36;
+    this.x = 0; this.z = -this.back;
+    this.shake = 0; this.bobT = 0;
+    this.W = 0; this.H = 0; this.horizon = 0;
+    this.offX = 0; this.offY = 0;
+  }
+  setPreset(p: CameraPreset) {
+    this.back = p.camBack; this.h = p.camHeight;
+    this.focal = p.focal; this.horizonFrac = p.horizonFrac;
+    if (this.H) this.horizon = Math.round(this.H * this.horizonFrac);
+  }
+  resize(W: number, H: number) {
+    this.W = W; this.H = H;
+    this.horizon = Math.round(H * this.horizonFrac);
+  }
+  follow(playerX: number, playerZ: number, dt: number, running: boolean) {
+    this.x += (playerX * 0.82 - this.x) * Math.min(1, dt * 8);
+    this.z = playerZ - this.back;
+    if (running) this.bobT += dt;
+    this.shake = Math.max(0, this.shake - dt * 3.2);
+    const sh = this.shake * this.shake * 14;
+    this.offX = (Math.random() - 0.5) * sh;
+    this.offY = (Math.random() - 0.5) * sh + Math.sin(this.bobT * 9) * 1.2;
+  }
+  // px-per-block at depth; sy of a point at height y (blocks) above ground
+  project(x: number, y: number, z: number) {
+    const rel = z - this.z;
+    if (rel < 0.62) return null;
+    const s = (this.focal * this.W * 0.14) / rel;
+    const sx = this.W / 2 + (x - this.x) * s + this.offX;
+    const sy = this.horizon + (this.h - y) * s + this.offY;
+    return { sx, sy, s, rel };
+  }
+  groundY(rel: number) {
+    const s = (this.focal * this.W * 0.14) / rel;
+    return this.horizon + this.h * s + this.offY;
+  }
+}
+
+// ---- biome background layers (pre-rendered) ----
+const layerCache = new Map<string, {far: HTMLCanvasElement; near: HTMLCanvasElement; stars: HTMLCanvasElement | null}>();
+
+function hillLayer(color: string, seed: number, amp: number, base: number, w = 480, h = 90) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d')!;
+  g.fillStyle = color;
+  const step = 10;
+  for (let x = 0; x < w; x += step) {
+    const i = x / step;
+    const t = hash2(seed, Math.floor(i / 3));
+    const t2 = hash2(seed + 7, i);
+    const hh = base + t * amp + t2 * amp * 0.3;
+    g.fillRect(x, h - hh, step, hh);
+  }
+  return c;
+}
+
+function starLayer(w = 480, h = 160) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d')!;
+  for (let i = 0; i < 90; i++) {
+    const x = hash2(99, i) * w, y = hash2(53, i) * h;
+    const b = hash2(31, i);
+    g.fillStyle = b > 0.8 ? '#ffffff' : b > 0.5 ? '#c9c2ff' : '#8a84b8';
+    const sz = b > 0.9 ? 2 : 1;
+    g.fillRect(x | 0, y | 0, sz, sz);
+  }
+  return c;
+}
+
+function biomeLayers(biome: Biome) {
+  let L = layerCache.get(biome.id);
+  if (!L) {
+    L = {
+      far: hillLayer(biome.hillFar, 11, 34, 22),
+      near: hillLayer(biome.hillNear, 23, 46, 12),
+      stars: biome.stars ? starLayer() : null,
+    };
+    layerCache.set(biome.id, L);
+  }
+  return L;
+}
+
+function drawTiled(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement, offsetX: number, y: number, W: number, scaleY = 1) {
+  const w = img.width;
+  let ox = ((offsetX % w) + w) % w;
+  const h = img.height * scaleY;
+  for (let x = -ox; x < W; x += w) ctx.drawImage(img, x, y - h, w, h);
+}
+
+// How fast the distant terrain slides compared to the ground (0 = fixed backdrop,
+// 1 = same plane). Low enough to read as far away, high enough to feel alive.
+const OUTER_PARALLAX = 0.35;
+
+const mixHex = (a: string, b: string, f: number) => {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = (sh: number) => Math.round((((pa >> sh) & 255) * (1 - f)) + (((pb >> sh) & 255) * f));
+  return `#${(((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)) >>> 0).toString(16).slice(1)}`;
+};
+
+// The far terrain is the biome's ground hazed toward its fog — same world, seen
+// from far enough away that the air washes it out. Cached per biome.
+const outerCache = new Map<string, {a: string; b: string; c: string}>();
+function outerPalette(biome: Biome) {
+  let p = outerCache.get(biome.id);
+  if (!p) {
+    const g = biome.ground;
+    p = { a: mixHex(g.a, biome.fog, 0.34), b: mixHex(g.b, biome.fog, 0.42), c: mixHex(g.c, biome.fog, 0.27) };
+    outerCache.set(biome.id, p);
+  }
+  return p;
+}
+
+export function renderWorld(ctx: CanvasRenderingContext2D, cam: Camera, biome: Biome, t: number) {
+  const { W, H, horizon } = cam;
+  if (!(W > 0 && H > 0)) return; // canvas not sized yet (e.g. hidden tab) — skip
+  // sky + fog gradients are static per biome/size — build once and cache
+  const grads = biomeGradients(ctx, biome, cam);
+  ctx.fillStyle = grads.sky;
+  ctx.fillRect(0, 0, W, horizon + 20);
+
+  const L = biomeLayers(biome);
+  if (L.stars) drawTiled(ctx, L.stars, cam.z * 0.4, horizon - 40, W);
+  if (biome.sun) {
+    ctx.fillStyle = biome.sun;
+    const sx = W * 0.72, sy = horizon * 0.42, r = Math.max(14, W * 0.045);
+    ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(sx - r * 1.35, sy - r * 0.55, r * 2.7, r * 1.1);
+    ctx.fillRect(sx - r * 0.55, sy - r * 1.35, r * 1.1, r * 2.7);
+    ctx.globalAlpha = 1;
+  }
+  drawTiled(ctx, L.far, cam.x * 4 + cam.z * 1.2, horizon + 6, W);
+  drawTiled(ctx, L.near, cam.x * 9 + cam.z * 2.6, horizon + 10, W);
+
+  // ground: far fog band (overdrawn by strips) then per-block strips far-first
+  ctx.fillStyle = biome.fog;
+  ctx.fillRect(0, horizon + 4, W, Math.max(0, cam.groundY(8) - horizon - 4));
+
+  const g = biome.ground;
+  const op = outerPalette(biome);
+  const zNear = Math.floor(cam.z + 0.7);
+  const zFar = Math.floor(cam.z + TUNE.viewDist);
+  for (let zi = zFar; zi >= zNear; zi--) {
+    const rel0 = zi - cam.z, rel1 = zi + 1 - cam.z;
+    if (rel0 < 0.65) continue;
+    const y0 = cam.groundY(rel1); // top (far edge)
+    const y1 = cam.groundY(rel0); // bottom (near edge)
+    const hh = y1 - y0;
+    if (hh < 0.4) continue;
+    const relMid = rel0 + 0.5;
+    const s = (cam.focal * W * 0.14) / relMid;
+    const cellPx = s;
+    const xToS = (wx: number) => W / 2 + (wx - cam.x) * s + cam.offX;
+
+    // Distant terrain fills everything past the shoulder so the track never sits
+    // in a void. It scrolls at a fraction of the ground's rate, so steering reads
+    // as parallax depth instead of the world edge sliding around. The band must
+    // start exactly where the detailed blocks stop (which follow the camera),
+    // otherwise steering opens a fog gap between them.
+    const xiMin = Math.floor(cam.x - TUNE.shoulderHalf);
+    const xiMax = Math.ceil(cam.x + TUNE.shoulderHalf);
+    const sxL = xToS(xiMin), sxR = xToS(xiMax);
+    const drawOuter = (x0: number, x1: number) => {
+      if (x1 <= x0) return;
+      const cw = Math.max(7, s * 3.2);            // coarse cells read as far away
+      const scroll = cam.x * s * OUTER_PARALLAX;  // slower than the ground's cam.x * s
+      const zs = Math.floor(zi * 0.4);            // and advances slower going forward
+      let x = Math.floor((x0 + scroll) / cw) * cw - scroll;
+      for (; x < x1; x += cw) {
+        const idx = Math.round((x + scroll) / cw);
+        const n = hash2(idx, zs);
+        ctx.fillStyle = n > 0.78 ? op.c : (((idx + zs) & 1) ? op.b : op.a);
+        const dx = Math.max(x, x0), dw = Math.min(x + cw, x1) - dx;
+        if (dw > 0) ctx.fillRect(dx, y0, dw + 0.6, hh + 0.6);
+      }
+    };
+    drawOuter(0, sxL);
+    drawOuter(sxR, W);
+
+    if (cellPx < 3.2) {
+      // LOD: single banded row, only across the playfield (outer band drawn above)
+      ctx.fillStyle = (zi & 1) ? g.b : g.a;
+      ctx.fillRect(sxL, y0, sxR - sxL, hh + 1);
+      const pl = xToS(-TUNE.trackHalf), pr = xToS(TUNE.trackHalf);
+      ctx.fillStyle = (zi & 1) ? g.pathB : g.pathA;
+      ctx.fillRect(pl, y0, pr - pl, hh + 1);
+      continue;
+    }
+    for (let xi = xiMin; xi < xiMax; xi++) {
+      const sxa = xToS(xi), sxb = xToS(xi + 1);
+      if (sxb < 0 || sxa > W) continue;
+      const cx = xi + 0.5;
+      const onPath = Math.abs(cx) < TUNE.trackHalf;
+      const edge = !onPath && Math.abs(cx) < TUNE.trackHalf + 1;
+      const n = hash2(xi, zi);
+      let col;
+      if (onPath) col = ((xi + zi) & 1) ? g.pathB : (n > 0.75 ? g.pathB : g.pathA);
+      else if (edge) col = ((xi + zi) & 1) ? g.edge : (n > 0.5 ? g.c : g.b);
+      else if (g.vein && n > 0.955) col = g.vein; // glowing sculk veins
+      else col = n > 0.82 ? g.c : ((xi + zi) & 1 ? g.b : g.a);
+      ctx.fillStyle = col;
+      ctx.fillRect(sxa, y0, sxb - sxa + 0.6, hh + 0.6);
+    }
+  }
+
+  // fog gradient over the far half (cached; jitter from cam bob is negligible)
+  ctx.fillStyle = grads.fog;
+  ctx.fillRect(0, grads.fogTop, W, grads.fogBottom - grads.fogTop);
+}
+
+// Cache the sky/fog gradients per (biome, canvas size, camera preset). The
+// fog bounds ignore the per-frame camera bob/shake offset, which is sub-pixel.
+const gradCache = new Map<string, {sky: CanvasGradient; fog: CanvasGradient; fogTop: number; fogBottom: number}>();
+function biomeGradients(ctx: CanvasRenderingContext2D, biome: Biome, cam: Camera) {
+  const { W, horizon } = cam;
+  const key = `${biome.id}:${W}:${horizon}:${cam.h}:${cam.focal}`;
+  let g = gradCache.get(key);
+  if (!g) {
+    const sky = ctx.createLinearGradient(0, 0, 0, horizon + 20);
+    sky.addColorStop(0, biome.sky[0]);
+    sky.addColorStop(1, biome.sky[1]);
+    const fogTop = horizon + 2;
+    const s = (cam.focal * W * 0.14) / (TUNE.viewDist * 0.45);
+    const fogBottom = horizon + cam.h * s;
+    const fog = ctx.createLinearGradient(0, fogTop, 0, fogBottom);
+    fog.addColorStop(0, biome.fog + 'ff');
+    fog.addColorStop(1, biome.fog + '00');
+    g = { sky, fog, fogTop, fogBottom };
+    if (gradCache.size > 24) gradCache.clear();
+    gradCache.set(key, g);
+  }
+  return g;
+}
+
+// simple painter's queue for billboards/effects
+export interface DrawQueue { items: {z: number; fn: (ctx: CanvasRenderingContext2D) => void}[] }
+export class DrawQueue {
+  constructor() { this.items = []; }
+  add(z: number, fn: (ctx: CanvasRenderingContext2D) => void) { this.items.push({ z, fn }); }
+  flush(ctx: CanvasRenderingContext2D) {
+    this.items.sort((a, b) => b.z - a.z);
+    for (const it of this.items) it.fn(ctx);
+    this.items.length = 0;
+  }
+}
+
+export function drawShadow(ctx: CanvasRenderingContext2D, p: Projection, wPx: number, screenX = p.sx) {
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.ellipse(screenX, p.sy, wPx / 2, wPx / 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+export function outlineText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, sizePx: number, fill = '#fff', align: CanvasTextAlign = 'center') {
+  ctx.font = `bold ${Math.round(sizePx)}px 'Courier New', monospace`;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = Math.max(2, sizePx / 7);
+  ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = fill;
+  ctx.fillText(text, x, y);
+}

@@ -1,0 +1,503 @@
+import type { Game } from './game.ts';
+import type { BillboardOptions, Sprite } from '../types/craftrush.js';
+import type { DrawQueue } from './engine.ts';
+// Craft Rush rendering: billboards, scenery, crowd, enemies, boss, fx draw.
+import { TUNE, SKINS, TIERS, PICKUPS } from './config.ts';
+import { GOLEM_SMASH_WINDOW } from './combat.ts';
+import { drawShadow, outlineText, hash2 } from './engine.ts';
+import { getSprite, blit, hasSprite } from './assets.ts';
+
+export function crowdPowerVisualScale(reserve = 0, stars = 0) {
+  const overflow = Math.log10(1 + Math.max(0, reserve) / 100) * 0.16;
+  return 1 + Math.min(0.65, overflow + Math.max(0, stars) * 0.07);
+}
+
+// Mobile gives a true-perspective gate only a handful of pixels at first sight.
+// Exaggerate the WHOLE gate at distance, then converge smoothly to the camera's
+// real projection. The curve is continuous with a continuous slope at 30px per
+// world block: panels, posts, lane separation and copy grow as one object.
+export function gateVisualScale(projectedScale: number) {
+  const scale = Math.max(0, Number(projectedScale) || 0);
+  return scale < 30 ? 15 + (scale * scale) / 60 : scale;
+}
+
+// Approaching gameplay objects need to read before the player commits to a
+// lane. Enlarge their whole billboard at distance, including lane position,
+// then meet true perspective smoothly at 24px per world block.
+export function gameplayVisualScale(projectedScale: number) {
+  const scale = Math.max(0, Number(projectedScale) || 0);
+  return scale < 24 ? 12 + (scale * scale) / 48 : scale;
+}
+
+export function gameplayVisualX(projectedX: number, worldX: number, cameraX: number, projectedScale: number) {
+  return projectedX + (worldX - cameraX) * (gameplayVisualScale(projectedScale) - projectedScale);
+}
+
+// Gate copy is painted and clipped inside that projected panel. Width fitting
+// keeps a fractional multiplier such as ×1.7 on its board without shrinking it
+// below a short multiplier unless the board really is width-constrained.
+export function gateSignFontSize(text: string, widthPx: number, heightPx: number, heightRatio = 0.4) {
+  const glyphs = Math.max(1, String(text).length);
+  const widthFit = (Math.max(0, widthPx) * 0.82) / (glyphs * 0.62);
+  return Math.max(1, Math.min(Math.max(0, heightPx) * heightRatio, widthFit));
+}
+
+export const RenderMixin = {
+  bb(this: Game, q: DrawQueue, spriteId: string, x: number, z: number, worldH: number, opts: BillboardOptions = {}): void {
+    const p = this.cam.project(x, 0, z);
+    if (!p || p.sy < this.cam.horizon - 200) return;
+    const spr = getSprite(spriteId, opts.palette, opts.palKey);
+    q.add(z + (opts.zBias || 0), (ctx) => {
+      const visualS = opts.readable ? gameplayVisualScale(p.s) : p.s;
+      const visualX = opts.readable ? gameplayVisualX(p.sx, x, this.cam.x, p.s) : p.sx;
+      const hPx = worldH * visualS;
+      if (opts.shadow !== false) drawShadow(ctx, p, hPx * spr.w / spr.h * 0.8, visualX);
+      const yOff = (opts.yOff || 0) * visualS;
+      blit(ctx, spr, opts.frame || 0, visualX, p.sy - yOff, hPx, opts);
+    });
+  },
+
+  renderScenery(this: Game, q: DrawQueue): void {
+    // deterministic per-cell decoration, no storage
+    const seed = 4242 + this.level * 17;
+    const zi0 = Math.floor(this.cam.z + 2), zi1 = Math.floor(this.cam.z + TUNE.viewDist);
+    for (let zi = zi0; zi <= zi1; zi++) {
+      for (const side of [-1, 1]) {
+        const h = hash2(zi, seed + side * 31);
+        if (h < 0.24) {
+          const sc = this.biome.scenery;
+          const id = sc[Math.floor(hash2(zi, seed + side * 77) * sc.length)];
+          if (!hasSprite(id)) continue;
+          const x = side * (TUNE.trackHalf + 1.6 + hash2(zi, seed + side * 13) * 3.4);
+          const wh = id.includes('tree') || id.includes('pillar') || id.includes('house') ? 3.1 : id.includes('fungus') || id.includes('cactus') ? 1.9 : 1.1;
+          this.bb(q, id, x, zi + 0.5, wh + hash2(zi, side) * 0.5, { shadow: false });
+        }
+      }
+    }
+  },
+
+  renderGates(this: Game, q: DrawQueue): void {
+    for (const gt of this.gates) {
+      if (gt.used) continue;
+      const p = this.cam.project(gt.x, 0, gt.z);
+      if (!p) continue;
+      const good = this.gateGood(gt);
+      q.add(gt.z, (ctx) => {
+        const gateS = gateVisualScale(p.s);
+        // Shift each board outward by the same exaggerated scale used for its
+        // width. Otherwise two readable boards would overlap at the horizon.
+        const gateX = p.sx + (gt.x - this.cam.x) * (gateS - p.s);
+        const wPx = gt.halfW * 2 * gateS;
+        const hPx = 2.3 * gateS * (1 + gt.pulse * 1.4);
+        const x0 = gateX - wPx / 2, y0 = p.sy - hPx;
+        // posts
+        ctx.fillStyle = '#241b2e';
+        ctx.fillRect(x0 - gateS * 0.18, y0, gateS * 0.22, hPx);
+        ctx.fillRect(x0 + wPx - gateS * 0.04, y0, gateS * 0.22, hPx);
+        ctx.fillRect(x0 - gateS * 0.18, y0 - gateS * 0.2, wPx + gateS * 0.4, gateS * 0.24);
+        // portal fill
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = good ? '#3fa9ff' : '#ff5533';
+        ctx.fillRect(x0, y0, wPx, hPx);
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = '#ffffff';
+        const sh = ((this.t * 2 + gt.z) % 1) * hPx;
+        ctx.fillRect(x0, y0 + sh, wPx, Math.max(2, hPx * 0.08));
+        ctx.globalAlpha = 1;
+        const frame = Math.max(1, gateS * 0.08);
+        const label = this.gateLabel(gt);
+        const secondary = gt.risk
+          ? 'DANGER AHEAD'
+          : this.mode === 'shooter' && !good ? 'SHOOT ME!' : '';
+
+        // A dark inset panel and a hard clip make the type part of the gate,
+        // rather than free-floating world text that can overrun its frame.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x0 + frame, y0 + frame, Math.max(1, wPx - frame * 2), Math.max(1, hPx - frame * 2));
+        ctx.clip();
+        ctx.fillStyle = 'rgba(20,15,28,0.56)';
+        ctx.fillRect(x0 + frame, y0 + frame, wPx - frame * 2, hPx * 0.58);
+        ctx.strokeStyle = good ? 'rgba(190,231,255,0.78)' : 'rgba(255,211,199,0.78)';
+        ctx.lineWidth = frame;
+        ctx.strokeRect(x0 + frame * 1.5, y0 + frame * 1.5, wPx - frame * 3, hPx * 0.58 - frame);
+        outlineText(
+          ctx,
+          label,
+          gateX,
+          y0 + hPx * 0.31,
+          gateSignFontSize(label, wPx, hPx),
+          good ? '#eaf6ff' : '#ffe3dc',
+        );
+        if (secondary) {
+          ctx.fillStyle = 'rgba(20,15,28,0.5)';
+          ctx.fillRect(x0 + frame, y0 + hPx * 0.68, wPx - frame * 2, hPx * 0.22);
+          outlineText(
+            ctx,
+            secondary,
+            gateX,
+            y0 + hPx * 0.79,
+            gateSignFontSize(secondary, wPx, hPx, 0.18),
+            '#ffd94d',
+          );
+        }
+        ctx.restore();
+      });
+    }
+  },
+
+  renderObstacles(this: Game, q: DrawQueue): void {
+    for (const o of this.obstacles) {
+      const x = o.x + Math.sin(o.wobble * 40) * 0.06;
+      const p = this.cam.project(x, 0, o.z);
+      if (p) q.add(o.z + 0.02, (ctx) => {
+        const s = gameplayVisualScale(p.s);
+        const sx = gameplayVisualX(p.sx, x, this.cam.x, p.s);
+        const pulse = 1 + Math.sin(this.t * 8 + o.z) * 0.08;
+        ctx.globalAlpha = o.directed ? 0.24 : 0.17;
+        ctx.fillStyle = o.motion ? '#ff9d3c' : '#ff5545';
+        ctx.beginPath();
+        ctx.ellipse(sx, p.sy, s * 0.92 * pulse, s * 0.34 * pulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = o.directed ? 0.82 : 0.66;
+        ctx.strokeStyle = o.motion ? '#ffb35c' : '#ff8d7a';
+        ctx.lineWidth = Math.max(2, s * 0.08);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+      this.bb(q, o.sprite, x, o.z, 1.35, { readable: true });
+    }
+  },
+
+  renderPickups(this: Game, q: DrawQueue): void {
+    for (const p of this.pickups) {
+      if (p.dead) continue;
+      const def = PICKUPS[p.kind] || PICKUPS.emerald;
+      const bob = def.grounded ? 0 : Math.sin(p.t * 3 + p.z) * 0.12 + 0.5;
+      const frame = Math.floor(p.t * 3) % 2;
+      const projected = this.cam.project(p.x, 0, p.z);
+      if (projected) q.add(p.z + 0.02, (ctx) => {
+        const s = gameplayVisualScale(projected.s);
+        const sx = gameplayVisualX(projected.sx, p.x, this.cam.x, projected.s);
+        const powerup = p.kind.startsWith('powerup_');
+        const pulse = 1 + Math.sin(this.t * 7 + p.z) * 0.1;
+        ctx.globalAlpha = powerup ? 0.28 : 0.2;
+        ctx.fillStyle = powerup ? '#7ee0ff' : '#7dff5a';
+        ctx.beginPath();
+        ctx.ellipse(sx, projected.sy, s * 0.82 * pulse, s * 0.28 * pulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = powerup ? 0.9 : 0.68;
+        ctx.strokeStyle = powerup ? '#d8f7ff' : '#b8ff9f';
+        ctx.lineWidth = Math.max(2, s * 0.07);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+      this.bb(q, def.sprite, p.x, p.z, def.worldH, {
+        yOff: bob, frame, zBias: -0.01, readable: true,
+      });
+    }
+  },
+
+  renderEnemies(this: Game, q: DrawQueue): void {
+    for (const e of this.enemies) {
+      const spriteId = e.type.sprite || e.id;
+      const hop = e.type.hops ? Math.abs(Math.sin(e.t * 5)) * 0.35 : 0;
+      const fl = e.type.floats ? 0.5 + Math.sin(e.t * 3) * 0.15 : 0;
+      const fuseFlash = e.fuse >= 0 && (Math.floor(e.t * 12) % 2 === 0);
+      this.bb(q, spriteId, e.x, e.z, e.type.worldH, {
+        frame: Math.floor(e.t * 5) % 2,
+        flash: e.flash > 0 || fuseFlash,
+        yOff: hop + fl,
+        readable: true,
+      });
+      // hp pips for tougher enemies
+      if (e.maxHp >= 10 && e.hp < e.maxHp) {
+        const p = this.cam.project(e.x, 0, e.z);
+        if (p) q.add(e.z - 0.01, (ctx) => {
+          const w = p.s * 1.2, y = p.sy - e.type.worldH * p.s - p.s * 0.3;
+          ctx.fillStyle = 'rgba(0,0,0,0.55)';
+          ctx.fillRect(p.sx - w / 2, y, w, Math.max(2, p.s * 0.1));
+          ctx.fillStyle = '#ff5545';
+          ctx.fillRect(p.sx - w / 2, y, w * (e.hp / e.maxHp), Math.max(2, p.s * 0.1));
+        });
+      }
+    }
+  },
+
+  renderWavesTelegraph(this: Game, ctx: CanvasRenderingContext2D): void {
+    for (const w of this.waves) {
+      const steps = 14;
+      ctx.globalAlpha = w.warn > 0 ? 0.22 + 0.12 * Math.sin(this.t * 16) : 0.4;
+      ctx.fillStyle = w.color || '#ff3b2e';
+      const z0 = this.playerZ + 1, z1 = w.z;
+      for (let i = 0; i < steps; i++) {
+        const z = z0 + (z1 - z0) * (i / steps);
+        const pa = this.cam.project(w.x - w.halfW, 0, z);
+        const pb = this.cam.project(w.x + w.halfW, 0, z + (z1 - z0) / steps);
+        if (!pa || !pb) continue;
+        ctx.fillRect(pa.sx, Math.min(pa.sy, pb.sy), pb.sx - pa.sx, Math.abs(pa.sy - pb.sy) + 1);
+      }
+      ctx.globalAlpha = 1;
+    }
+  },
+
+  renderSummons(this: Game, q: DrawQueue): void {
+    for (const s of this.summons) {
+      if (!s.impactCount) {
+        const p = this.cam.project(s.x, 0, s.z);
+        if (p) q.add(s.z + 0.01, (ctx) => {
+          ctx.globalAlpha = 0.18 + Math.sin(this.t * 9) * 0.04;
+          const inSmashWindow = s.t >= GOLEM_SMASH_WINDOW.min && s.t <= GOLEM_SMASH_WINDOW.max;
+          ctx.fillStyle = inSmashWindow ? '#ffd94d' : '#ffffff';
+          ctx.beginPath();
+          ctx.ellipse(p.sx, p.sy, p.s * 0.75, p.s * 0.28, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+      }
+      this.bb(q, 'iron_golem', s.x, s.z, 2.6, { frame: Math.floor(s.t * 6) % 2 });
+    }
+  },
+
+  renderBoss(this: Game, q: DrawQueue): void {
+    const b = this.boss!;
+    const shield = b.shielded > 0 || b.guarded;
+    if (shield) {
+      const p = this.cam.project(b.x, 0, b.z);
+      if (p) q.add(b.z + 0.01, (ctx) => {
+        const pulse = 1 + Math.sin(this.t * 11) * 0.08;
+        ctx.globalAlpha = b.guarded ? 0.62 : 0.48;
+        ctx.strokeStyle = b.guarded ? '#c76bff' : '#ffd94d';
+        ctx.lineWidth = Math.max(3, p.s * 0.08);
+        ctx.beginPath();
+        ctx.ellipse(p.sx, p.sy - p.s * b.type.worldH * 0.48, p.s * b.type.worldH * 0.62 * pulse, p.s * b.type.worldH * 0.58 * pulse, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+    }
+    const shakeX = b.lunge > 0 && b.lunge < 0.5 ? (Math.random() - 0.5) * 0.2 : 0;
+    this.bb(q, b.id, b.x + shakeX, b.z, b.type.worldH, {
+      frame: Math.floor(b.t * 3) % 2,
+      flash: b.flash > 0,
+    });
+  },
+
+  capeSprite(this: Game): Sprite | null {
+    const def = this.cosmetic?.cape;
+    if (!def) return null;
+    if (def.rainbow) {
+      const CYCLE = [
+        { c: '#ff5545', C: '#c02a1c' }, { c: '#ffd94d', C: '#c29222' },
+        { c: '#2eff70', C: '#1d8f3e' }, { c: '#3fa9ff', C: '#2465a8' },
+        { c: '#c76bff', C: '#8b3fd6' },
+      ];
+      const i = Math.floor(this.t * 4) % CYCLE.length;
+      return getSprite('cape', CYCLE[i], `cape_rainbow_${i}`);
+    }
+    return getSprite('cape', def.colors, def.id);
+  },
+
+  renderCrowd(this: Game, q: DrawQueue): void {
+    const skin = this.skin || SKINS[0];
+    const capeSpr = this.capeSprite();
+    const hatDef = this.cosmetic?.hat;
+    const hatSpr = hatDef && hasSprite(hatDef.sprite) ? getSprite(hatDef.sprite!) : null;
+
+    const drawUnit = (x: number, z: number, worldH: number, frame: number, bob: number, phase: number, tier: number, flash: boolean) => {
+      const p = this.cam.project(x, 0, z);
+      if (!p) return;
+      // giants get a per-tier boot accent (gold, fire, ender) to read as elite
+      const palette = tier > 0 ? { ...skin.palette, b: TIERS.units[tier - 1].boots } : skin.palette;
+      const palKey = tier > 0 ? `${skin.id}_t${tier}` : skin.id;
+      q.add(z, (ctx) => {
+        const hPx = worldH * p.s;
+        const px1 = hPx / 18; // one art pixel of the 18px-tall runner
+        const spr = getSprite('runner_back', palette, palKey);
+        drawShadow(ctx, p, hPx * spr.w / spr.h * 0.8);
+        const y = p.sy - bob * p.s;
+        blit(ctx, spr, frame, p.sx, y, hPx, { flash });
+        if (capeSpr) {
+          const sway = Math.sin(this.t * 6 + phase);
+          blit(ctx, capeSpr, Math.abs(sway) > 0.45 ? 1 : 0, p.sx, y - px1 * 3.5, px1 * 9, { flip: sway < 0 });
+        }
+        if (hatSpr) {
+          // scale hats to head width (~8 art px incl. overhang), not their native size
+          blit(ctx, hatSpr, 0, p.sx, y - hPx + px1 * 1.2, (hatSpr.h / hatSpr.w) * 8 * px1);
+        }
+      });
+    };
+
+    const pulse = this.crowdPulse || 0;
+    const spread = 1 + pulse * 0.22;
+    const popScale = 1 + pulse * 0.1;
+    const powerScale = crowdPowerVisualScale(this.reserve, this.stars);
+    for (const m of this.crowd) {
+      drawUnit(this.playerX + m.ox * spread, this.playerZ + m.oz * spread, 1.45 * popScale,
+        Math.floor(this.t * 8 + m.phase) % 2,
+        Math.abs(Math.sin(this.t * 9 + m.phase)) * 0.12, m.phase, 0, false);
+    }
+    TIERS.units.forEach((u, i) => {
+      // Overflow and graduation make the top giant visibly more imposing while
+      // staying bounded, so huge gains read without filling the whole screen.
+      const topScale = i === TIERS.units.length - 1 ? powerScale : 1;
+      const scale = 1.45 * u.scale * popScale * topScale;
+      const rate = Math.max(3, 8 - i * 1.5);
+      for (const g of this.bigs[i]) {
+        drawUnit(this.playerX + g.ox * spread, this.playerZ + g.oz * spread, scale,
+          Math.floor(this.t * rate + g.phase) % 2,
+          Math.abs(Math.sin(this.t * rate + g.phase)) * (0.12 + i * 0.03), g.phase, i + 1, g.flash > 0);
+      }
+    });
+  },
+
+  renderPet(this: Game, q: DrawQueue): void {
+    const pet = this.cosmetic?.pet;
+    if (!pet || !hasSprite(pet.sprite) || (this.state !== 'run' && this.state !== 'boss')) return;
+    const flying = pet.id === 'pet_parrot';
+    const bob = flying ? 1.4 + Math.sin(this.t * 4) * 0.25 : Math.abs(Math.sin(this.t * 8)) * 0.15;
+    // scouts ahead of the crowd where it's always visible
+    this.bb(q, pet.sprite!, this.playerX + 2.3, this.playerZ + 3.2, flying ? 0.8 : 1.0, {
+      frame: Math.floor(this.t * 6) % 2, yOff: bob, shadow: !flying,
+    });
+  },
+
+  renderArrows(this: Game, q: DrawQueue): void {
+    const trail = this.cosmetic?.trail;
+    for (const a of this.arrows) {
+      const p = this.cam.project(a.x, 0, a.z);
+      if (!p) continue;
+      q.add(a.z, (ctx) => {
+        if (trail) {
+          for (let k = 1; k <= 3; k++) {
+            const tp = this.cam.project(a.x, 0, a.z - k * 0.55);
+            if (!tp) continue;
+            ctx.globalAlpha = 0.5 / k;
+            ctx.fillStyle = trail.rainbow
+              ? trail.colors![(k + Math.floor(this.t * 10)) % trail.colors!.length]
+              : trail.colors![(k - 1) % trail.colors!.length];
+            const s = Math.max(2, tp.s * (a.big ? 0.24 : 0.14));
+            ctx.fillRect(tp.sx - s / 2, tp.sy - tp.s * 0.75, s, s);
+          }
+          ctx.globalAlpha = 1;
+        }
+        if (hasSprite('arrow')) {
+          const spr = getSprite('arrow');
+          blit(ctx, spr, 0, p.sx, p.sy - p.s * 0.75, (a.big ? 1.1 : 0.6) * p.s);
+        } else {
+          ctx.fillStyle = '#ffe9a0';
+          ctx.fillRect(p.sx - 1.5, p.sy - p.s * 1.4, a.big ? 5 : 3, p.s * 0.7);
+        }
+      });
+    }
+  },
+
+  renderEshots(this: Game, q: DrawQueue): void {
+    for (const s of this.eshots) {
+      const id = s.kind === 'fireball' ? 'fireball' : s.kind === 'potion' ? 'potion' : 'arrow';
+      this.bb(q, id, s.x, s.z, s.kind === 'fireball' ? 0.7 : 0.6, { yOff: s.y || 0.8, frame: Math.floor(this.t * 8) % 2, shadow: false });
+    }
+  },
+
+  renderParticles(this: Game, q: DrawQueue): void {
+    for (const p of this.particles) {
+      const pr = this.cam.project(p.x, p.y, p.z);
+      if (!pr) continue;
+      q.add(p.z, (ctx) => {
+        ctx.globalAlpha = Math.min(1, p.life * 2.5);
+        ctx.fillStyle = p.color;
+        const s = Math.max(1.5, p.size * pr.s);
+        ctx.fillRect(pr.sx - s / 2, pr.sy - s / 2, s, s);
+        ctx.globalAlpha = 1;
+      });
+    }
+    for (const r of this.rings) {
+      const pr = this.cam.project(r.x, 0, r.z);
+      if (!pr) continue;
+      q.add(r.z, (ctx) => {
+        ctx.globalAlpha = r.life / r.T * 0.7;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = Math.max(2, pr.s * 0.12);
+        ctx.beginPath();
+        ctx.ellipse(pr.sx, pr.sy, r.r * pr.s, r.r * pr.s * 0.42, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
+    }
+  },
+
+  renderFloaties(this: Game, ctx: CanvasRenderingContext2D): void {
+    for (const f of this.floaties) {
+      const p = this.cam.project(f.x, f.y, f.z);
+      if (!p) continue;
+      ctx.globalAlpha = Math.min(1, f.life * 3);
+      outlineText(ctx, f.text, p.sx, p.sy, Math.min(46, Math.max(12, p.s * 0.55 * f.sizeMul)), f.color);
+      ctx.globalAlpha = 1;
+    }
+  },
+
+  // Credit lines stand in the world like signs, so you run through the thanks
+  // instead of watching them scroll over a dead screen.
+  renderCredits(this: Game, q: DrawQueue): void {
+    if (!this.creditSigns || !this.creditSigns.length) return;
+    for (const c of this.creditSigns) {
+      // one sign at a time: further ones stack up illegibly against the horizon
+      const ahead = c.z - this.playerZ;
+      if (ahead > 100 || ahead < -4) continue;
+      const p = this.cam.project(0, 3.4, c.z);
+      if (!p) continue;
+      q.add(c.z, (ctx) => {
+        const fadeIn = Math.min(1, (100 - ahead) / 25);                   // ease in out of the distance
+        const fadeOut = Math.min(1, Math.max(0, (ahead + 4) / 10));       // and out as you pass through
+        ctx.globalAlpha = Math.min(fadeIn, fadeOut);
+        outlineText(ctx, c.text, p.sx, p.sy, Math.min(64, Math.max(16, p.s * 0.9)), '#ffd94d');
+        outlineText(ctx, c.sub, p.sx, p.sy + Math.max(14, p.s * 0.62), Math.min(30, Math.max(11, p.s * 0.42)), '#eaf6ff');
+        ctx.globalAlpha = 1;
+      });
+    }
+  },
+
+  renderCrystals(this: Game, q: DrawQueue): void {
+    if (!this.crystals || !this.crystals.length) return;
+    for (const c of this.crystals) {
+      if (c.dead) continue;
+      const p = this.cam.project(c.x, 2.2 + Math.sin(c.t * 2) * 0.25, c.z);
+      if (!p) continue;
+      q.add(c.z, (ctx) => {
+        const s = p.s * 0.5;
+        ctx.save();
+        ctx.translate(p.sx, p.sy);
+        ctx.rotate(c.t * 0.8);
+        ctx.fillStyle = '#c76bff';
+        ctx.fillRect(-s * 0.3, -s * 0.3, s * 0.6, s * 0.6);
+        ctx.fillStyle = '#f0d8ff';
+        ctx.fillRect(-s * 0.14, -s * 0.14, s * 0.28, s * 0.28);
+        ctx.restore();
+        // a thread back to the boss, so the healing link is legible
+        if (this.boss && !this.boss.entering) {
+          const bp = this.cam.project(this.boss.x, 2.4, this.boss.z);
+          if (bp) {
+            ctx.globalAlpha = 0.4 + Math.sin(this.t * 6 + c.t) * 0.2;
+            ctx.strokeStyle = '#c76bff';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(p.sx, p.sy); ctx.lineTo(bp.sx, bp.sy); ctx.stroke();
+            ctx.globalAlpha = 1; ctx.lineWidth = 1;
+          }
+        }
+      });
+    }
+  },
+
+  renderCrowdLabel(this: Game, ctx: CanvasRenderingContext2D): void {
+    if (this.state !== 'run' && this.state !== 'boss') return;
+    const p = this.cam.project(this.playerX, 2.3, this.playerZ);
+    if (!p) return;
+    // show true power (worth boosted by stars) — climbs forever, no cap
+    const power = this.armyPower();
+    const low = power <= 3;
+    const size = Math.max(15, p.s * 0.62);
+    if (this.stars > 0) {
+      outlineText(ctx, `★${this.stars}`, p.sx, p.sy - size * 0.95, size * 0.7, '#ffe14d');
+    }
+    outlineText(ctx, `${power}`, p.sx, p.sy, size, low ? '#ff8d7a' : '#ffffff');
+  },
+};

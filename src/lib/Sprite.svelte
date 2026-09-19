@@ -5,8 +5,18 @@
   the palette changes, so a skin swap in the shop updates the preview without
   anyone calling a repaint.
 -->
-<script>
-  import { getSprite, hasSprite } from '../../js/assets.js';
+<script lang="ts">
+  import type { HTMLCanvasAttributes } from 'svelte/elements';
+  import { getSprite, hasSprite } from '../../js/assets.ts';
+
+  interface Props extends HTMLCanvasAttributes {
+    name: string | undefined;
+    palette?: Record<string, string> | null;
+    palKey?: string | null;
+    scale?: number;
+    frame?: number;
+    class?: string;
+  }
 
   let {
     /** sprite id, e.g. 'ui_pickaxe' */
@@ -21,13 +31,13 @@
     frame = 0,
     class: klass = 'icon',
     ...rest
-  } = $props();
+  }: Props = $props();
 
-  let canvas = $state(null);
+  let canvas = $state<HTMLCanvasElement>();
 
   $effect(() => {
     // referenced so the effect re-runs when any of them change
-    const [n, p, k, s, f] = [name, palette, palKey, scale, frame];
+    const [n, p, k, s, f] = [name, palette, palKey, scale, frame] as const;
     if (!canvas || !n || !hasSprite(n)) return;
     const spr = getSprite(n, p, k);
     canvas.width = spr.w * s;

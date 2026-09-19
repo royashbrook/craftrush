@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSave, writeBackup, listBackups, restoreBackup, dayStamp, MAX_BACKUPS } from '../js/config.js';
+import { loadSave, writeBackup, listBackups, restoreBackup, dayStamp, MAX_BACKUPS } from '../js/config.ts';
 
 function freshStorage() {
   const store = {};

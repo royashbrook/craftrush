@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LevelMixin } from '../js/levelgen.js';
-import { BIOMES } from '../js/config.js';
+import { LevelMixin } from '../js/levelgen.ts';
+import { BIOMES } from '../js/config.ts';
 
 function gen(level, mode = 'shooter', mut = {}) {
   const g = Object.assign({

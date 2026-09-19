@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { THEME, THEME_INFO, THEME_ART, THEME_ATLAS } from '../js/theme.js';
+import { THEME, THEME_INFO, THEME_ART, THEME_ATLAS } from '../js/theme.ts';
 import { BIOMES, SKINS, COSMETICS, CAMPAIGN, ENEMY_TYPES, BOSS_TYPES, EXPEDITIONS,
-  loadSave, chapterUnlocked } from '../js/config.js';
+  loadSave, chapterUnlocked } from '../js/config.ts';
 
 const artDir = new URL('./', THEME_ART + '/');
 const ART = JSON.parse(readFileSync(new URL('sprites.json', artDir), 'utf8'));

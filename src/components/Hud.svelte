@@ -5,13 +5,15 @@
   main.js writes straight to nav.hud. There is nothing to poll and nothing to
   refresh: this just derives off whatever nav.hud currently holds.
 -->
-<script>
-  import { nav, save } from '../lib/store.svelte.js';
+<script lang="ts">
+  import { nav, save } from '../lib/store.svelte.ts';
+  import type { Game } from '../../js/game.ts';
+  import type { HudState } from '../../types/craftrush.js';
 
-  let { game, pauseGame } = $props();
+  let { game, pauseGame }: { game: Game; pauseGame: (force?: boolean) => void } = $props();
 
-  const h = $derived(nav.hud ?? {});
-  const power = $derived(h.power ?? {});
+  const h: Partial<HudState> = $derived(nav.hud ?? {});
+  const power: Partial<NonNullable<typeof h.power>> = $derived(h.power ?? {});
   const pct = $derived(h.redstoneMax ? (h.redstone ?? 0) / h.redstoneMax : 0);
   const ready = $derived(h.golemReady ?? pct >= 1);
   const golemLabel = $derived.by(() => {
@@ -27,19 +29,19 @@
     // tutorial flag rather than staying up for every run.
     if (h.mode === 'shooter') c.push(h.autoFire ? 'CALM · AUTO FIRE' : (h.firing ? 'FIRING' : (save.tutorialSeen ? '' : 'HOLD TO FIRE')));
     if (h.mode === 'gates' && h.bossActive) c.push(h.autoCharge ? 'CALM · AUTO CHARGE' : (h.charging ? 'CHARGING' : 'HOLD TO CHARGE'));
-    if (power.triple > 0) c.push(`3× ${Math.ceil(power.triple)}s`);
-    if (power.rapid > 0) c.push(`RAPID ${Math.ceil(power.rapid)}s`);
-    if (power.power > 0) c.push(`POWER ${Math.ceil(power.power)}s`);
-    if (power.sword > 0) c.push(`SWORD ${Math.ceil(power.sword)}s`);
-    if (power.axe > 0) c.push(`AXE ${Math.ceil(power.axe)}s`);
+    if (power.triple && power.triple > 0) c.push(`3× ${Math.ceil(power.triple)}s`);
+    if (power.rapid && power.rapid > 0) c.push(`RAPID ${Math.ceil(power.rapid)}s`);
+    if (power.power && power.power > 0) c.push(`POWER ${Math.ceil(power.power)}s`);
+    if (power.sword && power.sword > 0) c.push(`SWORD ${Math.ceil(power.sword)}s`);
+    if (power.axe && power.axe > 0) c.push(`AXE ${Math.ceil(power.axe)}s`);
     return c.filter(Boolean).join('  ');
   });
   const bossHint = $derived.by(() => {
-    const b = h.boss ?? {};
+    const b: Partial<NonNullable<typeof h.boss>> = h.boss ?? {};
     const armorLeft = Math.max(0, (b.phases ?? 1) - (b.phase ?? 1));
     const armor = b.shielded
       ? 'ARMOR BROKEN!'
-      : (armorLeft > 0 ? `ARMOR ${armorLeft}/${b.phases - 1}` : '');
+      : (armorLeft > 0 ? `ARMOR ${armorLeft}/${b.phases! - 1}` : '');
     const crowd = b.needRunners ? `NEED ~${b.needRunners} RUNNERS!` : '';
     return [armor, crowd].filter(Boolean).join(' · ');
   });

@@ -1,66 +1,91 @@
 name: deploy craftrush.royashbrook.com
 
-# The game deploys ITSELF now. It used to trigger a rebuild of royashbrook.com,
-# whose build cloned this repo and shipped the result at /craftrush. That made two
-# unrelated projects share a release: the site had to redeploy for a game change,
-# and a game that failed to build could hold up the site. Its own origin ends both.
 on:
   push:
     branches: [main]
-    # CI config and docs don't change the built game, so they shouldn't burn a deploy.
-    paths-ignore:
-      - ".github/**"
-      - "**/*.md"
-  # manual re-deploy, so a build can be reissued without a dummy commit
+  # Also used after the deliberately created vMAJOR.MINOR milestone tag.
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: craftrush-deploy-${{ github.ref }}
-  cancel-in-progress: true
+  group: craftrush-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      # FULL history, no depth limit: the version is derived from the last tag plus
-      # the commits since it (see appVersion() in svelte.config.js), and a shallow
-      # clone has neither, so the build would stamp 0.0.0-dev and every client's
-      # cache key would stop moving.
       - uses: actions/checkout@v6
         with:
+          # A delayed event validates current main, never the event's old SHA.
+          ref: main
           fetch-depth: 0
+      - id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: strict application types
+        run: npm run check
+      - name: rules, persistence and release contracts
+        run: npm test
+      # No development fallback: incomplete history, dirty input or a missing
+      # eligible milestone stops this job before any publishing step.
+      - name: build the release once
+        run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - name: native legacy update and offline recovery
+        run: node tools/verify-update.mjs --candidate build --evidence test-results/native-update
+      - name: all browser projects against the release artifact
+        id: browsers
+        run: npx playwright test --forbid-only --retries=0 --workers=2 --reporter=line,json
         env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
-      - run: npm test
-      - run: npm run build
-      # The version players read out is derived from git tags, and it is also the
-      # cache key every client uses, so a build that quietly fell back to
-      # 0.0.0-dev would freeze everyone's cache. Check the file the framework
-      # actually writes, not the bundle: the fallback string also appears in a
-      # sourcemap, so grepping build/ matches on a healthy build too.
-      - name: check the build stamped a real version
+          PW_TARGET: build
+          PW_PREBUILT: "1"
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/browser-report.json
+      - name: require executed passing coverage
         run: |
-          test -f build/index.html
-          test -f build/_app/version.json
-          cat build/_app/version.json
-          if grep -q '0\.0\.0-dev' build/_app/version.json; then
-            echo "build stamped 0.0.0-dev: this checkout has no tags, refusing to deploy"
-            exit 1
-          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const report = JSON.parse(readFileSync('test-results/browser-report.json', 'utf8'));
+          for (const field of ['unexpected', 'flaky', 'skipped']) assert.equal(report.stats[field], 0, `browser ${field}`);
+          assert.ok(report.stats.expected > 0, 'browser tests must actually run');
+          NODE
+      - name: verify exact release bytes and distribution notices
+        run: node tools/release-artifact.mjs build
+        env:
+          CRAFTRUSH_EXPECTED_SOURCE: ${{ steps.source.outputs.sha }}
+      - name: retain the validated artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: validated-production
+          path: build/
+          if-no-files-found: error
+          retention-days: 7
+      - name: refuse a superseded release
+        run: |
+          git fetch origin main --no-tags
+          node tools/release-artifact.mjs --current "$(git rev-parse HEAD)" "$(git rev-parse origin/main)" "$GITHUB_REF"
       - name: deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CRAFTRUSH_EXPECTED_SOURCE: ${{ steps.source.outputs.sha }}
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "CLOUDFLARE_API_TOKEN is not set. add the repo secret to enable deploys."
-            exit 1
-          fi
-          npx wrangler deploy
+          node tools/release-artifact.mjs build
+          npm exec --no -- wrangler deploy
+      - name: verify production bytes and host headers
+        run: node tools/release-live.mjs build https://craftrush.royashbrook.com/
+      - name: retain browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-evidence
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7

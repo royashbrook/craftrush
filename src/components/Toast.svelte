@@ -1,12 +1,12 @@
 <!--
   Tutorial toasts. One line, at the right moment, then gone.
 
-  The store already owns the auto-hide timer (see toast() in store.svelte.js);
+  The store already owns the auto-hide timer (see toast() in store.svelte.ts);
   this only maps the kind it was given onto the copy it means and shows it
   while nav.toast is non-null.
 -->
-<script>
-  import { nav } from '../lib/store.svelte.js';
+<script lang="ts">
+  import { nav } from '../lib/store.svelte.ts';
 
   const text = $derived(nav.toast === 'steer'
     ? 'DRAG ANYWHERE TO STEER!'

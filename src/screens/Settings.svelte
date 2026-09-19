@@ -3,20 +3,20 @@
   back in if you paste one. RESET EVERYTHING keeps its confirm() guard — it
   destroys a kid's progress, and that is not something a stray tap should do.
 -->
-<script>
-  import { onMount, tick } from 'svelte';
+<script lang="ts">
+  import { onDestroy, onMount, tick } from 'svelte';
   import QRCode from 'qrcode';
-  import { encodeSave, saveLink } from '../../js/savecode.js';
-  import { save, nav } from '../lib/store.svelte.js';
-  import { Audio } from '../../js/audio.js';
+  import { encodeSave, saveLink } from '../../js/savecode.ts';
+  import { save, nav } from '../lib/store.svelte.ts';
+  import { Audio } from '../../js/audio.ts';
   import {
     ownsCraftRushCache,
     ownsCraftRushRegistration,
     updateReloadIsSafe,
-  } from '../../js/pwa-safety.js';
+  } from '../../js/pwa-safety.ts';
   import {
     VERSION, dayStamp, exportSave, importSave, resetSave, listBackups, restoreBackup,
-  } from '../../js/config.js';
+  } from '../../js/config.ts';
   import Sprite from '../lib/Sprite.svelte';
 
   const code = $derived(exportSave(save));
@@ -28,12 +28,26 @@
   let importText = $state('');
   let qrShown = $state(false);
   let qrMsg = $state('');
+  let qrCanvas = $state<HTMLCanvasElement>();
+  let qrGeneration = 0;
+  let mounted = true;
   let updateMsg = $state('');
-  let updateStatusEl = $state(null);
-  let importEl = $state(null);
+  let updateStatusEl = $state<HTMLDivElement>();
+  let importEl = $state<HTMLTextAreaElement>();
   let restoreHint = $state('');
   const LEGACY_RESTORE_DONE_KEY = 'craftrush_legacy_restore_done_v1';
   const LEGACY_RESTORE_OFFER_KEY = 'craftrush_legacy_restore_offer_v1';
+
+  onDestroy(() => {
+    mounted = false;
+    qrGeneration++;
+  });
+
+  function invalidateQr() {
+    qrGeneration++;
+    qrShown = false;
+    qrMsg = '';
+  }
 
   onMount(async () => {
     if (!nav.restoreIntent) return;
@@ -44,7 +58,7 @@
     importEl?.focus();
   });
 
-  async function showUpdateMessage(text) {
+  async function showUpdateMessage(text: string) {
     updateMsg = text;
     await tick();
     updateStatusEl?.scrollIntoView({ block: 'nearest' });
@@ -59,27 +73,34 @@
    */
   async function showQr() {
     Audio.sfx('click');
+    const generation = ++qrGeneration;
+    qrShown = false;
     qrMsg = 'Building…';
     try {
-      const raw = localStorage.getItem('craftrush_save_v1');
-      if (!raw) { qrMsg = 'No save to share yet.'; return; }
+      // Like COPY CODE, export the progress being played, even when storage
+      // is blocked or a stale tab must preserve somebody else's disk save.
+      const raw = JSON.stringify(save);
       const link = saveLink(await encodeSave(raw));
-      await QRCode.toCanvas(document.getElementById('saveQr'), link,
+      if (!mounted || generation !== qrGeneration) return;
+      await QRCode.toCanvas(qrCanvas, link,
         { errorCorrectionLevel: 'L', margin: 2, width: 260 });
+      if (!mounted || generation !== qrGeneration) return;
       qrShown = true;
       qrMsg = 'Scan this with the other device.';
     } catch (e) {
+      if (!mounted || generation !== qrGeneration) return;
       qrShown = false;
-      qrMsg = `Too big for a QR code — use COPY CODE instead. (${e.message})`;
+      qrMsg = `Too big for a QR code — use COPY CODE instead. (${e instanceof Error ? e.message : String(e)})`;
     }
   }
   let setMsg = $state('');
   let showExport = $state(false);
-  let exportEl = $state(null);
+  let exportEl = $state<HTMLTextAreaElement>();
 
-  function restore(day, level) {
+  function restore(day: string, level: number) {
     if (!confirm(`Go back to your ${day} save (level ${level})? Your current progress will be replaced.`)) return;
     if (restoreBackup(day)) {
+      invalidateQr();
       setMsg = 'Restored! Reloading…';
       setTimeout(() => location.reload(), 700);
     } else {
@@ -105,12 +126,22 @@
 
   async function copyCode() {
     Audio.sfx('click');
+    let copied = false;
     try {
       await navigator.clipboard.writeText(code);
+      copied = true;
     } catch {
-      try { exportEl?.select(); document.execCommand('copy'); } catch { /* give up quietly */ }
+      if (!mounted) return;
+      showExport = true;
+      await tick();
+      if (!mounted) return;
+      exportEl?.focus();
+      exportEl?.select();
+      try { copied = document.execCommand('copy'); } catch { /* manual copy remains available */ }
     }
-    setMsg = 'Copied! Keep it somewhere safe.';
+    if (mounted) setMsg = copied
+      ? 'Copied! Keep it somewhere safe.'
+      : 'Copy the code below and keep it somewhere safe.';
   }
 
   function loadCode() {
@@ -121,6 +152,7 @@
         && !confirm('Replace this device’s save? Your current save will be kept as a one-step rollback on the rescue page.')) return;
     const merged = importSave(importText);
     if (merged) {
+      invalidateQr();
       if (restoreHint) {
         try {
           localStorage.setItem(LEGACY_RESTORE_DONE_KEY, '1');
@@ -165,7 +197,11 @@
   function reset() {
     Audio.sfx('click');
     if (confirm('Reset EVERYTHING? Your emeralds, skins, and progress will be erased. This cannot be undone.')) {
-      resetSave();
+      if (resetSave() === false) {
+        setMsg = 'Could not reset your save. Your progress is still here.';
+        return;
+      }
+      invalidateQr();
       location.reload();
     }
   }
@@ -224,7 +260,7 @@
       <Sprite name="ui_world" />SHOW SAVE AS QR CODE
     </button>
     <div class="setMsg">{qrMsg}</div>
-    <canvas id="saveQr" class="saveQr" class:hidden={!qrShown}></canvas>
+    <canvas id="saveQr" class="saveQr" class:hidden={!qrShown} bind:this={qrCanvas}></canvas>
     <div class="setLabel" class:hidden={!qrShown}>
       Point another device's camera at this. On iPhone the normal Camera app reads it.
     </div>
