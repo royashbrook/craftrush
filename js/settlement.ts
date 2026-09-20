@@ -61,7 +61,8 @@ export function settleRunResult(save: Save, result: RunResult, { now = Date.now(
   save.emeralds += banked;
   save.stats.totalEmeralds = (save.stats.totalEmeralds || 0) + banked;
   if (result.win && !isExpedition) {
-    save.level += 1;
+    // Do not turn a valid boundary save into an unrepresentable next level.
+    save.level = Math.min(Number.MAX_SAFE_INTEGER, save.level + 1);
     save.bestLevel = Math.max(save.bestLevel, save.level);
   }
   save.bestCrowd = Math.max(save.bestCrowd, result.bestCrowd);

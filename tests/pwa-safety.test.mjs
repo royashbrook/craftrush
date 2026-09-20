@@ -148,6 +148,12 @@ test('save validation accepts playable partial and current-shaped saves', () => 
 });
 
 test('syntactically valid but unplayable JSON is rejected', () => {
+  for (const level of [Number.MAX_SAFE_INTEGER + 1, Number.MAX_VALUE, Infinity]) {
+    assert.match(saveSchemaError({ level }), /level/);
+  }
+  for (const level of [1000, 1e12, Number.MAX_SAFE_INTEGER]) {
+    assert.equal(saveSchemaError({ level }), '', 'endless progression remains valid');
+  }
   assert.match(parsePlayableSave('{"hello":"world"}').error, /level/);
   assert.match(parsePlayableSave('{"level":"nine"}').error, /level/);
   assert.match(parsePlayableSave('{"level":1,"mode":"spectator"}').error, /mode/);

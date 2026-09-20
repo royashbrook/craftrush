@@ -247,7 +247,7 @@ export type LevelEvent = EventCommon & (
 );
 export interface Encounter { id: string; role: string; startZ: number; endZ: number; threat: boolean; relief: boolean; agency: number; mechanic: string; choiceZ?: number; dangerZ?: number; safeLane?: number; bossPreview?: boolean }
 export interface Obstacle extends Position { baseX: number; hp: number; sprite: string; wobble: number; stationary: boolean; directed: boolean; motion: SweepMotion | null; encounterId?: string }
-export interface Pickup extends Position { kind: string; t: number; hp?: number; dead?: boolean }
+export interface Pickup extends Position { kind: string; t: number; quantity?: number; hp?: number; dead?: boolean }
 export interface Arrow extends Position { vx: number; dmg: number; big?: boolean; dead?: boolean }
 export type EnemyShot = Position & { vx: number; vz?: number; y: number; dead?: boolean } & (
   { kind: 'potion'; vy: number; aoe: LobberType } | { kind: 'arrow' | 'fireball' }

@@ -1,9 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadSave } from '../js/config.ts';
+import { saveSchemaError } from '../js/pwa-safety.ts';
 import { finishRunSettlement, settleRunResult, SETTLED_RUN_CAP } from '../js/settlement.ts';
 
 const NOW = new Date(2026, 6, 27, 12).getTime();
+
+test('the numeric representation boundary remains a persistable winning save', () => {
+  const save = loadSave();
+  save.level = Number.MAX_SAFE_INTEGER;
+  settleRunResult(save, result({ level: save.level }), { now: NOW });
+  assert.equal(save.level, Number.MAX_SAFE_INTEGER);
+  assert.equal(save.bestLevel, Number.MAX_SAFE_INTEGER);
+  assert.equal(saveSchemaError(save), '');
+});
 
 function result(overrides = {}) {
   return {
