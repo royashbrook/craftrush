@@ -147,7 +147,7 @@ export const PICKUPS: Record<string, PickupDefinition> = {
   emerald: {
     sprite: 'emerald', worldH: 0.95, magnet: true,
     onCollect(g, p) {
-      g.runEmeralds += TUNE.emeraldPickup;
+      g.runEmeralds += TUNE.emeraldPickup * (p.quantity ?? 1);
       Audio.sfx('emerald', 60);
       g.burst(p.x, 1, p.z, ['#2eff70', '#1fcf58'], 4, 3);
     },

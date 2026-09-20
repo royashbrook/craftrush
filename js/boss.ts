@@ -472,8 +472,15 @@ export const BossMixin = {
       }, 200 + i * 260);
     }
     const bonus = 8 + this.level * 2;
-    for (let i = 0; i < bonus; i++) {
-      this.pickups.push({ kind: 'emerald', x: (Math.random() * 2 - 1) * 2.5, z: this.playerZ + 3 + Math.random() * 4, t: Math.random() });
+    // Endless levels increase reward, not allocation or collection effects.
+    const count = Math.min(64, bonus);
+    // A safe-integer level can yield a reward just above 2^54. There the
+    // representable spacing is four: aligned bundles avoid rounding each sum.
+    const step = Number.isSafeInteger(bonus) ? 1 : 4;
+    const each = Math.floor(bonus / count / step) * step;
+    const remainder = bonus - each * count;
+    for (let i = 0; i < count; i++) {
+      this.pickups.push({ kind: 'emerald', quantity: each + (i === count - 1 ? remainder : 0), x: (Math.random() * 2 - 1) * 2.5, z: this.playerZ + 3 + Math.random() * 4, t: Math.random() });
     }
     this._later(() => { if (this.state === 'boss') this.endRun(true); }, 1900);
   },

@@ -87,6 +87,12 @@ hostname and `CLOUDFLARE_API_TOKEN` repository secret. The credential is injecte
 only into the deploy step and is never printed. Wrangler comes from the lockfile,
 not a newly fetched CLI at deployment time.
 
+External action steps are pinned to full reviewed commit SHAs, with version
+comments for maintenance. `tests/action-pins.test.mjs` rejects mutable references
+in the repository's block-style workflow steps; unfamiliar step syntax must be
+reviewed rather than silently skipped. Updating a version comment alone does not
+update the executable action. Preserve the pin and hosted checks when upgrading.
+
 Every production job checks out **main's current tip**, regardless of the triggering
 event's age. One fixed concurrency group serializes production jobs and does not
 cancel a running deploy. GitHub's pending queue is not assumed to preserve event

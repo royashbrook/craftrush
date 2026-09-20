@@ -286,6 +286,27 @@ test('rescue refuses restore when the current save cannot be read', async () => 
   assert.doesNotMatch(rescue.get('msg2').textContent, /^Restored\./);
 });
 
+test('unsafe level representations cannot replace or overwrite recoverable saves', async () => {
+  for (const level of [1e100, Number.MAX_SAFE_INTEGER + 1]) {
+    const raw = JSON.stringify({ level: 7, emeralds: 300 });
+    const values = storage(raw);
+    const runtime = await freshRuntime();
+    assert.equal(runtime.importSave(runtime.exportSave({ level })), null);
+    assert.equal(values.get(key), raw);
+    const rescue = rescueHarness();
+    rescue.get('restoreBox').value = JSON.stringify({ level });
+    await rescue.click('restore');
+    assert.equal(values.get(key), raw);
+    assert.doesNotMatch(rescue.get('msg2').textContent, /^Restored\./);
+    const unsafe = JSON.stringify({ level, emeralds: 300 });
+    values.set(key, unsafe);
+    const loaded = runtime.loadSave();
+    assert.equal(runtime.getSaveStatus(), 'corrupt');
+    assert.equal(runtime.persistSave(loaded), false);
+    assert.equal(values.get(key), unsafe, 'invalid legacy bytes stay available for recovery');
+  }
+});
+
 test('rescue re-read failing after confirmation leaves the confirmed save untouched', async () => {
   const raw = JSON.stringify({ level: 12, emeralds: 800 });
   const values = storage(raw);

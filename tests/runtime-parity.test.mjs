@@ -26,7 +26,22 @@ function executable(source) {
 
 test('type erasure preserves the pinned engine executable syntax', () => {
   for (const name of unchanged) {
-    const old = execFileSync('git', ['show', `${baseline}:js/${name}.js`], { encoding: 'utf8' });
+    let old = execFileSync('git', ['show', `${baseline}:js/${name}.js`], { encoding: 'utf8' });
+    // #142 deliberately bounds the fountain after the port. Apply only this
+    // reviewed delta to the frozen source; every other boss rule stays pinned.
+    if (name === 'boss') {
+      const loop = 'const bonus = 8 + this.level * 2;\n    for (let i = 0; i < bonus; i++) {';
+      const pickup = "this.pickups.push({ kind: 'emerald', x:";
+      assert.equal(old.split(loop).length, 2);
+      assert.equal(old.split(pickup).length, 2);
+      old = old.replace(loop, `const bonus = 8 + this.level * 2;
+        const count = Math.min(64, bonus);
+        const step = Number.isSafeInteger(bonus) ? 1 : 4;
+        const each = Math.floor(bonus / count / step) * step;
+        const remainder = bonus - each * count;
+        for (let i = 0; i < count; i++) {`)
+        .replace(pickup, "this.pickups.push({ kind: 'emerald', quantity: each + (i === count - 1 ? remainder : 0), x:");
+    }
     const current = readFileSync(new URL(`../js/${name}.ts`, import.meta.url), 'utf8');
     assert.deepEqual(executable(current), executable(old), name);
   }

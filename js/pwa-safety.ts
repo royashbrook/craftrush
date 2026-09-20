@@ -130,7 +130,7 @@ function friendSchemaError(friend: unknown, path: string): string {
  */
 export function saveSchemaError(save: unknown): string {
   if (!record(save)) return 'the save must be a JSON object';
-  if (typeof save.level !== 'number' || !Number.isInteger(save.level) || save.level < 1) return 'level must be a positive whole number';
+  if (typeof save.level !== 'number' || !Number.isSafeInteger(save.level) || save.level < 1) return 'level must be a positive safe whole number';
   if ('emeralds' in save && !finiteAtLeast(save.emeralds, 0)) return 'emeralds must be a non-negative number';
   for (const key of ['bestLevel', 'bestCrowd']) {
     if (key in save && !finiteAtLeast(save[key], 0)) return `${key} must be a non-negative number`;
