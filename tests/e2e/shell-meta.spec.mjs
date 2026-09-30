@@ -31,3 +31,19 @@ test('the about page ends with the exact ethos line above the maker mark', async
   });
   expect(order).toBeTruthy();
 });
+
+test('every link and button on the about page is a 44px tap target', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#navMore').click();
+  await page.locator('#btnAbout').click();
+  await expect(page.locator('#about')).toBeVisible();
+  // the fleet gate measures the short side, so the floor holds on both axes
+  const targets = page.locator('#about').locator('a[href], button');
+  expect(await targets.count()).toBeGreaterThan(0);
+  for (const target of await targets.all()) {
+    const box = await target.boundingBox();
+    expect(box, await target.textContent()).not.toBeNull();
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(44);
+  }
+});
